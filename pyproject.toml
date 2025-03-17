@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "pyjelly"
+version = "0.0.1"
+description = "Jelly for python"
+authors = ["Anastasiya Danilenka <anastasiya@neverblink.eu>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+rdflib = "^7.0.0"
+protobuf = "^5.29.3"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.12.1"
+mypy = "^1.14.1"
+pytest-cov = "^6.0.0"
+
+[tool.pytest.ini_options]
+addopts = "--cov=./pyjelly --cov-report=term-missing --cov-fail-under=80"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

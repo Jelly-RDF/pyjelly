@@ -1,0 +1,11 @@
+@prefix hobbit: <http://w3id.org/hobbit/vocab#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Standard triple
+hobbit:Frodo hobbit:hasFriend hobbit:Samwise .
+
+# RDF-star triple used as a subject
+<< hobbit:Frodo hobbit:hasFriend hobbit:Samwise >> 
+    hobbit:evidence "They traveled to Mordor together."@en ;
+    rdfs:comment "This friendship is recorded in Tolkien's works."@en .

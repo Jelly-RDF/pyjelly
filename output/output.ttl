@@ -1,0 +1,22 @@
+@prefix ex: <http://example.org/sample/> .
+@prefix movie: <http://data.linkedmdb.org/resource/movie/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:film1 a movie:Film ;
+    rdfs:label "A Sample Film" ;
+    movie:directedBy [ a ex:Person ;
+            rdfs:label "Unknown Director" ;
+            ex:hasExperience "15 years" ] ;
+    movie:producedBy [ a ex:Company ;
+            rdfs:label "Mystery Productions" ;
+            ex:established "1990" ] .
+
+ex:film2 a movie:Film ;
+    rdfs:label "Another Sample Film" ;
+    movie:directedBy [ a ex:Person ;
+            rdfs:label "Anonymous Director" ;
+            ex:hasExperience "20 years" ] ;
+    movie:producedBy [ a ex:Company ;
+            rdfs:label "Unknown Films Inc." ;
+            ex:established "2005" ] .
+
