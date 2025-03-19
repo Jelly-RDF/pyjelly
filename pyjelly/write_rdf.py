@@ -78,14 +78,16 @@ class RDFEncoder:
         Splits an IRI into a prefix and local name by finding the last occurrence
         of '#' or '/'. (as in jvm version)
         """
-        idx_hash = iri.rfind('#')
-        idx_slash = iri.rfind('/')
-        idx = max(idx_hash, idx_slash)
+        idx_hash = iri.find('#', 8)
         
-        if idx == -1:
-            return '', iri 
-        else:
-            return iri[:idx + 1], iri[idx + 1:]
+        if idx_hash == -1:  
+            idx_slash = iri.rfind('/')  
+            if idx_slash != -1: 
+                return iri[:idx_slash + 1], iri[idx_slash + 1:]
+            else: 
+                return '', iri
+        else: 
+            return iri[:idx_hash + 1], iri[idx_hash + 1:]
 
     def update_prefix_lookup(self, prefix):
         id = self.prefix_lookup.get(prefix)
@@ -192,7 +194,7 @@ class RDFEncoder:
             logging.info("Processing namespace: prefix=%s, namespace=%s", prefix, namespace)
 
             if self.use_prefix_lookup:
-                prefix_id = self.update_prefix_lookup(namespace)
+                prefix_id = self.update_prefix_lookup(str(namespace))
                 name_id = self.update_name_lookup("")
             else:
                 prefix_id = 0
@@ -217,7 +219,7 @@ class RDFEncoder:
 
 def main():
     graph = Graph()
-    graph.parse("./test_files/example_for_lookup.ttl")
+    graph.parse("./test_files/new_sample.ttl")
     output_file = "./output/encoded_file.jelly"
 
     encoder = RDFEncoder(graph)
