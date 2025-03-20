@@ -1,0 +1,36 @@
+@prefix ex: <http://example.org/sample/> .
+@prefix movie: <http://data.linkedmdb.org/resource/movie/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+# A movie with multiple tricky features
+ex:film1 a movie:Film ;
+    rdfs:label "A Tricky Film" ;
+    movie:directedBy _:b0 ;
+    movie:producedBy _:b1 ;
+    movie:releaseDate "2001-07-16"^^xsd:date ;
+    movie:rating "4.5"^^xsd:integer ;
+    owl:sameAs <http://www.wikidata.org/entity/Q12345> .
+
+# Director (blank node) with a special character in name
+_:b0 a ex:Person ;
+    rdfs:label "Jean-Luc O'Connor" ;
+    ex:biography """Jean-Luc O'Connor is known for his 
+    innovative storytelling and cinematography. 
+    He has directed several award-winning films.""" .
+
+# Producer (blank node) appearing twice
+_:b1 a ex:Company ;
+    rdfs:label "Hidden Productions™" ;
+    ex:established "1999"^^xsd:integer .
+
+# Another movie using the same producer blank node
+ex:film2 a movie:Film ;
+    rdfs:label "Mysterious Sequel" ;
+    movie:producedBy _:b1 ;
+    movie:directedBy [ 
+        a ex:Person ;
+        rdfs:label "Anonymous Director" ;
+        ex:hasExperience "10 years"
+    ] .

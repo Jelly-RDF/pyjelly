@@ -1,0 +1,19 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix hobbit: <http://w3id.org/hobbit/vocab#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+hobbit:AscendingOrder
+  rdf:type hobbit:Ranking ;
+  rdfs:comment "Indicates smallest-to-largest preferred ordering of property values."^^xsd:string ;
+  rdfs:label "Ascending Order"^^xsd:string .
+
+hobbit:DescendingOrder
+  rdf:type hobbit:Ranking ;
+  rdfs:comment "Indicates largest-to-smallest preferred ordering of property values."^^xsd:string ;
+  rdfs:label "Descending Order"^^xsd:string .
+
+hobbit:PearsonAlgorithm a hobbit:AnalysisAlgorithm ;
+  rdf:type hobbit:AnalysisAlgorithm ;
+  rdfs:label "Pearson correlation"@en ;
+  rdfs:comment "Pearson correlation coefficient is a measure of the linear correlation between two variables X and Y."@en .

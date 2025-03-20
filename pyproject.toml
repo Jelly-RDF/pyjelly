@@ -1,0 +1,140 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyjelly"
+version = "0.1.0"
+description = "Jelly RDF implementation for Python"
+readme = "README.md"
+authors = [
+    { name = "Bartosz Sławecki", email = "bartosz@neverblink.eu" },
+    { name = "Anastasiya Danilenka", email = "anastasiya@neverblink.eu" },
+]
+requires-python = ">=3.9"
+dependencies = [
+    "protobuf>=5.29.3",
+    "typer>=0.15.2",
+    "typing-extensions>=4.12.2 ; python_full_version < '3.10'",
+]
+
+[project.optional-dependencies]
+oxigraph = ["pyoxigraph>=0.4.9"]
+rdflib = ["rdflib>=7.1.3"]
+
+[dependency-groups]
+ci = ["memray>=1.16.0", "pip-audit>=2.8.0"]
+dev = [
+    "grpcio-tools>=1.71.0",
+    "mypy>=1.13.0",
+    "pyright>=1.1.392.post0",
+    "rich>=13.9.4",
+    "ruff>=0.8.6",
+    "typer>=0.15.2",
+]
+docs = [
+    "markdown-exec>=1.10.2",
+    "mdx-include>=1.4.2",
+    "mkdocs-material>=9.6.9",
+    "mkdocstrings>=0.29.0",
+    "mkdocstrings-python>=1.16.7",
+]
+test = [
+    "inline-snapshot>=0.20.8",
+    "pytest>=8.3.4",
+    "pytest-accept>=0.1.12",
+    "pytest-asyncio>=0.25.3",
+    "pytest-mock>=3.14.0",
+    "pytest-subtests>=0.14.1",
+    "pytest-sugar>=1.0.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "test", "docs"]
+
+[tool.mypy]
+strict = true
+explicit_package_bases = true
+exclude = ".*_pb2(_grpc)?\\.pyi?"
+
+[tool.pyright]
+pythonVersion = "3.9"
+
+[tool.inline-snapshot]
+format-command = "ruff format --stdin-filename {filename}"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = [
+    "--import-mode=importlib",
+    "--ignore=migrations",
+    "--ignore=mosquitto",
+    "--doctest-modules",
+]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
+
+[tool.ruff.lint]
+# To discuss the presented rationales, contact the author (bswck).
+select = ["ALL"]
+ignore = [
+    # Description: Dynamically typed expressions (typing.Any) are disallowed
+    # Rationale:
+    #  We use Any to allow user to constrain return types of our functions on their own.
+    #  For example, having a function `def foo() -> Any: ...` allows user to write
+    #  `my_foo: int = foo()` and have it passed type checking, since `Any` disables
+    #  type checking completely.
+    "ANN401",
+
+    # Description: 1 blank line required before class docstring
+    # Rationale: Remove the warning -- D211 (no-blank-line-before-class) preferred.
+    "D203",
+
+    # Description: Multi-line docstring summary should start at the second line
+    # Rationale: Remove the warning -- D213 (multi-line-summary-second-line) preferred.
+    "D212",
+
+    # Description: Line contains TODO, consider resolving the issue
+    # Rationale: Not appropriate for the project.
+    "FIX002",
+
+    # Description: Implicitly concatenated string literals on one line
+    # Rationale: Allegedly conflicts with the formatter.
+    "ISC001",
+
+    # Description: Trailing comma missing
+    # Rationale: Allegedly conflicts with the formatter.
+    "COM812",
+
+    # Description: File is part of an implicit namespace package. Add an `__init__.py`
+    # Rationale: Implicit namespace packages are a feature
+    "INP001",
+
+    # Description: `print` found
+    # Rationale: `print` is OK
+    "T201",
+
+    # Description: Missing documentation
+    # Rationale: Important, but secondary concern
+    "D100", # Public module
+    "D101", # Public class
+    "D102", # Public method
+    "D103", # Public function
+    "D104", # Public package
+    "D105", # Magic method
+    "D107", # __init__
+
+    # Description: Use of `assert` detected
+    # Rationale: Assertions contribute to validation routines caught by Pydantic
+    "S101",
+
+    # Description: Missing issue link on the line following this TODO
+    # Rationale: Own semantics
+    "TD003",
+
+    # Description: Wildcard imports used
+    # Rationale: Waiting for red knot to understand them
+    "F403",
+]
