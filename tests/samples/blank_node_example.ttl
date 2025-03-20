@@ -1,0 +1,13 @@
+@prefix ex: <http://example.org/sample/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix movie: <http://data.linkedmdb.org/resource/movie/> .
+
+# A movie with a blank node as a director
+ex:film1 a movie:Film ;
+    rdfs:label "A Sample Film" ;
+    movie:directedBy _:b0 .
+
+# Blank node for the director (no IRI)
+_:b0 a ex:Person ;
+    rdfs:label "Unknown Director" ;
+    ex:hasExperience "15 years" .

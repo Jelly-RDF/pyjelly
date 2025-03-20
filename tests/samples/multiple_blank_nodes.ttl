@@ -1,0 +1,34 @@
+@prefix ex: <http://example.org/sample/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix movie: <http://data.linkedmdb.org/resource/movie/> .
+
+# A movie with multiple blank nodes
+ex:film1 a movie:Film ;
+    rdfs:label "A Sample Film" ;
+    movie:directedBy _:b1 ;
+    movie:producedBy _:b2 .
+
+# Blank node for the director (anonymous person)
+_:b1 a ex:Person ;
+    rdfs:label "Unknown Director" ;
+    ex:hasExperience "15 years" .
+
+# Blank node for the producer
+_:b2 a ex:Company ;
+    rdfs:label "Mystery Productions" ;
+    ex:established "1990" .
+
+# Another movie with an inline blank node
+ex:film2 a movie:Film ;
+    rdfs:label "Another Sample Film" ;
+    movie:directedBy [ 
+        a ex:Person ;
+        rdfs:label "Anonymous Director" ;
+        ex:hasExperience "20 years"
+    ] ;
+    movie:producedBy _:b3 .
+
+# Blank node for another producer
+_:b3 a ex:Company ;
+    rdfs:label "Unknown Films Inc." ;
+    ex:established "2005" .

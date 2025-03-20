@@ -1,0 +1,6 @@
+<http://example.org#Alice> <http://example.org#knows> <http://example.org#Bob> .
+<http://example.org#Bob> <http://example.org#knows> <http://example.org#Charlie> .
+<http://example.org#Charlie> <http://example.org#knows> <http://example.org#Alice> .
+<http://example.org#Alice> <http://example.org#age> "25"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://example.org#Bob> <http://example.org#age> "30"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://example.org#Charlie> <http://example.org#age> "35"^^<http://www.w3.org/2001/XMLSchema#integer> .
