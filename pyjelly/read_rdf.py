@@ -1,9 +1,10 @@
 import rdf_pb2
 from rdflib import URIRef, BNode, Literal, Graph, Namespace
+from lookup import LookupTable
 
 
 def process_options(options):
-    return options.options.max_prefix_table_size != 0
+    return options.options.max_prefix_table_size != 0, options.options.max_prefix_table_size, options.options.max_name_table_size, options.options.max_datatype_table_size
 
 
 def parse_rdf_stream(filename):
@@ -54,11 +55,11 @@ def main():
 
     graph = Graph()
     options_row = rdf_stream_frame.rows.pop(0)
-    use_prefix_table = process_options(options_row)
+    use_prefix_table, prefix_table_size, name_table_size, datatype_table_size = process_options(options_row)
 
-    prefix_lookup = {}
-    name_lookup = {}
-    datatype_lookup = {}
+    prefix_lookup = LookupTable(prefix_table_size)
+    name_lookup = LookupTable(name_table_size)
+    datatype_lookup = LookupTable(datatype_table_size)
 
     last_prefix_set = 0
     last_name_set = 0
@@ -135,7 +136,7 @@ def main():
 
             graph.add((subject, predicate, obj))
 
-    graph.serialize("./output/output.ttl", format="ttl")
+    graph.serialize("./output/output.nt", format="nt")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import logging
 from rdflib import URIRef, BNode, Literal, Graph
 import rdf_pb2
+from lookup import LookupTable
 
 logging.basicConfig(level=logging.INFO)
 
@@ -10,15 +11,12 @@ class RDFEncoder:
         self.graph = graph
         self.use_prefix_lookup = True
         if self.use_prefix_lookup:
-            self.prefix_lookup = {}
+            self.prefix_lookup = LookupTable(30)
         else:
             self.prefix_lookup = None
             
-        self.name_lookup = {}
-        self.datatype_lookup = {}
-        self.prefix_counter = 1
-        self.name_counter = 1
-        self.datatype_counter = 1
+        self.name_lookup = LookupTable(16)
+        self.datatype_lookup = LookupTable(16)
         
         self.prefix_last_set_id = -1000
         self.prefix_last_get_id = -1000
@@ -40,20 +38,19 @@ class RDFEncoder:
         first_row.options.physical_type = rdf_pb2.PhysicalStreamType.PHYSICAL_STREAM_TYPE_TRIPLES
         first_row.options.generalized_statements = False
         first_row.options.rdf_star = False
-        first_row.options.max_name_table_size = 50
+        first_row.options.max_name_table_size = self.name_lookup.max_size
         if self.use_prefix_lookup:
-            first_row.options.max_prefix_table_size = 50
+            first_row.options.max_prefix_table_size = self.prefix_lookup.max_size
         else:
             first_row.options.max_prefix_table_size = 0
-        first_row.options.max_datatype_table_size = 10
+        first_row.options.max_datatype_table_size = self.datatype_lookup.max_size
         first_row.options.version = 2
         self.rdf_stream_frame.rows.append(first_row)
         
     def update_name_lookup(self, name):
-        id = self.name_lookup.get(name)
+        id = self.name_lookup[name]
         if id == None:
-            self.name_lookup[name] = self.name_counter
-            id = self.name_counter
+            id = self.name_lookup.add_entry(name)
             if id == self.name_last_set_id + 1:
                 set_id =  0
             else:
@@ -64,7 +61,6 @@ class RDFEncoder:
             row_name_entry.name.id = set_id
             row_name_entry.name.value = name
             self.rdf_stream_frame.rows.append(row_name_entry)
-            self.name_counter += 1
             
         if id == (self.name_last_get_id+1):
             get_id = 0
@@ -90,10 +86,9 @@ class RDFEncoder:
             return iri[:idx_hash + 1], iri[idx_hash + 1:]
 
     def update_prefix_lookup(self, prefix):
-        id = self.prefix_lookup.get(prefix)
+        id = self.prefix_lookup[prefix]
         if id == None:
-            self.prefix_lookup[prefix] = self.prefix_counter
-            id = self.prefix_counter
+            id = self.prefix_lookup.add_entry(prefix)
             if id == self.prefix_last_set_id + 1:
                 set_id =  0
             else:
@@ -104,8 +99,6 @@ class RDFEncoder:
             row_prefix_entry.prefix.id = set_id
             row_prefix_entry.prefix.value = prefix
             self.rdf_stream_frame.rows.append(row_prefix_entry)
-            
-            self.prefix_counter += 1
             
         if id == self.prefix_last_get_id:
             get_id = 0
@@ -126,10 +119,9 @@ class RDFEncoder:
         return prefix_id, name_id
 
     def get_datatype_id(self, item):
-        id = self.datatype_lookup.get(item)
+        id = self.datatype_lookup[item]
         if id == None:
-            self.datatype_lookup[item] = self.datatype_counter
-            id = self.datatype_counter
+            id = self.datatype_lookup.add_entry(item)
             if id == self.datatype_last_set_id + 1:
                 set_id =  0
             else:
@@ -140,7 +132,6 @@ class RDFEncoder:
             row_datatype_entry.datatype.id = set_id
             row_datatype_entry.datatype.value = item
             self.rdf_stream_frame.rows.append(row_datatype_entry)
-            self.datatype_counter += 1
 
         get_id = id
         self.datatype_last_get_id = id
@@ -219,7 +210,7 @@ class RDFEncoder:
 
 def main():
     graph = Graph()
-    graph.parse("./test_files/new_sample.ttl")
+    graph.parse("./test_files/generated_triples.nt")
     output_file = "./output/encoded_file.jelly"
 
     encoder = RDFEncoder(graph)
