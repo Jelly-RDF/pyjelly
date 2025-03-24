@@ -1,0 +1,88 @@
+name: quality-gate
+
+on:
+  push:
+    branches:
+    -  main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+    
+env:
+  FORCE_COLOR: '1'
+  PY_COLORS: '1'
+
+  UV_VERSION: '0.6.5'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  quality-gate:
+    if: ${{ github.actor != 'dependabot[bot]' && !cancelled() }}
+    name: ${{ matrix.version }} ${{matrix.platform}}
+    runs-on: ${{ matrix.platform }}
+
+    strategy:
+      fail-fast: false
+      # https://blog.jaraco.com/efficient-use-of-ci-resources/
+      matrix:
+        version: 
+        - '3.9'
+        - '3.13'
+        platform:
+        - ubuntu-latest
+        - macos-latest
+        - windows-latest
+        include:
+        - version: '3.10'
+          platform: ubuntu-latest
+        - version: '3.11'
+          platform: ubuntu-latest
+        - version: '3.12'
+          platform: ubuntu-latest
+        - version: '3.14'
+          platform: ubuntu-latest
+        - version: pypy3.10
+          platform: ubuntu-latest  
+        - version: pypy3.11
+          platform: ubuntu-latest
+
+    env:
+      uv-sync: uv sync --frozen --python ${{matrix.version}}
+      uv-run: uv run --no-sync --frozen --python ${{matrix.version}}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        version: ${{ env.UV_VERSION }}
+
+    - name: Install
+      id: install
+      run: ${{ env.uv-sync }}
+
+    - name: Run tests
+      id: tests
+      run: ${{ env.uv-run }} pytest -svv
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Check formatting
+      id: formatting
+      run: ${{ env.uv-run }} ruff format . --diff
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Lint
+      id: linting
+      run: ${{ env.uv-run }} ruff check --output-format github
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Check type safety
+      id: types
+      run: ${{ env.uv-run }} mypy .
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}

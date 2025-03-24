@@ -1,0 +1,3 @@
+[submodule "submodules/protobuf"]
+	path = submodules/protobuf
+	url = ../jelly-protobuf
