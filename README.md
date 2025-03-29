@@ -69,3 +69,6 @@ a different idea is to rely on lifespan context managers, a pattern like in fast
 
 that's TBC.
 
+## oh, and we have some early quality-gate ci!
+check `.github/workflows/quality.yml`
+
