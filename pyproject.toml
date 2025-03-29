@@ -11,15 +11,23 @@ authors = [
     { name = "Bartosz Sławecki", email = "bartosz@neverblink.eu" },
     { name = "Anastasiya Danilenka", email = "anastasiya@neverblink.eu" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "protobuf>=5.29.3",
     "typer>=0.15.2",
-    "typing-extensions>=4.12.2 ; python_full_version < '3.10'",
+    "typing-extensions>=4.12.2", # Revisit after 3.13 is older
 ]
 
 [project.optional-dependencies]
-rdflib = ["rdflib>=7.1.3"]
+rdflib = ["rdflib>=7.1.4"]
+
+[project.entry-points."rdf.plugins.parser"]
+jelly = "pyjelly.integrations.rdflib_plugin:RDFLibJellyParser"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib_plugin:RDFLibJellyParser"
+
+[project.entry-points."rdf.plugins.serializer"]
+jelly = "pyjelly.integrations.rdflib_plugin:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib_plugin:RDFLibJellySerializer"
 
 [dependency-groups]
 ci = ["memray>=1.16.0", "pip-audit>=2.8.0"]
@@ -49,6 +57,7 @@ test = [
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
 ]
+types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
 default-groups = ["dev", "test", "docs"]
@@ -59,7 +68,7 @@ explicit_package_bases = true
 exclude = ".*_pb2(_grpc)?\\.pyi?"
 
 [tool.pyright]
-pythonVersion = "3.9"
+pythonVersion = "3.10"
 
 [tool.inline-snapshot]
 format-command = "ruff format --stdin-filename {filename}"
@@ -139,3 +148,6 @@ ignore = [
     # Rationale: Waiting for red knot to understand them
     "F403",
 ]
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["typing_extensions"]

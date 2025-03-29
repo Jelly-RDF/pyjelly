@@ -1,0 +1,1719 @@
+# Frame 0
+rows {
+  options {
+    physical_type: PHYSICAL_STREAM_TYPE_TRIPLES
+    generalized_statements: true
+    rdf_star: true
+    max_name_table_size: 128
+    max_prefix_table_size: 16
+    max_datatype_table_size: 16
+    logical_type: LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    version: 1
+  }
+}
+rows {
+  prefix {
+    value: "http://example17.org/"
+  }
+}
+rows {
+  name {
+    value: "name14"
+  }
+}
+rows {
+  prefix {
+    value: "http://xmlns.com/foaf/0.1/"
+  }
+}
+rows {
+  name {
+    value: "name"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 1
+    }
+    p_iri {
+      prefix_id: 2
+    }
+    o_literal {
+      lex: "name01"
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example01.org/"
+  }
+}
+rows {
+  name {
+    value: "name15"
+  }
+}
+rows {
+  prefix {
+    value: "http://dbpedia.org/ontology/"
+  }
+}
+rows {
+  name {
+    value: "occupation"
+  }
+}
+rows {
+  prefix {
+    value: "http://example09.org/"
+  }
+}
+rows {
+  name {
+    value: "name05"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+    }
+    p_iri {
+      prefix_id: 4
+    }
+    o_iri {
+      prefix_id: 5
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example19.org/"
+  }
+}
+rows {
+  name {
+    value: "name02"
+  }
+}
+rows {
+  prefix {
+    value: "http://example06.org/"
+  }
+}
+rows {
+  name {
+    value: "name17"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+    }
+    o_iri {
+      prefix_id: 7
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example05.org/"
+  }
+}
+rows {
+  name {
+    value: "name26"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 8
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name03"
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example25.org/"
+  }
+}
+rows {
+  name {
+    value: "knows"
+  }
+}
+rows {
+  prefix {
+    value: "http://example10.org/"
+  }
+}
+rows {
+  name {
+    value: "name04"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 9
+      name_id: 6
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 10
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example16.org/"
+  }
+}
+rows {
+  name {
+    value: "name08"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 11
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name11"
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example15.org/"
+  }
+}
+rows {
+  name {
+    value: "name07"
+  }
+}
+rows {
+  prefix {
+    value: "http://example13.org/"
+  }
+}
+rows {
+  name {
+    value: "name24"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 12
+      name_id: 12
+    }
+    p_iri {
+      prefix_id: 4
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 13
+      name_id: 13
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://schema.org/"
+  }
+}
+rows {
+  name {
+    value: "jobTitle"
+  }
+}
+rows {
+  prefix {
+    value: "http://example24.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 9
+      name_id: 5
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 15
+      name_id: 11
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example02.org/"
+  }
+}
+rows {
+  name {
+    value: "name11"
+  }
+}
+rows {
+  prefix {
+    id: 1
+    value: "http://example04.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 15
+    }
+    o_iri {
+      prefix_id: 1
+      name_id: 13
+    }
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example11.org/"
+  }
+}
+rows {
+  name {
+    value: "name12"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+      name_id: 16
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name17"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 5
+    value: "http://example21.org/"
+  }
+}
+rows {
+  name {
+    value: "name13"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 17
+    }
+    o_literal {
+      lex: "name22"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 15
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 6
+    }
+  }
+}
+rows {
+  prefix {
+    id: 7
+    value: "http://example18.org/"
+  }
+}
+rows {
+  name {
+    value: "name23"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 7
+      name_id: 18
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name12"
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example06.org/"
+  }
+}
+rows {
+  prefix {
+    id: 10
+    value: "http://example23.org/"
+  }
+}
+rows {
+  name {
+    value: "name09"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 8
+      name_id: 18
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 19
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example12.org/"
+  }
+}
+rows {
+  prefix {
+    value: "http://example20.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 11
+      name_id: 11
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 12
+      name_id: 15
+    }
+  }
+}
+rows {
+  name {
+    value: "name06"
+  }
+}
+rows {
+  name {
+    value: "name03"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 20
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 7
+      name_id: 21
+    }
+  }
+}
+rows {
+  prefix {
+    id: 4
+    value: "http://example09.org/"
+  }
+}
+rows {
+  name {
+    value: "name21"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 16
+    }
+  }
+}
+rows {
+  prefix {
+    id: 9
+    value: "http://example15.org/"
+  }
+}
+rows {
+  name {
+    value: "name01"
+  }
+}
+rows {
+  prefix {
+    id: 15
+    value: "http://dbpedia.org/ontology/"
+  }
+}
+rows {
+  name {
+    value: "name16"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 9
+      name_id: 23
+    }
+    p_iri {
+      prefix_id: 15
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 16
+      name_id: 24
+    }
+  }
+}
+rows {
+  prefix {
+    id: 1
+    value: "http://example07.org/"
+  }
+}
+rows {
+  name {
+    value: "name27"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 1
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name07"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example17.org/"
+  }
+}
+rows {
+  name {
+    value: "name19"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+      name_id: 26
+    }
+    p_iri {
+      prefix_id: 15
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 5
+      name_id: 20
+    }
+  }
+}
+rows {
+  prefix {
+    id: 6
+    value: "http://example11.org/"
+  }
+}
+rows {
+  prefix {
+    id: 8
+    value: "http://example04.org/"
+  }
+}
+rows {
+  name {
+    value: "name30"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 13
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 27
+    }
+  }
+}
+rows {
+  prefix {
+    id: 11
+    value: "http://example14.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 10
+      name_id: 11
+    }
+    o_iri {
+      prefix_id: 11
+      name_id: 11
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example06.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 12
+      name_id: 15
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 3
+      name_id: 23
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      name_id: 21
+    }
+    p_iri {
+      prefix_id: 15
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 3
+      name_id: 16
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 1
+      name_id: 21
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name27"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 10
+      name_id: 16
+    }
+    p_iri {
+      prefix_id: 15
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 1
+      name_id: 18
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example08.org/"
+  }
+}
+rows {
+  name {
+    value: "name18"
+  }
+}
+rows {
+  prefix {
+    id: 7
+    value: "http://example13.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 28
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 7
+      name_id: 16
+    }
+  }
+}
+rows {
+  prefix {
+    id: 4
+    value: "http://example19.org/"
+  }
+}
+rows {
+  name {
+    value: "name22"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+      name_id: 24
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 13
+      name_id: 29
+    }
+  }
+}
+rows {
+  prefix {
+    id: 9
+    value: "http://example09.org/"
+  }
+}
+rows {
+  name {
+    value: "name25"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+      name_id: 24
+    }
+    o_iri {
+      prefix_id: 9
+      name_id: 30
+    }
+  }
+}
+rows {
+  prefix {
+    id: 16
+    value: "http://example15.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 1
+    }
+    p_iri {
+      prefix_id: 2
+    }
+    o_literal {
+      lex: "name10"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 5
+    value: "http://example05.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 24
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 12
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example16.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 28
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name01"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 11
+    value: "http://example18.org/"
+  }
+}
+rows {
+  name {
+    value: "name20"
+  }
+}
+rows {
+  prefix {
+    value: "http://example21.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 11
+      name_id: 31
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 12
+      name_id: 25
+    }
+  }
+}
+rows {
+  prefix {
+    id: 10
+    value: "http://example02.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      name_id: 7
+    }
+    p_iri {
+      prefix_id: 14
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 6
+    }
+  }
+}
+rows {
+  prefix {
+    id: 15
+    value: "http://example24.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 15
+      name_id: 27
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 12
+      name_id: 7
+    }
+  }
+}
+rows {
+  name {
+    value: "name28"
+  }
+}
+rows {
+  prefix {
+    id: 1
+    value: "http://dbpedia.org/ontology/"
+  }
+}
+rows {
+  prefix {
+    id: 7
+    value: "http://example20.org/"
+  }
+}
+rows {
+  name {
+    value: "name10"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+      name_id: 32
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 7
+      name_id: 33
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 11
+      name_id: 25
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name16"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 13
+    value: "http://example23.org/"
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example13.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 25
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 3
+      name_id: 10
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+      name_id: 19
+    }
+    o_iri {
+      prefix_id: 15
+      name_id: 21
+    }
+  }
+}
+rows {
+  prefix {
+    id: 9
+    value: "http://example10.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 10
+      name_id: 25
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 9
+    }
+  }
+}
+rows {
+  prefix {
+    id: 16
+    value: "http://example06.org/"
+  }
+}
+rows {
+  name {
+    value: "name29"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 34
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name05"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 5
+    value: "http://example17.org/"
+  }
+}
+rows {
+  prefix {
+    id: 8
+    value: "http://example11.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 22
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 21
+    }
+  }
+}
+rows {
+  prefix {
+    id: 6
+    value: "http://example03.org/"
+  }
+}
+rows {
+  prefix {
+    id: 14
+    value: "http://example25.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 20
+    }
+    o_iri {
+      prefix_id: 14
+      name_id: 10
+    }
+  }
+}
+rows {
+  prefix {
+    id: 12
+    value: "http://schema.org/"
+  }
+}
+rows {
+  prefix {
+    id: 7
+    value: "http://example07.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 29
+    }
+    p_iri {
+      prefix_id: 12
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 7
+      name_id: 3
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 29
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 16
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 14
+      name_id: 16
+    }
+    p_iri {
+      prefix_id: 12
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 7
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 5
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name21"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 28
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 5
+      name_id: 25
+    }
+  }
+}
+rows {
+  prefix {
+    id: 11
+    value: "http://example20.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 11
+      name_id: 29
+    }
+    p_iri {
+      prefix_id: 12
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 21
+    }
+  }
+}
+rows {
+  prefix {
+    id: 13
+    value: "http://example04.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 21
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 19
+    }
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example08.org/"
+  }
+}
+rows {
+  prefix {
+    value: "http://example21.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+      name_id: 10
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 4
+      name_id: 19
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 15
+      name_id: 12
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name22"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+    }
+    o_literal {
+      lex: "name23"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 3
+    }
+    p_iri {
+      prefix_id: 1
+    }
+    o_iri {
+      prefix_id: 15
+      name_id: 8
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 6
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 29
+    }
+  }
+}
+rows {
+  prefix {
+    id: 9
+    value: "http://example09.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 1
+    }
+    o_iri {
+      prefix_id: 9
+      name_id: 31
+    }
+  }
+}
+rows {
+  prefix {
+    id: 6
+    value: "http://example05.org/"
+  }
+}
+rows {
+  prefix {
+    value: "http://example22.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 33
+    }
+    o_iri {
+      prefix_id: 7
+      name_id: 29
+    }
+  }
+}
+rows {
+  prefix {
+    id: 14
+    value: "http://example18.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 14
+      name_id: 18
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 27
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 9
+      name_id: 30
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name06"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 5
+    value: "http://example12.org/"
+  }
+}
+rows {
+  prefix {
+    id: 11
+    value: "http://example16.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 25
+    }
+    p_iri {
+      prefix_id: 12
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 11
+      name_id: 12
+    }
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example17.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 34
+    }
+    o_iri {
+      prefix_id: 3
+      name_id: 20
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example10.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 15
+      name_id: 22
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 4
+      name_id: 33
+    }
+  }
+}
+rows {
+  prefix {
+    id: 13
+    value: "http://example25.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 5
+    }
+    o_iri {
+      prefix_id: 11
+      name_id: 31
+    }
+  }
+}
+rows {
+  prefix {
+    id: 10
+    value: "http://example13.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      name_id: 6
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 10
+      name_id: 27
+    }
+  }
+}
+rows {
+  prefix {
+    id: 16
+    value: "http://example21.org/"
+  }
+}
+rows {
+  prefix {
+    id: 6
+    value: "http://example15.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 16
+      name_id: 10
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 6
+      name_id: 7
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example23.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 7
+      name_id: 27
+    }
+    o_iri {
+      name_id: 10
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 14
+      name_id: 21
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name15"
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example06.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 5
+      name_id: 28
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 9
+    }
+    o_iri {
+      prefix_id: 8
+      name_id: 7
+    }
+  }
+}
+rows {
+  prefix {
+    value: "http://example07.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      name_id: 19
+    }
+    o_iri {
+      prefix_id: 9
+      name_id: 22
+    }
+  }
+}
+rows {
+  prefix {
+    id: 12
+    value: "http://example09.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 13
+    }
+    o_iri {
+      prefix_id: 12
+      name_id: 31
+    }
+  }
+}
+rows {
+  prefix {
+    id: 3
+    value: "http://example01.org/"
+  }
+}
+rows {
+  prefix {
+    id: 15
+    value: "http://schema.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 3
+      name_id: 16
+    }
+    p_iri {
+      prefix_id: 15
+      name_id: 14
+    }
+    o_iri {
+      prefix_id: 11
+      name_id: 13
+    }
+  }
+}
+rows {
+  prefix {
+    id: 4
+    value: "http://example14.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 4
+      name_id: 30
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name03"
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 8
+      name_id: 34
+    }
+    o_literal {
+      lex: "name09"
+    }
+  }
+}
+rows {
+  prefix {
+    id: 13
+    value: "http://example10.org/"
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 13
+      name_id: 10
+    }
+    p_iri {
+      prefix_id: 1
+      name_id: 4
+    }
+    o_iri {
+      prefix_id: 13
+      name_id: 1
+    }
+  }
+}
+rows {
+  triple {
+    s_iri {
+      prefix_id: 6
+      name_id: 11
+    }
+    p_iri {
+      prefix_id: 2
+      name_id: 2
+    }
+    o_literal {
+      lex: "name02"
+    }
+  }
+}
