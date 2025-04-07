@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -CETeuxo pipefail 
+
+DIR=${1:-"tests/samples/"}
+
+: Check rdfcompare is in PATH
+: Check jelly is in PATH
+
+: Check samples
+
+for file in "$DIR"*; do
+    command rm -f py.{txt,nt,jelly}
+    python -m pyjelly "$file" py.jelly
+    jelly rdf from-jelly --debug --out-format=jelly-text py.jelly > py.txt
+    jelly rdf from-jelly --debug "py.jelly" > "py.nt"
+    : Testing "$file"
+    rdfcompare "$file" "py.jelly"
+done
+
+: Done

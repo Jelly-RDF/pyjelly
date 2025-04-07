@@ -14,20 +14,21 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "protobuf>=5.29.3",
+    "pyoxigraph>=0.4.9",
     "typer>=0.15.2",
-    "typing-extensions>=4.12.2", # Revisit after 3.13 is older
+    "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
 
 [project.optional-dependencies]
 rdflib = ["rdflib>=7.1.4"]
 
 [project.entry-points."rdf.plugins.parser"]
-jelly = "pyjelly.integrations.rdflib_plugin:RDFLibJellyParser"
-"application/x-jelly-rdf" = "pyjelly.integrations.rdflib_plugin:RDFLibJellyParser"
+jelly = "pyjelly.integrations.rdflib:RDFLibJellyParser"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib:RDFLibJellyParser"
 
 [project.entry-points."rdf.plugins.serializer"]
-jelly = "pyjelly.integrations.rdflib_plugin:RDFLibJellySerializer"
-"application/x-jelly-rdf" = "pyjelly.integrations.rdflib_plugin:RDFLibJellySerializer"
+jelly = "pyjelly.integrations.rdflib:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib:RDFLibJellySerializer"
 
 [dependency-groups]
 ci = ["memray>=1.16.0", "pip-audit>=2.8.0"]
@@ -52,7 +53,6 @@ test = [
     "inline-snapshot>=0.20.8",
     "pytest>=8.3.4",
     "pytest-accept>=0.1.12",
-    "pytest-asyncio>=0.25.3",
     "pytest-mock>=3.14.0",
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
@@ -81,7 +81,6 @@ addopts = [
     "--ignore=mosquitto",
     "--doctest-modules",
 ]
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -CETeuxo pipefail 
+
+DEST_NAME=${1:-"$HOME/.local/bin/jelly"}
+
+: Downloading...
+command wget https://github.com/Jelly-RDF/cli/releases/download/dev/jelly-cli-linux-x86_64 -O "$DEST_NAME"
+command chmod +x "$DEST_NAME"
+
+: Done

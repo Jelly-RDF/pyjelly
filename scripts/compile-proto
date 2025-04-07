@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2120
 set -CETeuxo pipefail 
 
 PROTO_PATH=${1:-"pyjelly/proto"}
