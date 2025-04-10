@@ -1,6 +1,6 @@
 # pyjelly
 
-**pyjelly** is an official implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs.
+**pyjelly** is a Python implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs.
 
 ## Contributing and support
 
