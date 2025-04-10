@@ -1,0 +1,19 @@
+version: 2
+updates:
+- package-ecosystem: gitsubmodule
+  directory: /
+  schedule:
+    interval: weekly
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: monthly
+- package-ecosystem: pip
+  directory: /
+  schedule:
+    interval: monthly
+  groups:
+    production:
+      dependency-type: production
+    development:
+      dependency-type: development
