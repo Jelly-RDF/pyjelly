@@ -1,169 +1,165 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import NamedTuple, final
-
 from typing_extensions import override
 
 
+@final
+class Lookup(OrderedDict[str, int]):  # not a nonimal subtype!
+    """
+    Fixed-size 1-based string-to-ID mapping with LRU eviction.
+
+    - Assigns incrementing IDs starting from 1.
+    - After reaching `size`, evicts the least-recently-used entry and reuses its ID.
+    - ID 0 is reserved for delta encoding in Jelly streams.
+
+    To check if a key exists, use `.move_to_end(key)` and catch `KeyError`.
+    If `KeyError` is raised, the key can be inserted with `.insert(key)`.
+
+    If `size == 0`, the lookup is disabled and `.insert()` always returns 0.
+    """
+
+    def __init__(self, size: int) -> None:
+        """
+        Parameters
+        ----------
+        size
+            Maximum number of entries. Zero disables lookup.
+        """
+        self.size = size
+        self.insert = self._insert_sequential if size else self._insert_noop
+
+    def _insert_noop(self, key: str) -> int:
+        """
+        No-op.
+
+        Used when the lookup is disabled. Always returns 0.
+        """
+        return 0
+
+    def _insert_sequential(self, key: str) -> int:
+        """
+        Assigns the next available sequential ID to `key`.
+
+        Cannot be called when the key is already present.
+        Switches to eviction mode when capacity is reached.
+        """
+        ident = len(self) + 1
+        self[key] = ident
+        if ident == self.size:
+            self.insert = self._insert_evicting
+        return ident
+
+    def _insert_evicting(self, key: str) -> int:
+        """
+        Evict the least-recently-used key and reuse its ID for the new key.
+
+        Cannot be called when the key is already present.
+        """
+        _, ident = self.popitem(last=False)
+        self[key] = ident
+        return ident
+
+
 @dataclass
-class StringLookup:
+class LookupEncoder:
     """
-    LRU-based string-to-ID lookup for RDF prefixes, names, and datatypes.
+    Shared encoder logic for Jelly lookup tables.
 
-    Provides insertion-order-based eviction once size is exceeded.
-    Tracks last assigned and last accessed IDs to support delta encoding.
-
-    Subclasses implement term vs. entry lookup semantics.
+    - Tracks last assigned and accessed indices.
+    - Emits 0 for sequential IDs (`previous + 1`) to enable zero-byte delta encoding.
+    - Used by prefix, name, and datatype encoders.
     """
 
-    __slots__ = ("idents", "last_assigned_id", "last_accessed_id", "size")
+    __slots__ = ("lookup", "last_assigned_index", "last_accessed_index")
 
-    last_assigned_id: int
-    last_accessed_id: int
-    size: int
-    idents: OrderedDict[str, int]
+    last_assigned_index: int
+    last_accessed_index: int
 
-    def __init__(self, *, size: int) -> None:
+    def __init__(self, *, lookup: Lookup) -> None:
         """
         Parameters
         ----------
         size
             Maximum lookup size.
         """
-        self.size = size
-        self.idents = OrderedDict()
-        self.last_assigned_id = 0
-        self.last_accessed_id = 0
+        self.lookup = lookup
+        self.last_assigned_index = 0
+        self.last_accessed_index = 0
 
-    def lookup(self, value: str) -> tuple[int, bool]:
+    def index_for_entry(self, key: str) -> int | None:
         """
-        Look up or insert a value in the LRU table.
-
-        Parameters
-        ----------
-        value
-            String to look up or insert.
+        Inserts a new key or returns None if already present.
 
         Returns
         -------
-        tuple
-            (Assigned ID, whether the value is new in the table).
+        int | None
+            - 0 if the new index is sequential (`last_assigned_index + 1`)
+            - actual assigned/reused index otherwise
+            - None if the key already exists
+
+        If the return value is None, the entry is already in the lookup and does not need to be emitted.
+        Any integer value (including 0) means the entry is new and should be emitted.
         """
-        ident = self.idents.get(value)
-        if ident is not None:
-            self.idents.move_to_end(value)
-            return ident, False
-        if len(self.idents) == self.size:
-            _, ident = self.idents.popitem(last=False)
-        else:
-            ident = len(self.idents) + 1
-        self.idents[value] = ident
-        self.last_assigned_id = ident
-        return ident, True
+        try:
+            self.lookup.move_to_end(key)
+            return None
+        except KeyError:
+            previous_index = self.last_assigned_index
+            index = self.lookup.insert(key)
+            self.last_assigned_index = index
+            # > If the index is set to 0 in any other lookup entry, it MUST be interpreted
+            #   as previous_index + 1, that is, the index of the previous entry incremented by one.
+            # > If the index is set to 0 in the first entry of the lookup in the stream,
+            #   it MUST be interpreted as the value 1.
+            # Because the first value (stream-wise) of previous index is 0, two requirements are met.
+            if index == previous_index + 1:
+                return 0
+        return index
 
-    @abstractmethod
-    def lookup_for_term(self, value: str) -> int | None: ...
+    def index_for_term(self, value: str) -> int:
+        """
+        Access current index for a previously inserted value.
 
-    @abstractmethod
-    def lookup_for_entry(self, value: str) -> int | None: ...
+        Updates `last_accessed_index`.
+        """
+        self.lookup.move_to_end(value)
+        current_index = self.lookup[value]
+        self.last_accessed_index = current_index
+        return current_index
 
 
 @final
-class PrefixLookup(StringLookup):
+class PrefixLookupEncoder(LookupEncoder):
     """
-    LRU table for RDF prefix strings with Jelly-specific ID assignment.
+    Optional Jelly encoder for RDF prefixes.
 
-    Entry IDs are only emitted when a new prefix is added and the ID is non-contiguous.
-    Reuses 0 as a sentinel to indicate "no new entry needed".
+    Emits ID only when changed. Reuses 0 as a delta marker.
     """
 
     @override
-    def lookup_for_entry(self, value: str) -> int | None:
-        """
-        Check if a prefix needs to be sent as an entry.
-
-        Parameters
-        ----------
-        value
-            Prefix string.
-
-        Returns
-        -------
-        int or None
-            Entry ID or None if not required.
-        """
-        if not value:
-            return 0
-        previous_id = self.last_assigned_id
-        ident, is_new = super().lookup(value)
-        if not is_new:
+    def index_for_term(self, value: str) -> int:
+        previous_index = self.last_accessed_index
+        current_index = super().index_for_term(value)
+        if previous_index == 0:
+            return current_index
+        if current_index == previous_index:
             return None
-        if ident == previous_id + 1:
-            return 0
-        return ident
-
-    @override
-    def lookup_for_term(self, value: str) -> int | None:
-        """
-        Get ID to use in an RDF term for this prefix.
-
-        Parameters
-        ----------
-        value
-            Prefix string.
-
-        Returns
-        -------
-        int or None
-            Assigned ID if it changed, None if reused.
-        """
-        previous_id = self.last_accessed_id
-        ident, is_new = super().lookup(value)
-        self.last_accessed_id = ident
-        assert not is_new
-        if previous_id == 0:
-            return ident
-        if ident == previous_id:
-            return None
-        return ident
+        return current_index
 
 
 @final
-class NameLookup(StringLookup):
+class NameLookupEncoder(LookupEncoder):
     """
-    LRU table for RDF name components with Jelly-specific ID emission logic.
+    Required Jelly encoder for RDF local names.
 
-    Behaves similarly to `PrefixLookup`, optimized for local names.
+    Emits 0 when the index is contiguous (`prev + 1`) for Jelly's zero-byte optimization.
     """
 
     @override
-    def lookup_for_entry(self, value: str) -> int | None:
-        """
-        Check if a name component should be emitted as an entry row.
-
-        Parameters
-        ----------
-        value
-            Local name string.
-
-        Returns
-        -------
-        int or None
-            Entry ID or None if not emitted.
-        """
-        previous_id = self.last_assigned_id
-        ident, is_new = super().lookup(value)
-        if not is_new:
-            return None
-        if ident == previous_id + 1:
-            return 0
-        return ident
-
-    @override
-    def lookup_for_term(self, value: str) -> int | None:
+    def index_for_term(self, value: str) -> int:
         """
         Get ID to use in RDF term for this name.
 
@@ -177,87 +173,34 @@ class NameLookup(StringLookup):
         int or None
             Assigned ID or None if unchanged.
         """
-        previous_id = self.last_accessed_id
-        ident, is_new = super().lookup(value)
-        assert not is_new
-        self.last_accessed_id = ident
-        if ident == previous_id + 1:
+        previous_index = self.last_accessed_index
+        current_index = super().index_for_term(value)
+        if current_index == previous_index + 1:
             return 0
-        return ident
+        return current_index
 
 
 @final
-class DatatypeLookup(StringLookup):
+class DatatypeLookupEncoder(LookupEncoder):
     """
-    LRU table for RDF datatype IRIs with hardcoded skip behavior.
+    Required Jelly encoder for RDF datatypes.
 
-    Skips the default XSD string datatype for encoding efficiency.
+    Skips `xsd:string` (default). All other IRIs use standard lookup.
     """
 
-    SKIP = "http://www.w3.org/2001/XMLSchema#string"
-
-    def lookup(self, value: str) -> tuple[int, bool]:
-        """
-        Override to skip default XSD string datatype.
-
-        Parameters
-        ----------
-        value
-            Datatype IRI.
-
-        Returns
-        -------
-        tuple
-            ID and new-entry flag.
-        """
-        if value == self.SKIP:
-            return 0, False
-        return super().lookup(value)
+    STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
 
     @override
-    def lookup_for_entry(self, value: str) -> int | None:
-        """
-        Check if a datatype should be emitted as an entry.
-
-        Parameters
-        ----------
-        value
-            Datatype IRI.
-
-        Returns
-        -------
-        int or None
-            Entry ID or None if not emitted.
-        """
-        if value == self.SKIP:
+    def index_for_entry(self, value: str) -> int | None:
+        if value == self.STRING_DATATYPE_IRI:
             return None
-        previous_ident = self.last_assigned_id
-        ident, is_new = super().lookup(value)
-        if ident == previous_ident + 1:
-            return 0
-        return ident if is_new else None
+        return super().index_for_entry(value)
 
     @override
-    def lookup_for_term(self, value: str) -> int | None:
-        """
-        Get datatype ID to use in RDF literal.
-
-        Parameters
-        ----------
-        value
-            Datatype IRI.
-
-        Returns
-        -------
-        int or None
-            Assigned ID or None if skipped or unchanged.
-        """
-        if value == self.SKIP:
+    def index_for_term(self, value: str) -> int:
+        if value == self.STRING_DATATYPE_IRI:
             return None
-        ident, is_new = super().lookup(value)
-        self.last_accessed_id = ident
-        assert not is_new
-        return ident
+        return super().index_for_term(value)
 
 
 class Options(NamedTuple):

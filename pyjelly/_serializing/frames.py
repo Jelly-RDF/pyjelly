@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import cached_property
 from typing import ClassVar
-
 from typing_extensions import override
 
 from pyjelly._pb2 import rdf_pb2 as pb

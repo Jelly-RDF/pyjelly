@@ -122,9 +122,11 @@ class StatementEncoder(metaclass=ABCMeta):
         if options is None:
             options = lookups.Options.big()
         self.options = options
-        self._name_lookup = lookups.NameLookup(size=options.name_lookup_size)
-        self._prefix_lookup = lookups.PrefixLookup(size=options.prefix_lookup_size)
-        self._datatype_lookup = lookups.DatatypeLookup(
+        self._name_lookup = lookups.NameLookupEncoder(size=options.name_lookup_size)
+        self._prefix_lookup = lookups.PrefixLookupEncoder(
+            size=options.prefix_lookup_size
+        )
+        self._datatype_lookup = lookups.DatatypeLookupEncoder(
             size=options.datatype_lookup_size
         )
         self._repeated_terms: dict[str, object] = {}
@@ -205,8 +207,8 @@ class StatementEncoder(metaclass=ABCMeta):
             IRI string.
         """
         prefix, name = self.split_iri(value)
-        prefix_id = self._prefix_lookup.lookup_for_entry(prefix)
-        name_id = self._name_lookup.lookup_for_entry(name)
+        prefix_id = self._prefix_lookup.index_for_entry(prefix)
+        name_id = self._name_lookup.index_for_entry(name)
         term_rows = []
 
         if prefix_id is not None:
@@ -217,8 +219,8 @@ class StatementEncoder(metaclass=ABCMeta):
             entry = pb.RdfNameEntry(id=name_id, value=name)
             term_rows.append(pb.RdfStreamRow(name=entry))
 
-        prefix_id = self._prefix_lookup.lookup_for_term(prefix)
-        name_id = self._name_lookup.lookup_for_term(name)
+        prefix_id = self._prefix_lookup.index_for_term(prefix)
+        name_id = self._name_lookup.index_for_term(name)
         iri = pb.RdfIri(prefix_id=prefix_id, name_id=name_id)
         self.statement.set_iri(iri, rows=term_rows)
 
@@ -256,13 +258,13 @@ class StatementEncoder(metaclass=ABCMeta):
         term_rows = []
 
         if datatype:
-            datatype_entry_id = self._datatype_lookup.lookup_for_entry(datatype)
+            datatype_entry_id = self._datatype_lookup.index_for_entry(datatype)
 
             if datatype_entry_id is not None:
                 entry = pb.RdfDatatypeEntry(id=datatype_entry_id, value=datatype)
                 term_rows = [pb.RdfStreamRow(datatype=entry)]
 
-            datatype_id = self._datatype_lookup.lookup_for_term(datatype)
+            datatype_id = self._datatype_lookup.index_for_term(datatype)
 
         literal = pb.RdfLiteral(lex=lex, langtag=language, datatype=datatype_id)
         self.statement.set_literal(literal, rows=term_rows)
