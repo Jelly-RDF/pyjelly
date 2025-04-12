@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from itertools import chain
 from typing import IO
+from typing_extensions import override
 
+import google.protobuf.proto as protolib  # type: ignore[import-not-found]
 import rdflib
 from rdflib.graph import Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
-from typing_extensions import override
 
 from pyjelly._serializing import encoders, frames, lookups
 
@@ -102,4 +103,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
                     msg = f"unexpected term type {term!r}"
                     raise TypeError(msg)
 
-            encoder.cycle(frame_logic)
+            if frame := encoder.cycle(frame_logic):
+                protolib.serialize_length_prefixed(frame, output=stream)
+
+        protolib.serialize_length_prefixed(frame_logic.pack(), output=stream)

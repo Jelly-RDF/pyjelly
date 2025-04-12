@@ -42,7 +42,7 @@ class FrameLogic:
         self._rows.extend(rows)
         if not self.ready:
             return None
-        return self._pack()
+        return self.pack()
 
     @property
     def ready(self) -> bool:
@@ -57,10 +57,10 @@ class FrameLogic:
         raise NotImplementedError
 
     @cached_property
-    def _protobuf_type(self) -> pb.LogicalStreamType:
+    def protobuf_type(self) -> pb.LogicalStreamType:
         return pb.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    def _pack(self) -> pb.RdfStreamFrame:
+    def pack(self) -> pb.RdfStreamFrame:
         """
         Construct and return a `RdfStreamFrame` from the current buffer.
 
@@ -85,10 +85,10 @@ class FlatFrameLogic(FrameLogic):
         Protobuf frame with accumulated rows.
     """
 
-    default_frame_size: ClassVar[int] = 1000
-
     frame_size: int
     quads: bool
+
+    default_frame_size: ClassVar[int] = 1000
 
     def __init__(self, frame_size: int | None = None, *, quads: bool = False) -> None:
         """
@@ -100,11 +100,12 @@ class FlatFrameLogic(FrameLogic):
             If True, emit frames with `LOGICAL_STREAM_TYPE_FLAT_QUADS`.
             Otherwise, emit as flat triples.
         """
+        super().__init__()
         self.frame_size = frame_size or self.default_frame_size
         self.quads = quads
 
     @cached_property
-    def _protobuf_type(self) -> pb.LogicalStreamType:
+    def protobuf_type(self) -> pb.LogicalStreamType:
         return (
             pb.LOGICAL_STREAM_TYPE_FLAT_QUADS
             if self.quads

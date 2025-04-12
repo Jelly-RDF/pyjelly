@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from collections import deque
 from collections.abc import Sequence
 from itertools import cycle
 from typing import Any, ClassVar, final
@@ -23,12 +24,12 @@ class Statement:
 
     current_term: str
 
-    def __init__(self, fields: Sequence[str]) -> None:
+    def __init__(self, terms: Sequence[str]) -> None:
         self._preceding_rows = []
         self._term_rows = ()
 
-        self._term_iterator = cycle(fields)
-        self.current_term = next(self._term_iterator)
+        self.all_terms = cycle(terms)
+        self.current_term = next(self.all_terms)
 
         self.values: dict[str, Any] = {}
 
@@ -41,7 +42,7 @@ class Statement:
         """
         self._preceding_rows.extend(self._term_rows)
         self._term_rows = ()
-        self.current_term = next(self._term_iterator)
+        self.current_term = next(self.all_terms)
 
     def _collect(self) -> tuple[tuple[pb.RdfStreamRow, ...], dict[str, Any]]:
         """
@@ -111,10 +112,8 @@ class StatementEncoder(metaclass=ABCMeta):
     and encoding of RDF IRIs, literals, and blank nodes.
     """
 
-    _protobuf_type: ClassVar[pb.PhysicalStreamType] = (
-        pb.PHYSICAL_STREAM_TYPE_UNSPECIFIED
-    )
-    _protobuf_terms: ClassVar[Sequence[str]]
+    protobuf_type: ClassVar[pb.PhysicalStreamType] = pb.PHYSICAL_STREAM_TYPE_UNSPECIFIED
+    protobuf_terms: ClassVar[Sequence[str]]
 
     options: lookups.Options
 
@@ -122,15 +121,17 @@ class StatementEncoder(metaclass=ABCMeta):
         if options is None:
             options = lookups.Options.big()
         self.options = options
-        self._name_lookup = lookups.NameLookupEncoder(size=options.name_lookup_size)
-        self._prefix_lookup = lookups.PrefixLookupEncoder(
-            size=options.prefix_lookup_size
+        self._name_encoder = lookups.NameLookupEncoder(
+            lookup=lookups.Lookup(size=options.name_lookup_size)
         )
-        self._datatype_lookup = lookups.DatatypeLookupEncoder(
-            size=options.datatype_lookup_size
+        self._prefix_encoder = lookups.PrefixLookupEncoder(
+            lookup=lookups.Lookup(size=options.prefix_lookup_size)
         )
-        self._repeated_terms: dict[str, object] = {}
-        self.statement = Statement(self._protobuf_terms)
+        self._datatype_encoder = lookups.DatatypeLookupEncoder(
+            lookup=lookups.Lookup(size=options.datatype_lookup_size)
+        )
+        self._repeated_terms: dict[str, object] = dict.fromkeys(self.protobuf_terms)
+        self.statement = Statement(self.protobuf_terms)
 
     def is_repeated(self, term: object) -> bool:
         """
@@ -146,8 +147,8 @@ class StatementEncoder(metaclass=ABCMeta):
         bool
             True if term is repeated in current slot, False otherwise.
         """
-        repeated_term = self._repeated_terms.get(self.statement.current_term)
-        if repeated_term == term:
+        repeated_term = self._repeated_terms[self.statement.current_term]
+        if repeated_term is term:
             return True
         self._repeated_terms[self.statement.current_term] = term
         return False
@@ -163,13 +164,13 @@ class StatementEncoder(metaclass=ABCMeta):
         """
         options = pb.RdfStreamOptions(
             stream_name=self.options.name,
-            physical_type=self._protobuf_type,
+            physical_type=self.protobuf_type,
             generalized_statements=False,
             rdf_star=False,
             max_name_table_size=self.options.name_lookup_size,
             max_prefix_table_size=self.options.prefix_lookup_size,
             max_datatype_table_size=self.options.datatype_lookup_size,
-            logical_type=frame_logic._protobuf_type,
+            logical_type=frame_logic.protobuf_type,
             version=1,
         )
         self.statement.add_rows(pb.RdfStreamRow(options=options))
@@ -207,20 +208,20 @@ class StatementEncoder(metaclass=ABCMeta):
             IRI string.
         """
         prefix, name = self.split_iri(value)
-        prefix_id = self._prefix_lookup.index_for_entry(prefix)
-        name_id = self._name_lookup.index_for_entry(name)
+        prefix_id = self._prefix_encoder.index_for_entry(prefix)
+        name_id = self._name_encoder.index_for_entry(name)
         term_rows = []
 
         if prefix_id is not None:
-            entry = pb.RdfPrefixEntry(id=prefix_id, value=prefix)
-            term_rows.append(pb.RdfStreamRow(prefix=entry))
+            prefix_entry = pb.RdfPrefixEntry(id=prefix_id, value=prefix)
+            term_rows.append(pb.RdfStreamRow(prefix=prefix_entry))
 
         if name_id is not None:
-            entry = pb.RdfNameEntry(id=name_id, value=name)
-            term_rows.append(pb.RdfStreamRow(name=entry))
+            name_entry = pb.RdfNameEntry(id=name_id, value=name)
+            term_rows.append(pb.RdfStreamRow(name=name_entry))
 
-        prefix_id = self._prefix_lookup.index_for_term(prefix)
-        name_id = self._name_lookup.index_for_term(name)
+        prefix_id = self._prefix_encoder.index_for_term(prefix)
+        name_id = self._name_encoder.index_for_term(name)
         iri = pb.RdfIri(prefix_id=prefix_id, name_id=name_id)
         self.statement.set_iri(iri, rows=term_rows)
 
@@ -258,13 +259,13 @@ class StatementEncoder(metaclass=ABCMeta):
         term_rows = []
 
         if datatype:
-            datatype_entry_id = self._datatype_lookup.index_for_entry(datatype)
+            datatype_entry_id = self._datatype_encoder.index_for_entry(datatype)
 
             if datatype_entry_id is not None:
                 entry = pb.RdfDatatypeEntry(id=datatype_entry_id, value=datatype)
                 term_rows = [pb.RdfStreamRow(datatype=entry)]
 
-            datatype_id = self._datatype_lookup.index_for_term(datatype)
+            datatype_id = self._datatype_encoder.index_for_term(datatype)
 
         literal = pb.RdfLiteral(lex=lex, langtag=language, datatype=datatype_id)
         self.statement.set_literal(literal, rows=term_rows)
@@ -285,7 +286,7 @@ class StatementEncoder(metaclass=ABCMeta):
         """
         frame = None
 
-        if self.statement.current_term == self._protobuf_terms[-1]:
+        if self.statement.current_term == self.protobuf_terms[-1]:
             preceding_rows, terms = self.statement._collect()
             frame = frame_logic.add(*preceding_rows, self.row_factory(**terms))
 
@@ -306,8 +307,8 @@ class TripleEncoder(StatementEncoder):
     Produces `RdfStreamRow(triple=...)` frames from RDF terms.
     """
 
-    _protobuf_type: ClassVar[pb.PhysicalStreamType] = pb.PHYSICAL_STREAM_TYPE_TRIPLES
-    _protobuf_terms = "spo"
+    protobuf_type: ClassVar[pb.PhysicalStreamType] = pb.PHYSICAL_STREAM_TYPE_TRIPLES
+    protobuf_terms = ("s", "p", "o")
 
     @staticmethod
     def row_factory(**terms: Any) -> pb.RdfStreamRow:

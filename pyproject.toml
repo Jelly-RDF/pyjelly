@@ -21,8 +21,8 @@ dependencies = [
 rdflib = ["rdflib>=7.1.4"]
 
 [project.entry-points."rdf.plugins.serializer"]
-jelly = "pyjelly.rdflib.serializer:RDFLibJellySerializer"
-"application/x-jelly-rdf" = "pyjelly.rdflib.serializer:RDFLibJellySerializer"
+jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
 dev = ["grpcio-tools>=1.71.0", "mypy>=1.13.0", "ruff>=0.8.6"]
@@ -57,6 +57,9 @@ addopts = ["--import-mode=importlib", "--doctest-modules"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
+
+[tool.setuptools]
+packages = ["pyjelly"]
 
 [tool.ruff.lint]
 select = ["ALL"]

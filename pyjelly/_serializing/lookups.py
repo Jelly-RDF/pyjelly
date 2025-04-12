@@ -7,7 +7,7 @@ from typing_extensions import override
 
 
 @final
-class Lookup(OrderedDict[str, int]):  # not a nonimal subtype!
+class Lookup:
     """
     Fixed-size 1-based string-to-ID mapping with LRU eviction.
 
@@ -28,6 +28,7 @@ class Lookup(OrderedDict[str, int]):  # not a nonimal subtype!
         size
             Maximum number of entries. Zero disables lookup.
         """
+        self.data = OrderedDict[str, int]()
         self.size = size
         self.insert = self._insert_sequential if size else self._insert_noop
 
@@ -46,11 +47,11 @@ class Lookup(OrderedDict[str, int]):  # not a nonimal subtype!
         Cannot be called when the key is already present.
         Switches to eviction mode when capacity is reached.
         """
-        ident = len(self) + 1
-        self[key] = ident
-        if ident == self.size:
+        index = len(self.data) + 1
+        self.data[key] = index
+        if index == self.size:
             self.insert = self._insert_evicting
-        return ident
+        return index
 
     def _insert_evicting(self, key: str) -> int:
         """
@@ -58,9 +59,9 @@ class Lookup(OrderedDict[str, int]):  # not a nonimal subtype!
 
         Cannot be called when the key is already present.
         """
-        _, ident = self.popitem(last=False)
-        self[key] = ident
-        return ident
+        _, index = self.data.popitem(last=False)
+        self.data[key] = index
+        return index
 
 
 @dataclass
@@ -72,8 +73,6 @@ class LookupEncoder:
     - Emits 0 for sequential IDs (`previous + 1`) to enable zero-byte delta encoding.
     - Used by prefix, name, and datatype encoders.
     """
-
-    __slots__ = ("lookup", "last_assigned_index", "last_accessed_index")
 
     last_assigned_index: int
     last_accessed_index: int
@@ -104,7 +103,7 @@ class LookupEncoder:
         Any integer value (including 0) means the entry is new and should be emitted.
         """
         try:
-            self.lookup.move_to_end(key)
+            self.lookup.data.move_to_end(key)
             return None
         except KeyError:
             previous_index = self.last_assigned_index
@@ -119,14 +118,14 @@ class LookupEncoder:
                 return 0
         return index
 
-    def index_for_term(self, value: str) -> int:
+    def index_for_term(self, value: str) -> int | None:
         """
         Access current index for a previously inserted value.
 
         Updates `last_accessed_index`.
         """
-        self.lookup.move_to_end(value)
-        current_index = self.lookup[value]
+        self.lookup.data.move_to_end(value)
+        current_index = self.lookup.data[value]
         self.last_accessed_index = current_index
         return current_index
 
@@ -140,13 +139,13 @@ class PrefixLookupEncoder(LookupEncoder):
     """
 
     @override
-    def index_for_term(self, value: str) -> int:
+    def index_for_term(self, value: str) -> int | None:
         previous_index = self.last_accessed_index
         current_index = super().index_for_term(value)
         if previous_index == 0:
             return current_index
         if current_index == previous_index:
-            return None
+            return 0
         return current_index
 
 
@@ -159,7 +158,7 @@ class NameLookupEncoder(LookupEncoder):
     """
 
     @override
-    def index_for_term(self, value: str) -> int:
+    def index_for_term(self, value: str) -> int | None:
         """
         Get ID to use in RDF term for this name.
 
@@ -176,7 +175,7 @@ class NameLookupEncoder(LookupEncoder):
         previous_index = self.last_accessed_index
         current_index = super().index_for_term(value)
         if current_index == previous_index + 1:
-            return 0
+            return None
         return current_index
 
 
@@ -197,7 +196,7 @@ class DatatypeLookupEncoder(LookupEncoder):
         return super().index_for_entry(value)
 
     @override
-    def index_for_term(self, value: str) -> int:
+    def index_for_term(self, value: str) -> int | None:
         if value == self.STRING_DATATYPE_IRI:
             return None
         return super().index_for_term(value)
