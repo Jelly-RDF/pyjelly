@@ -19,8 +19,6 @@ class Lookup:
     To check if a key exists, use `.move(key)` and catch `KeyError`.
     If `KeyError` is raised, the key can be inserted with `.insert(key)`.
 
-    If `size == 0`, the lookup is disabled and `.insert()` always returns 0.
-
     Parameters
     ----------
     size
