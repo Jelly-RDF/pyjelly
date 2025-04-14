@@ -9,7 +9,7 @@ from pyjelly._serializing.encoders import TripleEncoder
 from pyjelly._serializing.streams import FlatStream, Stream
 
 __all__ = (
-    "TripleEncoder",
-    "Stream",
     "FlatStream",
+    "Stream",
+    "TripleEncoder",
 )

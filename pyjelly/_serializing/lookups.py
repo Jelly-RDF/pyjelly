@@ -12,22 +12,23 @@ class Lookup:
     Fixed-size 1-based string-to-index mapping with LRU eviction.
 
     - Assigns incrementing indices starting from 1.
-    - After reaching the maximum size, reuses the existing indices from evicting the least-recently-used entries.
+    - After reaching the maximum size, reuses the existing indices from evicting
+      the least-recently-used entries.
     - Index 0 is reserved for delta encoding in Jelly streams.
 
     To check if a key exists, use `.move(key)` and catch `KeyError`.
     If `KeyError` is raised, the key can be inserted with `.insert(key)`.
 
     If `size == 0`, the lookup is disabled and `.insert()` always returns 0.
+
+    Parameters
+    ----------
+    size
+        Maximum number of entries. Zero disables lookup.
+
     """
 
     def __init__(self, max_size: int) -> None:
-        """
-        Parameters
-        ----------
-        size
-            Maximum number of entries. Zero disables lookup.
-        """
         self.data = OrderedDict[str, int]()
         self._max_size = max_size
         self._evicting = False
@@ -64,6 +65,7 @@ class LookupEncoder:
     ----------
     lookup_size
         Maximum lookup size.
+
     """
 
     last_assigned_index: int
@@ -76,7 +78,7 @@ class LookupEncoder:
 
     def index_for_entry(self, key: str) -> int | None:
         """
-        Inserts a new key or returns None if already present.
+        Get or assign the index to use in an entry.
 
         Returns
         -------
@@ -85,24 +87,30 @@ class LookupEncoder:
             - actual assigned/reused index otherwise
             - None if the key already exists
 
-        If the return value is None, the entry is already in the lookup and does not need to be emitted.
-        Any integer value (including 0) means the entry is new and should be emitted.
+        If the return value is None, the entry is already in the lookup and does not
+        need to be emitted. Any integer value (including 0) means the entry is new
+        and should be emitted.
+
         """
         try:
             self.lookup.move(key)
-            return None
+            return None  # noqa: TRY300
         except KeyError:
             previous_index = self.last_assigned_index
             index = self.lookup.insert(key)
             self.last_assigned_index = index
-            # > If the index is set to 0 in any other lookup entry, it MUST be interpreted
-            #   as previous_index + 1, that is, the index of the previous entry incremented by one.
-            # > If the index is set to 0 in the first entry of the lookup in the stream,
+            # > If the index is set to 0 in any other lookup
+            #   entry, it MUST be interpreted
+            #   as previous_index + 1, that is, the index
+            #   of the previous entry incremented by one.
+            # > If the index is set to 0 in the first entry
+            #   of the lookup in the stream,
             #   it MUST be interpreted as the value 1.
-            # Because the first value (stream-wise) of previous index is 0, two requirements are met.
+            # Because the first value (stream-wise) of previous
+            # index is 0, two requirements are met.
             if index == previous_index + 1:
                 return 0
-        return index
+            return index
 
     def index_for_term(self, value: str) -> int:
         """
@@ -158,6 +166,7 @@ class NameEncoder(LookupEncoder):
         -------
         int or None
             Assigned ID or None if unchanged.
+
         """
         previous_index = self.last_reused_index
         current_index = super().index_for_term(value)

@@ -36,6 +36,7 @@ class Stream:
         -------
         RdfStreamFrame or None
             The completed frame, or None if buffer not ready.
+
         """
         if not rows:
             return None
@@ -53,6 +54,7 @@ class Stream:
         -------
         bool
             True if `add()` should return a frame, otherwise False.
+
         """
         raise NotImplementedError
 
@@ -68,6 +70,7 @@ class Stream:
         -------
         RdfStreamFrame
             Protobuf frame with accumulated rows.
+
         """
         frame = pb.RdfStreamFrame(rows=self._rows)
         self._rows.clear()
@@ -79,10 +82,19 @@ class FlatStream(Stream):
     """
     Construct and return a `RdfStreamFrame` from the current buffer.
 
+    Parameters
+    ----------
+    frame_size
+        Number of rows after which a frame is emitted.
+    quads
+        If True, emit frames with `LOGICAL_STREAM_TYPE_FLAT_QUADS`.
+        Otherwise, emit as flat triples.
+
     Returns
     -------
     RdfStreamFrame
         Protobuf frame with accumulated rows.
+
     """
 
     frame_size: int
@@ -91,15 +103,6 @@ class FlatStream(Stream):
     default_frame_size: ClassVar[int] = 250
 
     def __init__(self, frame_size: int | None = None, *, quads: bool = False) -> None:
-        """
-        Parameters
-        ----------
-        frame_size
-            Number of rows after which a frame is emitted.
-        quads
-            If True, emit frames with `LOGICAL_STREAM_TYPE_FLAT_QUADS`.
-            Otherwise, emit as flat triples.
-        """
         super().__init__()
         self.frame_size = frame_size or self.default_frame_size
         self.quads = quads
@@ -122,5 +125,6 @@ class FlatStream(Stream):
         -------
         bool
             True if row count ≥ `frame_size`.
+
         """
         return len(self._rows) >= self.frame_size

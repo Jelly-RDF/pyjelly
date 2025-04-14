@@ -18,20 +18,20 @@ class RDFLibJellySerializer(RDFLibSerializer):
 
     Handles streaming RDF terms into Jelly frames using internal encoders.
     Supports only graphs and datasets (not quoted graphs).
+
+    Parameters
+    ----------
+    store
+        RDFLib Graph or Dataset. QuotedGraph is not supported.
+
+    Raises
+    ------
+    NotImplementedError
+        If the store is a QuotedGraph.
+
     """
 
     def __init__(self, store: Graph) -> None:
-        """
-        Parameters
-        ----------
-        store
-            RDFLib Graph or Dataset. QuotedGraph is not supported.
-
-        Raises
-        ------
-        NotImplementedError
-            If the store is a QuotedGraph.
-        """
         if isinstance(store, QuotedGraph):
             msg = "N3 format is not supported"
             raise NotImplementedError(msg)
@@ -71,6 +71,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
             If quad serialization is requested (not yet implemented).
         TypeError
             If an RDF term has unsupported type.
+
         """
         if isinstance(self.store, Dataset) and quads is None:
             msg = (

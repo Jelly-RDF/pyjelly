@@ -121,4 +121,8 @@ ignore = [
     # Description: Wildcard imports used
     # Rationale: Waiting for red knot to understand them
     "F403",
+
+    # Description: Move third-party import into a type-checking block
+    # Rationale: Start-up time is not yet that important
+    "TC",
 ]

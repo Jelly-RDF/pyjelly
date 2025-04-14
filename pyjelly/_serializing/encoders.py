@@ -50,6 +50,7 @@ class Statement:
         Returns
         -------
         tuple of rows and serialized RDF term data.
+
         """
         term_values = self.values.copy()
         self.values.clear()
@@ -78,6 +79,7 @@ class Statement:
             Protobuf message or string.
         rows
             Additional stream rows required for encoding.
+
         """
         self._term_rows = rows
         self.values[self._get_key(term)] = value
@@ -90,6 +92,7 @@ class Statement:
         ----------
         rows
             Stream rows to prepend before current term data.
+
         """
         self._preceding_rows.extend(rows)
 
@@ -141,6 +144,7 @@ class StatementEncoder(metaclass=ABCMeta):
         -------
         bool
             True if term is repeated in current slot, False otherwise.
+
         """
         repeated_term = self._repeated_terms[self.statement.current_term]
         if repeated_term == term:
@@ -156,6 +160,7 @@ class StatementEncoder(metaclass=ABCMeta):
         ----------
         frame_logic
             Active frame logic used to construct output frames.
+
         """
         options = pb.RdfStreamOptions(
             stream_name=self.options.name,
@@ -182,6 +187,7 @@ class StatementEncoder(metaclass=ABCMeta):
         Returns
         -------
         prefix, name
+
         """
         name = value
         prefix = ""
@@ -201,6 +207,7 @@ class StatementEncoder(metaclass=ABCMeta):
         ----------
         value
             IRI string.
+
         """
         prefix, name = self.split_iri(value)
         prefix_id = self._prefixes.index_for_entry(prefix)
@@ -228,6 +235,7 @@ class StatementEncoder(metaclass=ABCMeta):
         ----------
         bnode
             Blank node identifier string.
+
         """
         self.statement.set_bnode(bnode)
 
@@ -249,6 +257,7 @@ class StatementEncoder(metaclass=ABCMeta):
             Optional language tag.
         datatype
             Optional datatype IRI.
+
         """
         datatype_id = None
         term_rows = []
@@ -278,14 +287,15 @@ class StatementEncoder(metaclass=ABCMeta):
         -------
         RdfStreamFrame or None
             Returns frame if ready, otherwise None.
+
         """
         frame = None
 
         if self.statement.current_term == self.protobuf_terms[-1]:
-            preceding_rows, terms = self.statement._collect()
+            preceding_rows, terms = self.statement._collect()  # noqa: SLF001
             frame = frame_logic.add_row(*preceding_rows, self.row_factory(**terms))
 
-        self.statement._cycle()
+        self.statement._cycle()  # noqa: SLF001
         return frame
 
     @staticmethod
@@ -319,5 +329,6 @@ class TripleEncoder(StatementEncoder):
         -------
         RdfStreamRow
             Protobuf row representation.
+
         """
         return pb.RdfStreamRow(triple=pb.RdfTriple(**terms))
