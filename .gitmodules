@@ -1,0 +1,3 @@
+[submodule "submodules/protobuf"]
+	path = submodules/protobuf
+	url = https://github.com/Jelly-RDF/jelly-protobuf

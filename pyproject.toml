@@ -11,10 +11,13 @@ authors = [
     { name = "Anastasiya Danilenka", email = "anastasiya@neverblink.eu" },
 ]
 requires-python = ">=3.9"
-dependencies = []
+dependencies = [
+    "protobuf>=5.29.3",
+    "typing-extensions>=4.12.2", # revisit after 3.13 is older
+]
 
 [dependency-groups]
-dev = ["mypy>=1.13.0", "ruff>=0.8.6"]
+dev = ["grpcio-tools>=1.71.0", "mypy>=1.13.0", "ruff>=0.8.6"]
 maintenance = ["towncrier>=24.8.0"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
 test = [
@@ -25,7 +28,7 @@ test = [
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
 ]
-types = []
+types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
 required-version = "==0.6.14"
@@ -37,6 +40,9 @@ explicit_package_bases = true
 
 [tool.ruff.lint.isort]
 extra-standard-library = ["typing_extensions"]
+
+[tool.ruff]
+extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
 
 [tool.ruff.lint]
 select = ["ALL"]
