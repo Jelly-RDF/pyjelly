@@ -41,7 +41,7 @@ types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
 required-version = "==0.6.14"
-default-groups = ["dev", "test", "types"]
+default-groups = ["dev", "test", "extras", "types"]
 
 [tool.mypy]
 strict = true
