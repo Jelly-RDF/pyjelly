@@ -13,8 +13,16 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "protobuf>=5.29.3",
+    "typer>=0.15.2",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
+
+[project.optional-dependencies]
+rdflib = ["rdflib>=7.1.4"]
+
+[project.entry-points."rdf.plugins.serializer"]
+jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
 dev = ["grpcio-tools>=1.71.0", "mypy>=1.13.0", "ruff>=0.8.6"]
@@ -28,6 +36,7 @@ test = [
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
 ]
+extras = ["pyjelly[rdflib]"] # workaround for astral-sh/uv#8607
 types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
@@ -37,12 +46,20 @@ default-groups = ["dev", "test", "types"]
 [tool.mypy]
 strict = true
 explicit_package_bases = true
+exclude = ".*_pb2(_grpc)?\\.pyi?"
 
 [tool.ruff.lint.isort]
 extra-standard-library = ["typing_extensions"]
 
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = ["--import-mode=importlib", "--doctest-modules"]
+
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
+
+[tool.setuptools]
+packages = ["pyjelly"]
 
 [tool.ruff.lint]
 select = ["ALL"]
