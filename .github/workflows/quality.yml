@@ -50,7 +50,7 @@ jobs:
           platform: ubuntu-latest
 
     env:
-      uv-sync: uv sync --frozen --python ${{matrix.version}}
+      uv-sync: uv sync --frozen --python ${{matrix.version}} --no-group protoc
       uv-run: uv run --no-sync --frozen --python ${{matrix.version}}
 
     steps:
