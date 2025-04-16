@@ -56,7 +56,7 @@ class Stream:
             True if `add()` should return a frame, otherwise False.
 
         """
-        raise NotImplementedError
+        return False
 
     @cached_property
     def protobuf_type(self) -> pb.LogicalStreamType:
