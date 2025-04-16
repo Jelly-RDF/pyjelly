@@ -815,6 +815,7 @@ name = "pyjelly"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "grpcio" },
     { name = "protobuf" },
     { name = "typer" },
     { name = "typing-extensions" },
@@ -857,6 +858,7 @@ types = [
 
 [package.metadata]
 requires-dist = [
+    { name = "grpcio", specifier = ">=1.71.0" },
     { name = "protobuf", specifier = ">=5.29.3" },
     { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typer", specifier = ">=0.15.2" },
