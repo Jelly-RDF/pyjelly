@@ -12,7 +12,7 @@ command mkdir -p "$OUT_DIR"
 : Compiling rdf.proto...
 python -m grpc_tools.protoc "$PROTO_PATH/rdf.proto" --proto_path="$PROTO_PATH" --{python,pyi}_out="$OUT_DIR"
 
-: Compiling grpc.proto...
-python -m grpc_tools.protoc "$PROTO_PATH/grpc.proto" --proto_path="$PROTO_PATH" --{python,pyi,grpc_python}_out="$OUT_DIR"
+# : Compiling grpc.proto...
+# python -m grpc_tools.protoc "$PROTO_PATH/grpc.proto" --proto_path="$PROTO_PATH" --{python,pyi,grpc_python}_out="$OUT_DIR"
 
 : Done
