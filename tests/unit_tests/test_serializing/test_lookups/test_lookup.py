@@ -67,7 +67,7 @@ def test_insert_asserts_fresh_key() -> None:
         lookup.insert("foo")
 
 
-def test_evict_last() -> None:
+def test_make_last_to_evict() -> None:
     lookup = Lookup(3)
     a = lookup.insert("a")
     # evict order: a
@@ -75,7 +75,7 @@ def test_evict_last() -> None:
     b = lookup.insert("b")
     # evict order: a, b
 
-    lookup.evict_last("a")
+    lookup.make_last_to_evict("a")
     # b, a
 
     c = lookup.insert("c")
@@ -96,7 +96,7 @@ def test_evict_last() -> None:
 
     assert f == c
 
-    lookup.evict_last("e")
+    lookup.make_last_to_evict("e")
     # d, f, e
 
     g = lookup.insert("g")  # evicts d
@@ -115,7 +115,7 @@ def test_evict_last() -> None:
     assert i == e
 
 
-def test_evict_last_for_existing_key_raises() -> None:
+def test_make_last_to_evict_for_existing_key_raises() -> None:
     lookup = Lookup(1)
     with pytest.raises(KeyError, match="key1"):
-        lookup.evict_last("key1")
+        lookup.make_last_to_evict("key1")
