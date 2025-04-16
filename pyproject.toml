@@ -25,8 +25,9 @@ jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
-dev = ["grpcio-tools>=1.71.0", "mypy>=1.13.0", "ruff>=0.8.6"]
+dev = ["mypy>=1.13.0", "ruff>=0.8.6"]
 maintenance = ["towncrier>=24.8.0"]
+protoc = ["grpcio-tools>=1.71.0"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
 test = [
     "inline-snapshot>=0.20.8",

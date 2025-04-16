@@ -827,7 +827,6 @@ rdflib = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "grpcio-tools" },
     { name = "mypy" },
     { name = "ruff" },
 ]
@@ -840,6 +839,9 @@ maintenance = [
 profiling = [
     { name = "memray" },
     { name = "scalene" },
+]
+protoc = [
+    { name = "grpcio-tools" },
 ]
 test = [
     { name = "inline-snapshot" },
@@ -864,7 +866,6 @@ provides-extras = ["rdflib"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "grpcio-tools", specifier = ">=1.71.0" },
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "ruff", specifier = ">=0.8.6" },
 ]
@@ -874,6 +875,7 @@ profiling = [
     { name = "memray", specifier = ">=1.16.0" },
     { name = "scalene", specifier = ">=1.5.51" },
 ]
+protoc = [{ name = "grpcio-tools", specifier = ">=1.71.0" }]
 test = [
     { name = "inline-snapshot", specifier = ">=0.20.8" },
     { name = "pytest", specifier = ">=8.3.4" },
