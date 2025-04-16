@@ -43,7 +43,7 @@ class Stream:
         self._rows.extend(rows)
         if not self.frame_ready:
             return None
-        return self.make_frame()
+        return self.to_frame()
 
     @property
     def frame_ready(self) -> bool:
@@ -62,7 +62,7 @@ class Stream:
     def protobuf_type(self) -> pb.LogicalStreamType:
         return pb.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    def make_frame(self) -> pb.RdfStreamFrame:
+    def to_frame(self) -> pb.RdfStreamFrame:
         """
         Construct and return a `RdfStreamFrame` from the current row list.
 

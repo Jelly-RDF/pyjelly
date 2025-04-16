@@ -107,4 +107,4 @@ class RDFLibJellySerializer(RDFLibSerializer):
             if frame := encoder.cycle(logic):
                 protolib.serialize_length_prefixed(frame, output=stream)
 
-        protolib.serialize_length_prefixed(logic.make_frame(), output=stream)
+        protolib.serialize_length_prefixed(logic.to_frame(), output=stream)
