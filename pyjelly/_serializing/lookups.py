@@ -31,7 +31,7 @@ class Lookup:
         self._max_size = max_size
         self._evicting = False
 
-    def move(self, key: str) -> None:
+    def make_last_to_evict(self, key: str) -> None:
         self.data.move_to_end(key)
 
     def insert(self, key: str) -> int:
@@ -91,7 +91,7 @@ class LookupEncoder:
 
         """
         try:
-            self.lookup.move(key)
+            self.lookup.make_last_to_evict(key)
             return None  # noqa: TRY300
         except KeyError:
             previous_index = self.last_assigned_index
@@ -117,7 +117,7 @@ class LookupEncoder:
         Updates `last_reused_index` _always_ returns a valid index
         from the lookup, which is _never_ 0.
         """
-        self.lookup.move(value)
+        self.lookup.make_last_to_evict(value)
         current_index = self.lookup.data[value]
         self.last_reused_index = current_index
         return current_index
