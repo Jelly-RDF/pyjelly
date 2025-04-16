@@ -37,7 +37,7 @@ def test_maintains_size(max_size: int) -> None:
         assert current_size(lookup) == max_size
 
 
-def test_sequential_insert() -> None:
+def test_insert_sequential() -> None:
     lookup = Lookup(3)
 
     assert lookup.insert("key1") == snapshot(1)
@@ -45,7 +45,7 @@ def test_sequential_insert() -> None:
     assert lookup.insert("key3") == snapshot(3)
 
 
-def test_evicting_insert() -> None:
+def test_insert_evicting() -> None:
     lookup = Lookup(3)
 
     lookup.insert("key1")
@@ -58,6 +58,13 @@ def test_evicting_insert() -> None:
     assert lookup.insert("key7") == snapshot(1)
     assert lookup.insert("key8") == snapshot(2)
     assert lookup.insert("key9") == snapshot(3)
+
+
+def test_insert_asserts_fresh_key() -> None:
+    lookup = Lookup(1)
+    lookup.insert("foo")
+    with pytest.raises(AssertionError, match="key 'foo' already present"):
+        lookup.insert("foo")
 
 
 def test_evict_last() -> None:
@@ -112,10 +119,3 @@ def test_evict_last_for_existing_key_raises() -> None:
     lookup = Lookup(1)
     with pytest.raises(KeyError, match="key1"):
         lookup.evict_last("key1")
-
-
-def test_insert_asserts_fresh_key() -> None:
-    lookup = Lookup(1)
-    lookup.insert("foo")
-    with pytest.raises(AssertionError, match="key 'foo' already present"):
-        lookup.insert("foo")
