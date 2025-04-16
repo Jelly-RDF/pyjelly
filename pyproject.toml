@@ -25,8 +25,10 @@ jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
-dev = ["grpcio-tools>=1.71.0", "mypy>=1.13.0", "ruff>=0.8.6"]
+dev = ["mypy>=1.13.0", "ruff>=0.8.6"]
 maintenance = ["towncrier>=24.8.0"]
+# grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
+protoc = ["grpcio-tools>=1.71.0; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
 test = [
     "inline-snapshot>=0.20.8",
@@ -41,7 +43,7 @@ types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
 required-version = "==0.6.14"
-default-groups = ["dev", "test", "extras", "types"]
+default-groups = ["dev", "test", "extras", "protoc", "types"]
 
 [tool.mypy]
 strict = true
