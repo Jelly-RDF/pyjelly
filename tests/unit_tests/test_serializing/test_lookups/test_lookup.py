@@ -97,7 +97,7 @@ def test_evict_last() -> None:
     assert f == c
 
     lookup.evict_last("e")
-    # d, e, f
+    # d, f, e
 
     g = lookup.insert("g")  # evicts d
     # f, e, g
