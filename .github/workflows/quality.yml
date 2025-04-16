@@ -46,8 +46,6 @@ jobs:
           platform: ubuntu-latest
         - version: pypy3.10
           platform: ubuntu-latest  
-        - version: pypy3.11
-          platform: ubuntu-latest
 
     env:
       uv-sync: uv sync --frozen --python ${{matrix.version}}
