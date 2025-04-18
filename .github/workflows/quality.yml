@@ -50,7 +50,7 @@ jobs:
           platform: ubuntu-latest
 
     env:
-      uv-sync: uv sync --frozen --python ${{matrix.version}} --no-group protoc
+      uv-sync: uv sync --frozen --python ${{matrix.version}} --only-group ci-quality
       uv-run: uv run --no-sync --frozen --python ${{matrix.version}}
 
     steps:
@@ -60,7 +60,7 @@ jobs:
       with:
         enable-cache: true
 
-    - name: Install
+    - name: Install pyjelly
       id: install
       run: ${{ env.uv-sync }}
 
