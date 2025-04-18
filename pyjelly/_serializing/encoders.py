@@ -30,8 +30,8 @@ class Options:
     def small(cls) -> Self:
         return cls(
             name_lookup_size=128,
-            prefix_lookup_size=16,
-            datatype_lookup_size=16,
+            prefix_lookup_size=32,
+            datatype_lookup_size=32,
         )
 
     @classmethod
