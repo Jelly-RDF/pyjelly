@@ -9,7 +9,7 @@ import rdflib
 from rdflib.graph import Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
-from pyjelly._serializing import encoders, lookups, streams
+from pyjelly._serializing import encoders, streams
 
 
 class RDFLibJellySerializer(RDFLibSerializer):
@@ -45,7 +45,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
         encoding: str | None = None,
         *,
         quads: bool | None = None,
-        options: lookups.Options | None = None,
+        options: encoders.Options | None = None,
     ) -> None:
         """
         Serialize RDFLib graph to Jelly format.
@@ -104,7 +104,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
                     msg = f"unexpected term type {term!r}"
                     raise TypeError(msg)
 
-            if frame := encoder.cycle(logic):
+            if frame := encoder.get_frame_if_ready(logic):
                 protolib.serialize_length_prefixed(frame, output=stream)
 
         protolib.serialize_length_prefixed(logic.to_frame(), output=stream)

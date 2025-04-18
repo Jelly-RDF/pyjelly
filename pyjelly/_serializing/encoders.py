@@ -2,11 +2,45 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Sequence
+from dataclasses import dataclass
 from itertools import cycle
 from typing import Any, ClassVar, final
+from typing_extensions import Self
 
 from pyjelly._pb2 import rdf_pb2 as pb
 from pyjelly._serializing import lookups, streams
+
+
+@dataclass(frozen=True)
+class Options:
+    name_lookup_size: int
+    prefix_lookup_size: int
+    datatype_lookup_size: int
+    delimited: bool | None = None
+    name: str | None = None
+
+    MIN_NAME_LOOKUP_SIZE: ClassVar[int] = 8
+
+    def __post_init__(self) -> None:
+        assert self.name_lookup_size >= self.MIN_NAME_LOOKUP_SIZE, (
+            "name lookup size must be at least 8"
+        )
+
+    @classmethod
+    def small(cls) -> Self:
+        return cls(
+            name_lookup_size=128,
+            prefix_lookup_size=16,
+            datatype_lookup_size=16,
+        )
+
+    @classmethod
+    def big(cls) -> Self:
+        return cls(
+            name_lookup_size=4000,
+            prefix_lookup_size=150,
+            datatype_lookup_size=32,
+        )
 
 
 class Statement:
@@ -21,68 +55,21 @@ class Statement:
     _preceding_rows: list[pb.RdfStreamRow]
     _term_rows: Sequence[pb.RdfStreamRow]
 
-    current_term: str
+    _field_pointer: str
 
-    def __init__(self, terms: Sequence[str]) -> None:
+    def __init__(self, terms: Sequence[str], break_at: int = -1) -> None:
         self._preceding_rows = []
         self._term_rows = ()
 
-        self.all_terms = cycle(terms)
-        self.current_term = next(self.all_terms)
+        self._break_at_field = terms[break_at]
+        self._all_fields = cycle(terms)
+        self._field_pointer = next(self._all_fields)
 
-        self.values: dict[str, Any] = {}
+        self._values: dict[str, object] = {}
 
-    def _cycle(self) -> None:
-        """
-        Advance to the next RDF term in the encoding cycle.
-
-        Moves current term's rows to preceding, clears buffers,
-        and updates internal term pointer.
-        """
-        self._preceding_rows.extend(self._term_rows)
-        self._term_rows = ()
-        self.current_term = next(self.all_terms)
-
-    def _collect(self) -> tuple[tuple[pb.RdfStreamRow, ...], dict[str, Any]]:
-        """
-        Finalize term collection and return all buffered data.
-
-        Returns
-        -------
-        tuple of rows and serialized RDF term data.
-
-        """
-        term_values = self.values.copy()
-        self.values.clear()
-        preceding_rows = (*self._preceding_rows, *self._term_rows)
-        self._preceding_rows.clear()
-        self._term_rows = ()
-        return preceding_rows, term_values
-
-    def _get_key(self, term: str) -> str:
-        return f"{self.current_term}_{term}"
-
-    def _set_term(
-        self,
-        term: str,
-        value: Any,
-        rows: Sequence[pb.RdfStreamRow] = (),
-    ) -> None:
-        """
-        Register a term value and its related rows for the current RDF position.
-
-        Parameters
-        ----------
-        term
-            Logical RDF value kind (e.g. 'iri', 'literal').
-        value
-            Protobuf message or string.
-        rows
-            Additional stream rows required for encoding.
-
-        """
-        self._term_rows = rows
-        self.values[self._get_key(term)] = value
+    @property
+    def ready(self) -> bool:
+        return self._field_pointer == self._break_at_field
 
     def add_rows(self, *rows: pb.RdfStreamRow) -> None:
         """
@@ -96,14 +83,75 @@ class Statement:
         """
         self._preceding_rows.extend(rows)
 
-    def set_iri(self, value: Any, rows: Sequence[pb.RdfStreamRow] = ()) -> None:
-        self._set_term("iri", value, rows)
+    def set_iri(
+        self,
+        value: object,
+        extra_rows: Sequence[pb.RdfStreamRow] = (),
+    ) -> None:
+        self._set("iri", value, extra_rows)
 
-    def set_bnode(self, value: Any, rows: Sequence[pb.RdfStreamRow] = ()) -> None:
-        self._set_term("bnode", value, rows)
+    def set_bnode(
+        self,
+        value: object,
+        extra_rows: Sequence[pb.RdfStreamRow] = (),
+    ) -> None:
+        self._set("bnode", value, extra_rows)
 
-    def set_literal(self, value: Any, rows: Sequence[pb.RdfStreamRow] = ()) -> None:
-        self._set_term("literal", value, rows)
+    def set_literal(
+        self,
+        value: object,
+        extra_rows: Sequence[pb.RdfStreamRow] = (),
+    ) -> None:
+        self._set("literal", value, extra_rows)
+
+    def _set(
+        self,
+        term_type: str,
+        value: object,
+        rows: Sequence[pb.RdfStreamRow] = (),
+    ) -> None:
+        """
+        Register a term value and its related rows for the current RDF position.
+
+        Parameters
+        ----------
+        term_type
+            Logical RDF value kind (e.g. 'iri', 'literal').
+        value
+            Protobuf message or string.
+        rows
+            Additional stream rows required for encoding.
+
+        """
+        self._term_rows = rows
+        self._values[f"{self._field_pointer}_{term_type}"] = value
+
+    def _next(self) -> None:
+        """
+        Advance to the next RDF term in the encoding cycle.
+
+        Moves current term's rows to preceding, clears buffers,
+        and updates internal term pointer.
+        """
+        self._preceding_rows.extend(self._term_rows)
+        self._term_rows = ()
+        self._field_pointer = next(self._all_fields)
+
+    def _collect(self) -> tuple[tuple[pb.RdfStreamRow, ...], dict[str, Any]]:
+        """
+        Finalize term collection and return all buffered data.
+
+        Returns
+        -------
+        tuple of rows and serialized RDF term data.
+
+        """
+        term_values = self._values.copy()
+        self._values.clear()
+        preceding_rows = (*self._preceding_rows, *self._term_rows)
+        self._preceding_rows.clear()
+        self._term_rows = ()
+        return preceding_rows, term_values
 
 
 class StatementEncoder(metaclass=ABCMeta):
@@ -114,18 +162,20 @@ class StatementEncoder(metaclass=ABCMeta):
     and encoding of RDF IRIs, literals, and blank nodes.
     """
 
+    STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
+
     protobuf_type: ClassVar[pb.PhysicalStreamType] = pb.PHYSICAL_STREAM_TYPE_UNSPECIFIED
     protobuf_terms: ClassVar[Sequence[str]]
 
-    options: lookups.Options
+    options: Options
 
-    def __init__(self, options: lookups.Options | None = None) -> None:
+    def __init__(self, options: Options | None = None) -> None:
         if options is None:
-            options = lookups.Options.big()
+            options = Options.big()
         self.options = options
-        self._names = lookups.NameEncoder(lookup_size=options.name_lookup_size)
-        self._prefixes = lookups.PrefixEncoder(lookup_size=options.prefix_lookup_size)
-        self._datatypes = lookups.DatatypeEncoder(
+        self._names = lookups.LookupEncoder(lookup_size=options.name_lookup_size)
+        self._prefixes = lookups.LookupEncoder(lookup_size=options.prefix_lookup_size)
+        self._datatypes = lookups.LookupEncoder(
             lookup_size=options.datatype_lookup_size
         )
         self._repeated_terms: dict[str, object] = dict.fromkeys(self.protobuf_terms)
@@ -146,10 +196,10 @@ class StatementEncoder(metaclass=ABCMeta):
             True if term is repeated in current slot, False otherwise.
 
         """
-        repeated_term = self._repeated_terms[self.statement.current_term]
+        repeated_term = self._repeated_terms[self.statement._field_pointer]
         if repeated_term == term:
             return True
-        self._repeated_terms[self.statement.current_term] = term
+        self._repeated_terms[self.statement._field_pointer] = term
         return False
 
     def encode_options(self, *, frame_logic: streams.Stream) -> None:
@@ -210,8 +260,8 @@ class StatementEncoder(metaclass=ABCMeta):
 
         """
         prefix, name = self.split_iri(value)
-        prefix_id = self._prefixes.index_for_entry(prefix)
-        name_id = self._names.index_for_entry(name)
+        prefix_id = self._prefixes.encode_entry_index(prefix)
+        name_id = self._names.encode_entry_index(name)
         term_rows = []
 
         if prefix_id is not None:
@@ -222,10 +272,10 @@ class StatementEncoder(metaclass=ABCMeta):
             name_entry = pb.RdfNameEntry(id=name_id, value=name)
             term_rows.append(pb.RdfStreamRow(name=name_entry))
 
-        prefix_id = self._prefixes.index_for_term(prefix)
-        name_id = self._names.index_for_term(name)
+        prefix_id = self._prefixes.encode_prefix_term_index(prefix)
+        name_id = self._names.encode_name_term_index(name)
         iri = pb.RdfIri(prefix_id=prefix_id, name_id=name_id)
-        self.statement.set_iri(iri, rows=term_rows)
+        self.statement.set_iri(iri, extra_rows=term_rows)
 
     def encode_bnode(self, bnode: str) -> None:
         """
@@ -262,19 +312,22 @@ class StatementEncoder(metaclass=ABCMeta):
         datatype_id = None
         term_rows = []
 
-        if datatype:
-            datatype_entry_id = self._datatypes.index_for_entry(datatype)
+        if datatype and datatype != self.STRING_DATATYPE_IRI:
+            datatype_entry_id = self._datatypes.encode_entry_index(datatype)
 
             if datatype_entry_id is not None:
                 entry = pb.RdfDatatypeEntry(id=datatype_entry_id, value=datatype)
                 term_rows = [pb.RdfStreamRow(datatype=entry)]
 
-            datatype_id = self._datatypes.index_for_term(datatype)
+            datatype_id = self._datatypes.encode_datatype_term_index(datatype)
 
         literal = pb.RdfLiteral(lex=lex, langtag=language, datatype=datatype_id)
-        self.statement.set_literal(literal, rows=term_rows)
+        self.statement.set_literal(literal, extra_rows=term_rows)
 
-    def cycle(self, frame_logic: streams.Stream) -> pb.RdfStreamFrame | None:
+    def get_frame_if_ready(
+        self,
+        frame_logic: streams.Stream,
+    ) -> pb.RdfStreamFrame | None:
         """
         Finalize the current term and try to emit a new frame.
 
@@ -291,11 +344,11 @@ class StatementEncoder(metaclass=ABCMeta):
         """
         frame = None
 
-        if self.statement.current_term == self.protobuf_terms[-1]:
-            preceding_rows, terms = self.statement._collect()  # noqa: SLF001
+        if self.statement.ready:
+            preceding_rows, terms = self.statement._collect()
             frame = frame_logic.add_row(*preceding_rows, self.row_factory(**terms))
 
-        self.statement._cycle()  # noqa: SLF001
+        self.statement._next()
         return frame
 
     @staticmethod
