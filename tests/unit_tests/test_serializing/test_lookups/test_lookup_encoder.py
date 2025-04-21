@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from inline_snapshot import snapshot
 
-from pyjelly._serializing.lookups import LookupEncoder
+from pyjelly.producing.lookups import LookupEncoder
 
 
 def test_encode_entry_index() -> None:

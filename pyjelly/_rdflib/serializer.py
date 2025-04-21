@@ -1,15 +1,64 @@
 from __future__ import annotations
 
-from itertools import chain
-from typing import IO
+from collections.abc import Iterable
+from typing import IO, Any
 from typing_extensions import override
 
-import google.protobuf.proto as protolib  # type: ignore[import-not-found]
 import rdflib
-from rdflib.graph import Dataset, Graph, QuotedGraph
+from google.protobuf.proto import serialize_length_prefixed
+from rdflib.graph import Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
+from rdflib.term import Node
 
-from pyjelly._serializing import encoders, streams
+from pyjelly import jelly
+from pyjelly.options import StreamOptions
+from pyjelly.producing import stream_to_frame, stream_to_frames
+from pyjelly.producing.encoder import Encoder, TermName
+from pyjelly.producing.producers import Producer
+
+
+def serialize_delimited(
+    out: IO[bytes],
+    *,
+    producer: Producer,
+    encoder: Encoder,
+    statements: Iterable[Iterable[Node]],
+) -> None:
+    for frame in stream_to_frames(
+        encoder=encoder, statements=statements, producer=producer
+    ):
+        serialize_length_prefixed(frame, out)
+
+
+def serialize(
+    out: IO[bytes],
+    *,
+    encoder: Encoder,
+    statements: Iterable[Iterable[Node]],
+) -> None:
+    frame = stream_to_frame(encoder=encoder, statements=statements)
+    out.write(frame.SerializeToString(deterministic=True))
+
+
+class RDFLibEncoder(Encoder):
+    @override
+    def encode_term(self, term: Node, name: TermName) -> None:
+        if term is None and name == "g":
+            return
+        if isinstance(term, rdflib.URIRef):
+            self.encode_iri(term, term_name=name)
+        elif isinstance(term, rdflib.Literal):
+            self.encode_literal(
+                lex=term,
+                language=term.language,
+                datatype=term.datatype,
+                term_name=name,
+            )
+        elif isinstance(term, rdflib.BNode):
+            self.encode_bnode(term, term_name=name)
+        else:
+            msg = f"term of type {type(term)} is unsupported"
+            raise TypeError(msg)
 
 
 class RDFLibJellySerializer(RDFLibSerializer):
@@ -18,16 +67,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
 
     Handles streaming RDF terms into Jelly frames using internal encoders.
     Supports only graphs and datasets (not quoted graphs).
-
-    Parameters
-    ----------
-    store
-        RDFLib Graph or Dataset. QuotedGraph is not supported.
-
-    Raises
-    ------
-    NotImplementedError
-        If the store is a QuotedGraph.
 
     """
 
@@ -40,71 +79,31 @@ class RDFLibJellySerializer(RDFLibSerializer):
     @override
     def serialize(  # type: ignore[override]
         self,
-        stream: IO[bytes],
-        base: str | None = None,
-        encoding: str | None = None,
+        out: IO[bytes],
+        /,
         *,
-        quads: bool | None = None,
-        options: encoders.Options | None = None,
+        quads: bool = False,
+        producer: Producer | None = None,
+        options: StreamOptions | None = None,
+        **unused: Any,
     ) -> None:
-        """
-        Serialize RDFLib graph to Jelly format.
-
-        Parameters
-        ----------
-        stream
-            Output byte stream.
-        base
-            Base IRI (unused).
-        encoding
-            Character encoding (unused).
-        quads
-            Whether to serialize as RDF quads. Required for datasets.
-        options
-            Jelly serialization options.
-
-        Raises
-        ------
-        ValueError
-            If the graph is a dataset and `quads` is not specified.
-        NotImplementedError
-            If quad serialization is requested (not yet implemented).
-        TypeError
-            If an RDF term has unsupported type.
-
-        """
-        if isinstance(self.store, Dataset) and quads is None:
-            msg = (
-                "serialized store has multiple graphs"
-                "but quads was not set to True or False"
+        store = self.store
+        statements: Iterable[Iterable[Node]] = store
+        if isinstance(store, rdflib.Dataset):
+            if quads:
+                physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
+            else:
+                physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
+                statements = store.graphs()  # type: ignore[assignment]
+        else:
+            physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+        encoder = RDFLibEncoder(physical_type=physical_type, options=options)
+        if encoder.options.delimited:
+            serialize_delimited(
+                out,
+                producer=producer or Producer(),
+                encoder=encoder,
+                statements=statements,
             )
-            raise ValueError(msg)
-
-        if quads is not None:
-            msg = "multiple graph serialization is not implemented"
-            raise NotImplementedError(msg)
-
-        logic = streams.FlatStream()
-        encoder = encoders.TripleEncoder(options)
-        encoder.encode_options(frame_logic=logic)
-
-        for term in chain.from_iterable(self.store):
-            if not encoder.is_repeated(term):
-                if isinstance(term, rdflib.URIRef):
-                    encoder.encode_iri(term)
-                elif isinstance(term, rdflib.BNode):
-                    encoder.encode_bnode(term)
-                elif isinstance(term, rdflib.Literal):
-                    encoder.encode_literal(
-                        lex=term,
-                        language=term.language,
-                        datatype=term.datatype,
-                    )
-                else:
-                    msg = f"unexpected term type {term!r}"
-                    raise TypeError(msg)
-
-            if frame := encoder.get_frame_if_ready(logic):
-                protolib.serialize_length_prefixed(frame, output=stream)
-
-        protolib.serialize_length_prefixed(logic.to_frame(), output=stream)
+        else:
+            serialize(out, encoder=encoder, statements=statements)
