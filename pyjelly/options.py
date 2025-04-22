@@ -7,12 +7,6 @@ from typing_extensions import Self
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
-MIMETYPES = ("application/x-jelly-rdf",)
-
-
-def register_mimetypes(suffix: str = ".jelly") -> None:
-    for mimetype in MIMETYPES:
-        mimetypes.add_type(mimetype, suffix)
 
 
 @dataclass(frozen=True)
