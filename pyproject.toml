@@ -21,8 +21,8 @@ dependencies = [
 rdflib = ["rdflib>=7.1.4"]
 
 [project.entry-points."rdf.plugins.serializer"]
-jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
-"application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
+jelly = "pyjelly.integrations.with_rdflib.serializer:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly.integrations.with_rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
 dev = ["mypy>=1.13.0", "ruff>=0.8.6"]
