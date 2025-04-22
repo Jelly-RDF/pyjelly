@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import mimetypes
 from dataclasses import dataclass
 from typing import Final
 from typing_extensions import Self
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
+
+MIMETYPES = ("application/x-jelly-rdf",)
+
+
+def register_mimetypes(extension: str = ".jelly") -> None:
+    """
+    Associate files that have Jelly extension with Jelly MIME types.
+
+    >>> register_mimetypes()
+    >>> mimetypes.guess_type("out.jelly")
+    ('application/x-jelly-rdf', None)
+    """
+    for mimetype in MIMETYPES:
+        mimetypes.add_type(mimetype, extension)
 
 
 @dataclass(frozen=True)
