@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 from pyjelly import jelly
 from pyjelly.consuming.lookups import LookupDecoder
-from pyjelly.options import STRING_DATATYPE_IRI, StreamOptions
+from pyjelly.options import StreamOptions
 
 
 class Decoder:
