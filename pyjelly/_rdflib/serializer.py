@@ -14,7 +14,7 @@ from pyjelly import jelly
 from pyjelly.options import StreamOptions
 from pyjelly.producing import stream_to_frame, stream_to_frames
 from pyjelly.producing.encoder import Encoder, TermName
-from pyjelly.producing.producers import Producer
+from pyjelly.producing.producers import FlatProducer, Producer
 
 
 def serialize_delimited(
@@ -25,7 +25,9 @@ def serialize_delimited(
     statements: Iterable[Iterable[Node]],
 ) -> None:
     for frame in stream_to_frames(
-        encoder=encoder, statements=statements, producer=producer
+        encoder=encoder,
+        statements=statements,
+        producer=producer,
     ):
         serialize_length_prefixed(frame, out)
 
@@ -101,7 +103,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
         if encoder.options.delimited:
             serialize_delimited(
                 out,
-                producer=producer or Producer(),
+                producer=producer or FlatProducer(),
                 encoder=encoder,
                 statements=statements,
             )

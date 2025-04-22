@@ -2,7 +2,7 @@ from collections.abc import Iterable, Iterator
 
 from pyjelly import jelly
 from pyjelly.producing.encoder import Encoder
-from pyjelly.producing.producers import Producer
+from pyjelly.producing.producers import FlatProducer
 
 
 def stream_to_frame(
@@ -21,7 +21,7 @@ def stream_to_frame(
 
 
 def stream_to_frames(
-    producer: Producer,
+    producer: FlatProducer,
     encoder: Encoder,
     statements: Iterable[Iterable[object]],
 ) -> Iterator[jelly.RdfStreamFrame]:
