@@ -51,3 +51,6 @@ class RDFLibJellyParser(RDFLibParser):
         for frame in chain((first_frame,), frames):
             for row in decoder.decode_stream_frame(frame):
                 sink.add(row)
+
+
+print(__package__)
