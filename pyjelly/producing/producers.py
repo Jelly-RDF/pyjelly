@@ -15,26 +15,26 @@ class Producer:
     def __init__(self) -> None:
         self._rows = []
 
-    def add_rows(
+    def add_stream_rows(
         self,
         rows: Iterable[jelly.RdfStreamRow],
     ) -> jelly.RdfStreamFrame | None:
         if not rows:
             return None
         self._rows.extend(rows)
-        if not self.new_frame_ready:
+        if not self.stream_frame_ready:
             return None
-        return self.to_frame()
+        return self.to_stream_frame()
 
     @property
-    def new_frame_ready(self) -> bool:
+    def stream_frame_ready(self) -> bool:
         return False
 
     @cached_property
     def jelly_type(self) -> jelly.LogicalStreamType:
         return jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    def to_frame(self) -> jelly.RdfStreamFrame | None:
+    def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
         if not self._rows:
             return None
         frame = jelly.RdfStreamFrame(rows=self._rows)
@@ -65,5 +65,5 @@ class FlatProducer(Producer):
 
     @property
     @override
-    def new_frame_ready(self) -> bool:
+    def stream_frame_ready(self) -> bool:
         return len(self._rows) >= self.frame_size

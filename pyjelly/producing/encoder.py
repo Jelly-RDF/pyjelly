@@ -30,7 +30,7 @@ class Statement:
     def __init__(self, *, quads: bool) -> None:
         self.jelly_statement: Any = jelly.RdfQuad if quads else jelly.RdfTriple
         self.row_oneof: Any = STATEMENT_ONEOF_NAMES[self.jelly_statement]
-        self.extra_rows: dict[TermName, Iterable[jelly.RdfStreamRow]] = {}
+        self.extra_stream_rows: dict[TermName, Iterable[jelly.RdfStreamRow]] = {}
         self.term_values: dict[TermName, jelly.RdfIri | jelly.RdfLiteral | str] = {}
         self.term_types: dict[TermName, str] = {}
 
@@ -40,22 +40,22 @@ class Statement:
         value: jelly.RdfIri | str | jelly.RdfLiteral,
         rows: Iterable[jelly.RdfStreamRow] = (),
     ) -> None:
-        self.extra_rows[name] = rows
+        self.extra_stream_rows[name] = rows
         self.term_values[name] = value
         self.term_types[name] = TERM_ONEOF_NAMES[type(value)]
 
-    def to_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
-        extra_rows = chain(*self.extra_rows.values())
+    def to_stream_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
+        extra_rows = chain(*self.extra_stream_rows.values())
         fields = {
             f"{term_name}_{term_type}": self.term_values[term_name]
             for term_name, term_type in self.term_types.items()
         }
         self.term_values.clear()
         self.term_types.clear()
-        self.extra_rows.clear()
+        self.extra_stream_rows.clear()
         statement = self.jelly_statement(**fields)
-        row = jelly.RdfStreamRow(**{self.row_oneof: statement})
-        return (*extra_rows, row)
+        stream_row = jelly.RdfStreamRow(**{self.row_oneof: statement})
+        return (*extra_rows, stream_row)
 
 
 class Encoder(metaclass=ABCMeta):
@@ -105,7 +105,7 @@ class Encoder(metaclass=ABCMeta):
         self.repeated_terms[name] = term
         return False
 
-    def options_to_row(
+    def options_to_stream_row(
         self,
         *,
         logical_type: jelly.LogicalStreamType,
@@ -190,8 +190,8 @@ class Encoder(metaclass=ABCMeta):
         literal = jelly.RdfLiteral(lex=lex, langtag=language, datatype=datatype_id)
         self.statement.add_term(term_name, literal, rows=term_rows)
 
-    def to_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
-        return self.statement.to_rows()
+    def to_stream_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
+        return self.statement.to_stream_rows()
 
     @abstractmethod
     def encode_term(self, term: Any, name: TermName) -> None:

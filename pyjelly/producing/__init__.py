@@ -11,11 +11,11 @@ def stream_to_frame(
     encoder: Encoder,
     statements: Iterable[Iterable[object]],
 ) -> jelly.RdfStreamFrame:
-    rows = [encoder.options_to_row(logical_type=logical_type)]
+    rows = [encoder.options_to_stream_row(logical_type=logical_type)]
 
     for statement in statements:
         encoder.encode_statement(statement)
-        rows.extend(encoder.to_rows())
+        rows.extend(encoder.to_stream_rows())
 
     return jelly.RdfStreamFrame(rows=rows)
 
@@ -25,12 +25,14 @@ def stream_to_frames(
     encoder: Encoder,
     statements: Iterable[Iterable[object]],
 ) -> Iterator[jelly.RdfStreamFrame]:
-    producer.add_rows((encoder.options_to_row(logical_type=producer.jelly_type),))
+    producer.add_stream_rows(
+        (encoder.options_to_stream_row(logical_type=producer.jelly_type),)
+    )
 
     for statement in statements:
         encoder.encode_statement(statement)
-        if frame := producer.add_rows(encoder.to_rows()):
+        if frame := producer.add_stream_rows(encoder.to_stream_rows()):
             yield frame
 
-    if remaining := producer.to_frame():
+    if remaining := producer.to_stream_frame():
         yield remaining
