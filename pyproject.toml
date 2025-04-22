@@ -20,6 +20,10 @@ dependencies = [
 [project.optional-dependencies]
 rdflib = ["rdflib>=7.1.4"]
 
+[project.entry-points."rdf.plugins.parser"]
+jelly = "pyjelly._rdflib.parser:RDFLibJellyParser"
+"application/x-jelly-rdf" = "pyjelly._rdflib.parser:RDFLibJellyParser"
+
 [project.entry-points."rdf.plugins.serializer"]
 jelly = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly._rdflib.serializer:RDFLibJellySerializer"
