@@ -58,7 +58,7 @@ class Decoder:
         return self.decode_statement(triple, ("subject", "predicate", "object"))
 
     def decode_quad(self, quad: jelly.RdfQuad) -> Any:
-        return self.decode_statement(quad, ("subject", "predicate", "object", "quad"))
+        return self.decode_statement(quad, ("subject", "predicate", "object", "graph"))
 
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         name = self.names.decode_name_term_index(iri.name_id)
