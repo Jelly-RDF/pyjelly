@@ -8,7 +8,7 @@ from typing_extensions import Self
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
 
-INTEGRATION_SIDE_EFFECTS: Final[bool] = True
+INTEGRATION_SIDE_EFFECTS: bool = True
 """
 Whether to allow importing integration modules to trigger side effects.
 
