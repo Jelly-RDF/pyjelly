@@ -8,6 +8,14 @@ from typing_extensions import Self
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
 
+INTEGRATION_SIDE_EFFECTS: Final[bool] = True
+"""
+Whether to allow importing integration modules to trigger side effects.
+
+These side effects are cheap and may include populating some registries
+for guessing the defaults for external integrations that work with Jelly.
+"""
+
 MIMETYPES = ("application/x-jelly-rdf",)
 
 
