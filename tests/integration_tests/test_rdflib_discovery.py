@@ -7,22 +7,22 @@ from rdflib import Graph
 from pyjelly import options
 
 rdflib_entrypoint_names = ("jelly", *options.MIMETYPES)
-all_entrypoints = pytest.mark.parametrize("serialize_format", rdflib_entrypoint_names)
+all_entrypoints = pytest.mark.parametrize("file_format", rdflib_entrypoint_names)
 
 
 @all_entrypoints
 @patch("pyjelly.integrations.with_rdflib.serializer.RDFLibJellySerializer")
-def test_jelly_serializer_discovered(mock: MagicMock, serialize_format: str) -> None:
+def test_jelly_serializer_discovered(mock: MagicMock, file_format: str) -> None:
     graph = Graph()
-    graph.serialize(format=serialize_format)
+    graph.serialize(format=file_format)
     mock.assert_called_once_with(graph)
     mock.return_value.serialize.assert_called_once()
 
 
 @all_entrypoints
 @patch("pyjelly.integrations.with_rdflib.parser.RDFLibJellyParser")
-def test_jelly_parser_discovered(mock: MagicMock, serialize_format: str) -> None:
+def test_jelly_parser_discovered(mock: MagicMock, file_format: str) -> None:
     graph = Graph()
-    graph.parse(io.StringIO(), format=serialize_format)
+    graph.parse(io.StringIO(), format=file_format)
     mock.assert_called_once_with()
     mock.return_value.parse.assert_called_once()
