@@ -1,7 +1,7 @@
 import pytest
 from inline_snapshot import snapshot
 
-from pyjelly._serializing.lookups import Lookup
+from pyjelly.producing.lookups import Lookup
 
 
 def current_size(lookup: Lookup) -> int:

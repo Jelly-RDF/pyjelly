@@ -5,7 +5,7 @@
 set -CETeuxo pipefail 
 
 PROTO_PATH=${1:-"pyjelly/_proto"}
-OUT_DIR=${2:-"pyjelly/_pb2"}
+OUT_DIR=${2:-"pyjelly/jelly"}
 
 command mkdir -p "$OUT_DIR"
 

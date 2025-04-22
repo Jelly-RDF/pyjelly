@@ -20,7 +20,7 @@ class Lookup:
 
     Parameters
     ----------
-    size
+    max_size
         Maximum number of entries. Zero disables lookup.
 
     """
