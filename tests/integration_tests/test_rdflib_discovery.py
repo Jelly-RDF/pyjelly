@@ -11,7 +11,7 @@ all_entrypoints = pytest.mark.parametrize("file_format", rdflib_entrypoint_names
 
 
 @all_entrypoints
-@patch("pyjelly.integrations.with_rdflib.serializer.RDFLibJellySerializer")
+@patch("pyjelly.integrations.rdflib.serializer.RDFLibJellySerializer")
 def test_jelly_serializer_discovered(mock: MagicMock, file_format: str) -> None:
     graph = Graph()
     graph.serialize(format=file_format)
@@ -20,7 +20,7 @@ def test_jelly_serializer_discovered(mock: MagicMock, file_format: str) -> None:
 
 
 @all_entrypoints
-@patch("pyjelly.integrations.with_rdflib.parser.RDFLibJellyParser")
+@patch("pyjelly.integrations.rdflib.parser.RDFLibJellyParser")
 def test_jelly_parser_discovered(mock: MagicMock, file_format: str) -> None:
     graph = Graph()
     graph.parse(io.StringIO(), format=file_format)
