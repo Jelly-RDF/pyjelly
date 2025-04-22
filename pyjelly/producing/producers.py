@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABCMeta
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
@@ -9,7 +10,7 @@ from typing_extensions import override
 from pyjelly import jelly
 
 
-class Producer:
+class Producer(metaclass=ABCMeta):
     _rows: list[jelly.RdfStreamRow]
 
     def __init__(self) -> None:
@@ -32,7 +33,7 @@ class Producer:
 
     @cached_property
     def jelly_type(self) -> jelly.LogicalStreamType:
-        return jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+        return jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
         if not self._rows:
@@ -44,24 +45,36 @@ class Producer:
 
 @dataclass
 class FlatProducer(Producer):
-    frame_size: int
-    quads: bool
+    _rows: list[jelly.RdfStreamRow]
 
-    default_frame_size: ClassVar[int] = 250
-
-    def __init__(self, frame_size: int | None = None, *, quads: bool = False) -> None:
-        super().__init__()
-        self.frame_size = frame_size or self.default_frame_size
-        self.quads = quads
+    def __init__(self, *, targets_quads: bool = False) -> None:
+        self._targets_quads = targets_quads
+        self._rows = []
 
     @cached_property
     @override
     def jelly_type(self) -> jelly.LogicalStreamType:
         return (
             jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-            if self.quads
+            if self._targets_quads
             else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
         )
+
+
+@dataclass
+class BoundedFlatProducer(FlatProducer):
+    frame_size: int
+
+    default_frame_size: ClassVar[int] = 250
+
+    def __init__(
+        self,
+        *,
+        targets_quads: bool = False,
+        frame_size: int | None = None,
+    ) -> None:
+        super().__init__(targets_quads=targets_quads)
+        self.frame_size = frame_size or self.default_frame_size
 
     @property
     @override
