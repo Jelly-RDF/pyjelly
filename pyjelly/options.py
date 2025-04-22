@@ -10,7 +10,7 @@ STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
 
 INTEGRATION_SIDE_EFFECTS: bool = True
 """
-Whether to allow importing integration modules to trigger side effects.
+Whether to allow integration module imports to trigger side effects.
 
 These side effects are cheap and may include populating some registries
 for guessing the defaults for external integrations that work with Jelly.
