@@ -6,10 +6,10 @@ from pyjelly.producing.encoder import Encoder
 from pyjelly.producing.producers import FlatProducer, Producer
 
 __all__ = (
+    "Consumer",
+    "Decoder",
     "Encoder",
     "FlatConsumer",
     "FlatProducer",
     "Producer",
-    "Consumer",
-    "Decoder",
 )
