@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import mimetypes
 from dataclasses import dataclass
 from typing import Final
 from typing_extensions import Self
