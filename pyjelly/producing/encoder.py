@@ -32,13 +32,13 @@ class Statement:
         self.jelly_statement: Any = jelly.RdfQuad if quads else jelly.RdfTriple
         self.row_oneof: Any = STATEMENT_ONEOF_NAMES[self.jelly_statement]
         self.extra_stream_rows: dict[TermName, Iterable[jelly.RdfStreamRow]] = {}
-        self.term_values: dict[TermName, jelly.RdfIri | jelly.RdfLiteral | str] = {}
+        self.term_values: dict[TermName, object] = {}
         self.term_types: dict[TermName, str] = {}
 
     def add_term(
         self,
         name: TermName,
-        value: jelly.RdfIri | str | jelly.RdfLiteral | jelly.RdfDefaultGraph,
+        value: object,
         rows: Iterable[jelly.RdfStreamRow] = (),
     ) -> None:
         self.extra_stream_rows[name] = rows
