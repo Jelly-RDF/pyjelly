@@ -38,7 +38,7 @@ class Statement:
     def add_term(
         self,
         name: TermName,
-        value: jelly.RdfIri | str | jelly.RdfLiteral,
+        value: jelly.RdfIri | str | jelly.RdfLiteral | jelly.RdfDefaultGraph,
         rows: Iterable[jelly.RdfStreamRow] = (),
     ) -> None:
         self.extra_stream_rows[name] = rows
