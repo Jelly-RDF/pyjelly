@@ -90,20 +90,21 @@ class RDFLibJellySerializer(RDFLibSerializer):
         **unused: Any,
     ) -> None:
         store = self.store
-        statements: Iterable[Iterable[Node]] = store
+        statements: Iterable[Iterable[Any]] = store
         if isinstance(store, rdflib.Dataset):
             if quads:
                 physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
+                statements = store.quads()
             else:
                 physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-                statements = store.graphs()  # type: ignore[assignment]
+                statements = store.graphs()
         else:
             physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
         encoder = RDFLibEncoder(physical_type=physical_type, options=options)
         if encoder.options.delimited:
             serialize_delimited(
                 out,
-                producer=producer or FlatProducer(),
+                producer=producer or FlatProducer(targets_quads=quads),
                 encoder=encoder,
                 statements=statements,
             )
