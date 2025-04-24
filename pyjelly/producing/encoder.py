@@ -16,6 +16,7 @@ TERM_ONEOF_NAMES = {
     jelly.RdfIri: "iri",
     jelly.RdfLiteral: "literal",
     str: "bnode",
+    jelly.RdfDefaultGraph: "default_graph",
 }
 
 STATEMENT_ONEOF_NAMES = {
@@ -163,6 +164,9 @@ class Encoder(metaclass=ABCMeta):
         name_id = self.names.encode_name_term_index(name)
         jelly_iri = jelly.RdfIri(prefix_id=prefix_id, name_id=name_id)
         self.statement.add_term(term_name, jelly_iri, rows=term_rows)
+
+    def encode_default_graph(self, *, term_name: TermName) -> None:
+        self.statement.add_term(term_name, jelly.RdfDefaultGraph())
 
     def encode_bnode(self, bnode: str, *, term_name: TermName) -> None:
         self.statement.add_term(term_name, str(bnode))  # invariant str needed

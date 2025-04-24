@@ -41,11 +41,12 @@ if __name__ == "__main__":
     cli.add_argument("extra", nargs="*", type=str)
     cli.add_argument("output", nargs="?", default="out.jelly", type=str)
     args = cli.parse_args()
-    if not args.extra:
-        serialize_graph(args.first, output=args.output)
-    else:
+    quads = args.first.endswith(".nq")
+    if quads or args.extra:
         serialize_dataset(
             [args.first, *args.extra],
             output=args.output,
             quads=args.first.endswith(".nq"),
         )
+    else:
+        serialize_graph(args.first, output=args.output)

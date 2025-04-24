@@ -16,6 +16,8 @@ from pyjelly.producing import stream_to_frame, stream_to_frames
 from pyjelly.producing.encoder import Encoder, TermName
 from pyjelly.producing.producers import FlatProducer, Producer
 
+DEFAULT_GRAPH_IRI = rdflib.URIRef("urn:x-rdflib:default")
+
 
 def serialize_delimited(
     out: IO[bytes],
@@ -45,9 +47,9 @@ def serialize(
 class RDFLibEncoder(Encoder):
     @override
     def encode_term(self, term: Node, name: TermName) -> None:
-        if term is None and name == "g":
-            return
-        if isinstance(term, rdflib.URIRef):
+        if name == "g" and term == DEFAULT_GRAPH_IRI:
+            self.encode_default_graph(term_name=name)
+        elif isinstance(term, rdflib.URIRef):
             self.encode_iri(term, term_name=name)
         elif isinstance(term, rdflib.Literal):
             self.encode_literal(
