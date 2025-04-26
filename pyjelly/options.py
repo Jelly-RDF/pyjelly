@@ -6,6 +6,11 @@ from typing import Final
 from typing_extensions import Self
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
+
+DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
+DEFAULT_PREFIX_LOOKUP_SIZE: Final[int] = 150
+DEFAULT_DATATYPE_LOOKUP_SIZE: Final[int] = 32
+
 STRING_DATATYPE_IRI = "http://www.w3.org/2001/XMLSchema#string"
 
 INTEGRATION_SIDE_EFFECTS: bool = True
@@ -57,8 +62,8 @@ class StreamOptions:
     @classmethod
     def big(cls) -> Self:
         return cls(
-            name_lookup_size=4000,
-            prefix_lookup_size=150,
-            datatype_lookup_size=32,
+            name_lookup_size=DEFAULT_NAME_LOOKUP_SIZE,
+            prefix_lookup_size=DEFAULT_PREFIX_LOOKUP_SIZE,
+            datatype_lookup_size=DEFAULT_DATATYPE_LOOKUP_SIZE,
             version=1,
         )

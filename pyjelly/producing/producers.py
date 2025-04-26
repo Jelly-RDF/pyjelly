@@ -10,22 +10,14 @@ from typing_extensions import override
 from pyjelly import jelly
 
 
-class Producer(metaclass=ABCMeta):
+class FrameProducer(metaclass=ABCMeta):
     _rows: list[jelly.RdfStreamRow]
 
     def __init__(self) -> None:
         self._rows = []
 
-    def add_stream_rows(
-        self,
-        rows: Iterable[jelly.RdfStreamRow],
-    ) -> jelly.RdfStreamFrame | None:
-        if not rows:
-            return None
+    def add_stream_rows(self, rows: Iterable[jelly.RdfStreamRow]) -> None:
         self._rows.extend(rows)
-        if not self.stream_frame_ready:
-            return None
-        return self.to_stream_frame()
 
     @property
     def stream_frame_ready(self) -> bool:
@@ -44,11 +36,12 @@ class Producer(metaclass=ABCMeta):
 
 
 @dataclass
-class FlatProducer(Producer):
+class FlatFrameProducer(FrameProducer):
     _rows: list[jelly.RdfStreamRow]
 
-    def __init__(self, *, targets_quads: bool = False) -> None:
-        self._targets_quads = targets_quads
+    def __init__(self, *, quads: bool = False) -> None:
+        super().__init__()
+        self._quads = quads
         self._rows = []
 
     @cached_property
@@ -56,13 +49,13 @@ class FlatProducer(Producer):
     def jelly_type(self) -> jelly.LogicalStreamType:
         return (
             jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-            if self._targets_quads
+            if self._quads
             else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
         )
 
 
 @dataclass
-class BoundedFlatProducer(FlatProducer):
+class FlatSizedFrameProducer(FlatFrameProducer):
     frame_size: int
 
     default_frame_size: ClassVar[int] = 250
@@ -70,10 +63,10 @@ class BoundedFlatProducer(FlatProducer):
     def __init__(
         self,
         *,
-        targets_quads: bool = False,
+        quads: bool = False,
         frame_size: int | None = None,
     ) -> None:
-        super().__init__(targets_quads=targets_quads)
+        super().__init__(quads=quads)
         self.frame_size = frame_size or self.default_frame_size
 
     @property
