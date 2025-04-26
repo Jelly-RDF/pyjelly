@@ -1,153 +1,50 @@
 from __future__ import annotations
 
-from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable
-from itertools import chain
-from typing import Any, Literal
+from collections.abc import Iterable, Sequence
+from enum import Enum
+from typing import Any, ClassVar
 from typing_extensions import TypeAlias
 
-from pyjelly import jelly
-from pyjelly.options import STRING_DATATYPE_IRI, StreamOptions
+from pyjelly import jelly, options
 from pyjelly.producing.lookups import LookupEncoder
 
-TermName: TypeAlias = Literal["s", "p", "o", "g"]
 
-TERM_ONEOF_NAMES = {
-    jelly.RdfIri: "iri",
-    jelly.RdfLiteral: "literal",
-    str: "bnode",
-    jelly.RdfDefaultGraph: "default_graph",
-}
-
-STATEMENT_ONEOF_NAMES = {
-    jelly.RdfTriple: "triple",
-    jelly.RdfQuad: "quad",
-}
+def split_iri(iri_string: str) -> tuple[str, str]:
+    name = iri_string
+    prefix = ""
+    for sep in "#", "/":
+        prefix, char, name = iri_string.rpartition(sep)
+        if char:
+            return prefix + char, name
+    return prefix, name
 
 
-class Statement:
-    """Helper to manage RDF term encoding state during serialization."""
-
-    def __init__(self, *, quads: bool) -> None:
-        self.jelly_statement: Any = jelly.RdfQuad if quads else jelly.RdfTriple
-        self.row_oneof: Any = STATEMENT_ONEOF_NAMES[self.jelly_statement]
-        self.extra_stream_rows: dict[TermName, Iterable[jelly.RdfStreamRow]] = {}
-        self.term_values: dict[TermName, object] = {}
-        self.term_types: dict[TermName, str] = {}
-
-    def add_term(
-        self,
-        name: TermName,
-        value: object,
-        rows: Iterable[jelly.RdfStreamRow] = (),
-    ) -> None:
-        self.extra_stream_rows[name] = rows
-        self.term_values[name] = value
-        self.term_types[name] = TERM_ONEOF_NAMES[type(value)]
-
-    def to_stream_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
-        extra_rows = chain(*self.extra_stream_rows.values())
-        fields = {
-            f"{term_name}_{term_type}": self.term_values[term_name]
-            for term_name, term_type in self.term_types.items()
-        }
-        self.term_values.clear()
-        self.term_types.clear()
-        self.extra_stream_rows.clear()
-        statement = self.jelly_statement(**fields)
-        stream_row = jelly.RdfStreamRow(**{self.row_oneof: statement})
-        return (*extra_rows, stream_row)
+RowsAndTerm: TypeAlias = tuple[
+    Sequence[jelly.RdfStreamRow],
+    "jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph",
+]
 
 
-class Encoder(metaclass=ABCMeta):
-    """Base class for Jelly statement encoders."""
-
-    repeated_terms: dict[str, object]
+class TermEncoder:
+    TERM_ONEOF_NAMES: ClassVar = {
+        jelly.RdfIri: "iri",
+        jelly.RdfLiteral: "literal",
+        str: "bnode",
+        jelly.RdfDefaultGraph: "default_graph",
+    }
 
     def __init__(
         self,
-        *,
-        physical_type: jelly.PhysicalStreamType,
-        options: StreamOptions | None = None,
+        name_lookup_size: int = options.DEFAULT_NAME_LOOKUP_SIZE,
+        prefix_lookup_size: int = options.DEFAULT_PREFIX_LOOKUP_SIZE,
+        datatype_lookup_size: int = options.DEFAULT_DATATYPE_LOOKUP_SIZE,
     ) -> None:
-        assert physical_type is not jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED
-        if options is None:
-            options = StreamOptions.big()
-        self.physical_type = physical_type
-        self.options = options
-        self.names = LookupEncoder(lookup_size=options.name_lookup_size)
-        self.prefixes = LookupEncoder(lookup_size=options.prefix_lookup_size)
-        self.datatypes = LookupEncoder(lookup_size=options.datatype_lookup_size)
-        self.repeated_terms = dict.fromkeys("spog")
-        self.statement = Statement(
-            quads=physical_type is jelly.PHYSICAL_STREAM_TYPE_QUADS
-        )
+        self.names = LookupEncoder(lookup_size=name_lookup_size)
+        self.prefixes = LookupEncoder(lookup_size=prefix_lookup_size)
+        self.datatypes = LookupEncoder(lookup_size=datatype_lookup_size)
 
-    def is_repeated(self, term: object, name: TermName) -> bool:
-        """
-        Check if the RDF term was already used in the same position.
-
-        Parameters
-        ----------
-        term
-            RDFLib term object.
-        name
-            Name of the repeated term.
-
-        Returns
-        -------
-        bool
-            True if term is repeated in current slot, False otherwise.
-
-        """
-        repeated_term = self.repeated_terms[name]
-        if repeated_term == term:
-            return True
-        self.repeated_terms[name] = term
-        return False
-
-    def options_to_stream_row(
-        self,
-        *,
-        logical_type: jelly.LogicalStreamType,
-    ) -> jelly.RdfStreamRow:
-        options = jelly.RdfStreamOptions(
-            stream_name=self.options.stream_name,
-            physical_type=self.physical_type,
-            generalized_statements=True,
-            rdf_star=False,
-            max_name_table_size=self.options.name_lookup_size,
-            max_prefix_table_size=self.options.prefix_lookup_size,
-            max_datatype_table_size=self.options.datatype_lookup_size,
-            logical_type=logical_type,
-            version=1,
-        )
-        return jelly.RdfStreamRow(options=options)
-
-    def split_iri(self, value: str) -> tuple[str, str]:
-        """
-        Split full IRI string into prefix and local name.
-
-        Parameters
-        ----------
-        value
-            Full IRI string.
-
-        Returns
-        -------
-        prefix, name
-
-        """
-        name = value
-        prefix = ""
-        for sep in "#", "/":
-            prefix, char, name = value.rpartition(sep)
-            if char:
-                return prefix + char, name
-        return prefix, name
-
-    def encode_iri(self, iri: str, *, term_name: TermName) -> None:
-        prefix, name = self.split_iri(iri)
+    def encode_iri(self, iri_string: str) -> RowsAndTerm:
+        prefix, name = split_iri(iri_string)
         prefix_id = self.prefixes.encode_entry_index(prefix)
         name_id = self.names.encode_entry_index(name)
         term_rows = []
@@ -162,14 +59,13 @@ class Encoder(metaclass=ABCMeta):
 
         prefix_id = self.prefixes.encode_prefix_term_index(prefix)
         name_id = self.names.encode_name_term_index(name)
-        jelly_iri = jelly.RdfIri(prefix_id=prefix_id, name_id=name_id)
-        self.statement.add_term(term_name, jelly_iri, rows=term_rows)
+        return term_rows, jelly.RdfIri(prefix_id=prefix_id, name_id=name_id)
 
-    def encode_default_graph(self, *, term_name: TermName) -> None:
-        self.statement.add_term(term_name, jelly.RdfDefaultGraph())
+    def encode_default_graph(self) -> RowsAndTerm:
+        return (), jelly.RdfDefaultGraph()
 
-    def encode_bnode(self, bnode: str, *, term_name: TermName) -> None:
-        self.statement.add_term(term_name, str(bnode))  # invariant str needed
+    def encode_bnode(self, bnode: str) -> RowsAndTerm:
+        return (), bnode
 
     def encode_literal(
         self,
@@ -177,12 +73,11 @@ class Encoder(metaclass=ABCMeta):
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
-        term_name: TermName,
-    ) -> None:
+    ) -> RowsAndTerm:
         datatype_id = None
-        term_rows: tuple[jelly.RdfStreamRow, ...] = ()
+        term_rows: tuple[()] | tuple[jelly.RdfStreamRow] = ()
 
-        if datatype and datatype != STRING_DATATYPE_IRI:
+        if datatype and datatype != options.STRING_DATATYPE_IRI:
             datatype_entry_id = self.datatypes.encode_entry_index(datatype)
 
             if datatype_entry_id is not None:
@@ -191,18 +86,75 @@ class Encoder(metaclass=ABCMeta):
 
             datatype_id = self.datatypes.encode_datatype_term_index(datatype)
 
-        literal = jelly.RdfLiteral(lex=lex, langtag=language, datatype=datatype_id)
-        self.statement.add_term(term_name, literal, rows=term_rows)
+        return term_rows, jelly.RdfLiteral(
+            lex=lex,
+            langtag=language,
+            datatype=datatype_id,
+        )
 
-    def to_stream_rows(self) -> tuple[jelly.RdfStreamRow, ...]:
-        return self.statement.to_stream_rows()
+    def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+        msg = f"unsupported term type: {type(term)}"
+        raise NotImplementedError(msg)
 
-    @abstractmethod
-    def encode_term(self, term: Any, name: TermName) -> None:
-        raise NotImplementedError
 
-    def encode_statement(self, terms: Iterable[object]) -> None:
-        name: TermName
-        for name, term in zip(("spog"), terms):  # type: ignore[assignment]
-            if not self.is_repeated(term, name=name):
-                self.encode_term(term, name=name)
+class Slot(str, Enum):
+    """Slots for encoding RDF terms."""
+
+    subject = "s"
+    predicate = "p"
+    object = "o"
+    graph = "g"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+STATEMENT_ONEOF_NAMES = {
+    jelly.RdfTriple: "triple",
+    jelly.RdfQuad: "quad",
+}
+
+
+def new_repeated_terms() -> dict[Slot, object]:
+    """Create a new dictionary for repeated terms."""
+    return dict.fromkeys(Slot)
+
+
+def encode_statement(
+    terms: Iterable[object],
+    term_encoder: TermEncoder,
+    repeated_terms: dict[Slot, object],
+) -> tuple[list[jelly.RdfStreamRow], dict[str, Any]]:
+    statement: dict[str, object] = {}
+    rows: list[jelly.RdfStreamRow] = []
+    for slot, term in zip(Slot, terms):
+        if repeated_terms[slot] != term:
+            extra_rows, value = term_encoder.encode_any(term, slot)
+            oneof = term_encoder.TERM_ONEOF_NAMES[type(value)]
+            rows.extend(extra_rows)
+            field = f"{slot}_{oneof}"
+            statement[field] = value
+            repeated_terms[slot] = term
+    return rows, statement
+
+
+def encode_quad(
+    terms: Iterable[object],
+    term_encoder: TermEncoder,
+    repeated_terms: dict[Slot, object],
+) -> list[jelly.RdfStreamRow]:
+    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
+    row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
+    rows.append(row)
+    return rows
+
+
+def encode_triple(
+    terms: Iterable[object],
+    term_encoder: TermEncoder,
+    repeated_terms: dict[Slot, object],
+) -> list[jelly.RdfStreamRow]:
+    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
+    row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
+    rows.append(row)
+    return rows
