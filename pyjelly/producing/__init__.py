@@ -85,4 +85,4 @@ class Stream:
         end_row = jelly.RdfStreamRow(graph_end=jelly.RdfGraphEnd())
         self.producer.add_stream_rows((end_row,))
         if self.producer.stream_frame_ready:
-            yield self.producer.to_stream_frame()
+            yield self.producer.to_stream_frame()  # type: ignore[misc]
