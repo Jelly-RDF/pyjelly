@@ -81,6 +81,27 @@ def quad_stream(
         yield remaining
 
 
+def graph_stream(
+    store: Dataset,
+    options: StreamOptions,
+) -> Generator[jelly.RdfStreamFrame]:
+    stream = Stream(
+        encoder=RDFLibTermEncoder(
+            name_lookup_size=options.name_lookup_size,
+            prefix_lookup_size=options.prefix_lookup_size,
+            datatype_lookup_size=options.datatype_lookup_size,
+        ),
+        # Flat quads is used for continuous graph streaming
+        producer=FlatFrameProducer(quads=True),
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+    )
+    stream.begin(options)
+    for graph in store.graphs():
+        yield from stream.graph(graph_id=graph.identifier, graph=graph)
+    if remaining := stream.producer.to_stream_frame():
+        yield remaining
+
+
 class RDFLibJellySerializer(RDFLibSerializer):
     """
     RDFLib serializer for writing graphs in Jelly RDF stream format.
@@ -109,7 +130,11 @@ class RDFLibJellySerializer(RDFLibSerializer):
         if options is None:
             options = StreamOptions.big()
         if isinstance(self.store, Dataset):
-            frames = quad_stream(self.store, options=options)
+            frames = (
+                quad_stream(self.store, options=options)
+                if quads
+                else graph_stream(self.store, options=options)
+            )
         else:
             frames = triple_stream(self.store, options=options)
 
