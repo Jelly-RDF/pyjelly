@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator, Iterable, Sequence
 from typing import Any, ClassVar
 
 from pyjelly import jelly
@@ -43,14 +43,14 @@ class Decoder:
         self, statement: jelly.RdfTriple | jelly.RdfQuad, fields: Sequence[str]
     ) -> Any:
         terms = []
-        for term_name in fields:
-            field = statement.WhichOneof(term_name)
+        for slot in fields:
+            field = statement.WhichOneof(slot)
             if field:
                 jelly_term = getattr(statement, field)
                 decoded_term = self.term_decoders[type(jelly_term)](self, jelly_term)
-                self.repeated_terms[term_name] = decoded_term
+                self.repeated_terms[slot] = decoded_term
             else:
-                decoded_term = self.repeated_terms[term_name]
+                decoded_term = self.repeated_terms[slot]
             terms.append(decoded_term)
         return self.transform_statement(terms)
 
@@ -80,7 +80,8 @@ class Decoder:
             datatype=datatype,
         )
 
-    transform_statement = tuple
+    def transform_statement(self, terms: Iterable[Any]) -> Any:
+        return tuple(terms)
 
     def transform_iri(self, iri: str) -> Any:
         raise NotImplementedError

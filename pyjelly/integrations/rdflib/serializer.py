@@ -1,68 +1,101 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Generator
 from typing import IO, Any
 from typing_extensions import override
 
 import rdflib
 from google.protobuf.proto import serialize_length_prefixed
-from rdflib.graph import Graph, QuotedGraph
+from rdflib.graph import Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
-from rdflib.term import Node
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
-from pyjelly.producing import stream_to_frame, stream_to_frames
-from pyjelly.producing.encoder import Encoder, TermName
-from pyjelly.producing.producers import FlatProducer, Producer
+from pyjelly.producing import Stream
+from pyjelly.producing.encoders import RowsAndTerm, Slot, TermEncoder
+from pyjelly.producing.producers import FlatFrameProducer
 
-DEFAULT_GRAPH_IRI = rdflib.URIRef("urn:x-rdflib:default")
-
-
-def serialize_delimited(
-    out: IO[bytes],
-    *,
-    producer: Producer,
-    encoder: Encoder,
-    statements: Iterable[Iterable[Node]],
-) -> None:
-    for frame in stream_to_frames(
-        encoder=encoder,
-        statements=statements,
-        producer=producer,
-    ):
-        serialize_length_prefixed(frame, out)
+DEFAULT_GRAPH_IRI = "urn:x-rdflib:default"
 
 
-def serialize(
-    out: IO[bytes],
-    *,
-    encoder: Encoder,
-    statements: Iterable[Iterable[Node]],
-) -> None:
-    frame = stream_to_frame(encoder=encoder, statements=statements)
-    out.write(frame.SerializeToString(deterministic=True))
+class RDFLibTermEncoder(TermEncoder):
+    def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+        if slot is Slot.graph and str(term) == DEFAULT_GRAPH_IRI:
+            return self.encode_default_graph()
 
+        if isinstance(term, rdflib.URIRef):
+            return self.encode_iri(term)
 
-class RDFLibEncoder(Encoder):
-    @override
-    def encode_term(self, term: Node, name: TermName) -> None:
-        if name == "g" and term == DEFAULT_GRAPH_IRI:
-            self.encode_default_graph(term_name=name)
-        elif isinstance(term, rdflib.URIRef):
-            self.encode_iri(term, term_name=name)
-        elif isinstance(term, rdflib.Literal):
-            self.encode_literal(
+        if isinstance(term, rdflib.Literal):
+            return self.encode_literal(
                 lex=term,
                 language=term.language,
                 datatype=term.datatype,
-                term_name=name,
             )
-        elif isinstance(term, rdflib.BNode):
-            self.encode_bnode(term, term_name=name)
-        else:
-            msg = f"term of type {type(term)} is unsupported"
-            raise TypeError(msg)
+
+        if isinstance(term, rdflib.BNode):
+            return self.encode_bnode(str(term))
+
+        return super().encode_any(term, slot)  # error if not handled
+
+
+def triple_stream(
+    store: Graph,
+    options: StreamOptions,
+) -> Generator[jelly.RdfStreamFrame]:
+    stream = Stream(
+        encoder=RDFLibTermEncoder(
+            name_lookup_size=options.name_lookup_size,
+            prefix_lookup_size=options.prefix_lookup_size,
+            datatype_lookup_size=options.datatype_lookup_size,
+        ),
+        producer=FlatFrameProducer(quads=False),
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+    )
+    stream.begin(options)
+    yield from stream.to_triples(store)
+    if remaining := stream.producer.to_stream_frame():
+        yield remaining
+
+
+def quad_stream(
+    store: Graph,
+    options: StreamOptions,
+) -> Generator[jelly.RdfStreamFrame]:
+    stream = Stream(
+        encoder=RDFLibTermEncoder(
+            name_lookup_size=options.name_lookup_size,
+            prefix_lookup_size=options.prefix_lookup_size,
+            datatype_lookup_size=options.datatype_lookup_size,
+        ),
+        producer=FlatFrameProducer(quads=True),
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_QUADS,
+    )
+    stream.begin(options)
+    yield from stream.to_quads(store)
+    if remaining := stream.producer.to_stream_frame():
+        yield remaining
+
+
+def graph_stream(
+    store: Dataset,
+    options: StreamOptions,
+) -> Generator[jelly.RdfStreamFrame]:
+    stream = Stream(
+        encoder=RDFLibTermEncoder(
+            name_lookup_size=options.name_lookup_size,
+            prefix_lookup_size=options.prefix_lookup_size,
+            datatype_lookup_size=options.datatype_lookup_size,
+        ),
+        # Flat quads is used for continuous graph streaming
+        producer=FlatFrameProducer(quads=True),
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+    )
+    stream.begin(options)
+    for graph in store.graphs():
+        yield from stream.graph(graph_id=graph.identifier, graph=graph)
+    if remaining := stream.producer.to_stream_frame():
+        yield remaining
 
 
 class RDFLibJellySerializer(RDFLibSerializer):
@@ -87,28 +120,23 @@ class RDFLibJellySerializer(RDFLibSerializer):
         /,
         *,
         quads: bool = False,
-        producer: Producer | None = None,
         options: StreamOptions | None = None,
         **unused: Any,
     ) -> None:
-        store = self.store
-        statements: Iterable[Iterable[Any]] = store
-        if isinstance(store, rdflib.Dataset):
-            if quads:
-                physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
-                statements = store.quads()
-            else:
-                physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-                statements = store.graphs()
-        else:
-            physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
-        encoder = RDFLibEncoder(physical_type=physical_type, options=options)
-        if encoder.options.delimited:
-            serialize_delimited(
-                out,
-                producer=producer or FlatProducer(targets_quads=quads),
-                encoder=encoder,
-                statements=statements,
+        if options is None:
+            options = StreamOptions.big()
+        if isinstance(self.store, Dataset):
+            frames = (
+                quad_stream(self.store, options=options)
+                if quads
+                else graph_stream(self.store, options=options)
             )
         else:
-            serialize(out, encoder=encoder, statements=statements)
+            frames = triple_stream(self.store, options=options)
+
+        if options.delimited:
+            for frame in frames:
+                serialize_length_prefixed(frame, out)
+        else:
+            for frame in frames:
+                out.write(frame.SerializeToString(deterministic=True))
