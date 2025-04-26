@@ -109,10 +109,6 @@ ignore = [
     # Rationale: Implicit namespace packages are a feature
     "INP001",
 
-    # Description: `print` found
-    # Rationale: `print` is OK
-    "T201",
-
     # Description: Missing documentation
     # Rationale: Important, but secondary concern
     "D100", # Public module
