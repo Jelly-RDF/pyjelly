@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Sequence
+from collections.abc import Generator, Iterable, Sequence
 from typing import Any, ClassVar
 
 from pyjelly import jelly
@@ -80,7 +80,8 @@ class Decoder:
             datatype=datatype,
         )
 
-    transform_statement = tuple
+    def transform_statement(self, terms: Iterable[Any]) -> Any:
+        return tuple(terms)
 
     def transform_iri(self, iri: str) -> Any:
         raise NotImplementedError
