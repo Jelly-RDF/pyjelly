@@ -68,7 +68,8 @@ jobs:
 
     - name: Install latest Jelly CLI
       id: install-cli
-      run: ./scripts/download-cli
+      run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
+      if: ${{ !cancelled() && matrix.platform == 'ubuntu-latest' && matrix.version == '3.13' }}
 
     - name: Run unit tests
       id: unit-tests
