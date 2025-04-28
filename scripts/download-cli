@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# Download Jelly-CLI (https://github.com/Jelly-RDF/cli)
+
+set -CETeuxo pipefail
+
+DEST_NAME=${1:-"$HOME/.local/bin/jelly-cli"}
+
+: Downloading Jelly-CLI to "$DEST_NAME"...
+command wget https://github.com/Jelly-RDF/cli/releases/download/dev/jelly-cli-linux-x86_64 -O "$DEST_NAME"
+
+: Setting up permissions...
+command chmod +x "$DEST_NAME"
+
+: Done

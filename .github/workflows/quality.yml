@@ -66,6 +66,10 @@ jobs:
       id: install
       run: ${{ env.uv-sync }}
 
+    - name: Install latest Jelly CLI
+      id: install-cli
+      run: ./download-cli
+
     - name: Run unit tests
       id: unit-tests
       run: ${{ env.uv-run }} pytest -svv
