@@ -100,7 +100,7 @@ class GraphStream(TripleStream):
         [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
         kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
         start_row = jelly.RdfStreamRow(
-            graph_start=jelly.RdfGraphStart(**{kw_name: graph_node})
+            graph_start=jelly.RdfGraphStart(**{kw_name: graph_node})  # type: ignore[arg-type]
         )
         graph_rows.append(start_row)
         self.producer.add_stream_rows(graph_rows)
