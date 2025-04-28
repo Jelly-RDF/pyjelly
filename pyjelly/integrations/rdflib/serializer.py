@@ -6,7 +6,7 @@ from typing_extensions import override
 
 import rdflib
 from google.protobuf.proto import serialize_length_prefixed
-from rdflib.graph import Dataset, Graph, QuotedGraph
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
@@ -15,12 +15,10 @@ from pyjelly.producing import Stream
 from pyjelly.producing.encoder import RowsAndTerm, Slot, TermEncoder
 from pyjelly.producing.producers import FlatFrameProducer
 
-DEFAULT_GRAPH_IRI = rdflib.URIRef("urn:x-rdflib:default")
-
 
 class RDFLibTermEncoder(TermEncoder):
     def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
-        if slot is Slot.graph and term == DEFAULT_GRAPH_IRI:
+        if slot is Slot.graph and term == DATASET_DEFAULT_GRAPH_ID:
             return self.encode_default_graph()
 
         if isinstance(term, rdflib.URIRef):
