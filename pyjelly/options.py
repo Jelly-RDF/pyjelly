@@ -41,7 +41,9 @@ class StreamOptions:
     name_lookup_size: int
     prefix_lookup_size: int
     datatype_lookup_size: int
-    version: int
+    generalized_statements: bool = False
+    rdf_star: bool = False
+    version: int = 1
     delimited: bool = True
     stream_name: str | None = None
 
@@ -56,7 +58,6 @@ class StreamOptions:
             name_lookup_size=128,
             prefix_lookup_size=32,
             datatype_lookup_size=32,
-            version=1,
         )
 
     @classmethod
@@ -65,5 +66,4 @@ class StreamOptions:
             name_lookup_size=DEFAULT_NAME_LOOKUP_SIZE,
             prefix_lookup_size=DEFAULT_PREFIX_LOOKUP_SIZE,
             datatype_lookup_size=DEFAULT_DATATYPE_LOOKUP_SIZE,
-            version=1,
         )

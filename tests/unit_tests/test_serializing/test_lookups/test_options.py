@@ -15,5 +15,4 @@ def test_name_encoder_fails_with_size_lt_8(invalid_size: int) -> None:
             name_lookup_size=invalid_size,
             prefix_lookup_size=0,
             datatype_lookup_size=0,
-            version=1,
         )
