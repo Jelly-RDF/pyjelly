@@ -6,13 +6,11 @@ import argparse
 
 import rdflib
 
-from tests.utils.ordered_memory import OrderedMemory
-
 
 def main(location: str, output: str) -> None:
-    graph = rdflib.Graph(store=OrderedMemory())
+    graph = rdflib.Dataset()
     graph.parse(location=location, format="jelly")
-    graph.serialize(output, format="jelly")
+    graph.serialize(output, quads=True, format="jelly")
 
 
 if __name__ == "__main__":
