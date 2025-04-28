@@ -1,0 +1,9 @@
+from pathlib import Path
+
+CONFORMANCE_TESTS_DIR = Path(__file__).parent.parent
+
+TEST_OUTPUTS_DIR = CONFORMANCE_TESTS_DIR / "out"
+RDF_TESTS_DIR = CONFORMANCE_TESTS_DIR / "rdf"
+
+RDF_FROM_JELLY_TESTS_DIR = RDF_TESTS_DIR / "from_jelly"
+RDF_TO_JELLY_TESTS_DIR = RDF_TESTS_DIR / "to_jelly"
