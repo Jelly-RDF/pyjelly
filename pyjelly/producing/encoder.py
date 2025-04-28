@@ -109,12 +109,6 @@ class Slot(str, Enum):
         return self.value
 
 
-STATEMENT_ONEOF_NAMES = {
-    jelly.RdfTriple: "triple",
-    jelly.RdfQuad: "quad",
-}
-
-
 def new_repeated_terms() -> dict[Slot, object]:
     """Create a new dictionary for repeated terms."""
     return dict.fromkeys(Slot)
@@ -156,5 +150,17 @@ def encode_triple(
 ) -> list[jelly.RdfStreamRow]:
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
+    rows.append(row)
+    return rows
+
+
+def encode_namespace_declaration(
+    name: str,
+    value: str,
+    term_encoder: TermEncoder,
+) -> list[jelly.RdfStreamRow]:
+    [*rows], iri = term_encoder.encode_iri(value)
+    declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)
+    row = jelly.RdfStreamRow(namespace=declaration)
     rows.append(row)
     return rows

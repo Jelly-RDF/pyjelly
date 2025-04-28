@@ -8,6 +8,7 @@ from pyjelly.options import StreamOptions
 from pyjelly.producing.encoder import (
     Slot,
     TermEncoder,
+    encode_namespace_declaration,
     encode_quad,
     encode_triple,
     new_repeated_terms,
@@ -57,6 +58,14 @@ class Stream:
     def begin(self) -> None:
         row = jelly.RdfStreamRow(options=self.encode_options())
         self.producer.add_stream_rows((row,))
+
+    def namespace_declaration(self, name: str, iri: str) -> None:
+        rows = encode_namespace_declaration(
+            name=name,
+            value=iri,
+            term_encoder=self.encoder,
+        )
+        self.producer.add_stream_rows(rows)
 
 
 class TripleStream(Stream):
