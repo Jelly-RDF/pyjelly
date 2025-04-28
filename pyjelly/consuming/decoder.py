@@ -65,6 +65,9 @@ class Decoder:
         prefix = self.prefixes.decode_prefix_term_index(iri.prefix_id)
         return self.transform_iri(iri=prefix + name)
 
+    def decode_default_graph(self, _: jelly.RdfDefaultGraph) -> Any:
+        return self.transform_default_graph()
+
     def decode_bnode(self, bnode: str) -> Any:
         return self.transform_bnode(bnode)
 
@@ -86,6 +89,9 @@ class Decoder:
     def transform_iri(self, iri: str) -> Any:
         raise NotImplementedError
 
+    def transform_default_graph(self) -> Any:
+        raise NotImplementedError
+
     def transform_bnode(self, bnode: str) -> Any:
         raise NotImplementedError
 
@@ -97,7 +103,7 @@ class Decoder:
     ) -> Any:
         raise NotImplementedError
 
-    row_handlers: ClassVar[dict[Any, Any]] = {
+    row_handlers: ClassVar = {
         jelly.RdfStreamOptions: validate_stream_options,
         jelly.RdfPrefixEntry: ingest_prefix_entry,
         jelly.RdfNameEntry: ingest_name_entry,
@@ -110,4 +116,5 @@ class Decoder:
         jelly.RdfIri: decode_iri,
         str: decode_bnode,
         jelly.RdfLiteral: decode_literal,
+        jelly.RdfDefaultGraph: decode_default_graph,
     }

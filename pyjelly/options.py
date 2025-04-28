@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import mimetypes
 from dataclasses import dataclass
-from typing import Final
-from typing_extensions import Self
+from typing import Any, Final
+
+from pyjelly import jelly
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
@@ -52,18 +53,34 @@ class StreamOptions:
             "name lookup size must be at least 8"
         )
 
-    @classmethod
-    def small(cls) -> Self:
-        return cls(
+    @staticmethod
+    def small() -> StreamOptions:
+        return StreamOptions(
             name_lookup_size=128,
             prefix_lookup_size=32,
             datatype_lookup_size=32,
         )
 
-    @classmethod
-    def big(cls) -> Self:
-        return cls(
+    @staticmethod
+    def big() -> StreamOptions:
+        return StreamOptions(
             name_lookup_size=DEFAULT_NAME_LOOKUP_SIZE,
             prefix_lookup_size=DEFAULT_PREFIX_LOOKUP_SIZE,
             datatype_lookup_size=DEFAULT_DATATYPE_LOOKUP_SIZE,
         )
+
+
+class ConsumerStreamOptions(StreamOptions):
+    physical_type: jelly.PhysicalStreamType
+    logical_type: jelly.LogicalStreamType
+
+    def __init__(
+        self,
+        *,
+        physical_type: jelly.PhysicalStreamType,
+        logical_type: jelly.LogicalStreamType,
+        **kwds: Any,
+    ) -> None:
+        super().__init__(**kwds)
+        self.physical_type = physical_type
+        self.logical_type = logical_type

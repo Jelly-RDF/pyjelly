@@ -6,7 +6,7 @@ from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
 from pyjelly.consuming import options_from_frame
-from pyjelly.options import StreamOptions
+from pyjelly.options import ConsumerStreamOptions
 
 
 def delimited_jelly_hint(header: bytes) -> bool:
@@ -63,7 +63,7 @@ def chained_frame_iterator(
 
 def get_options_and_frames(
     input_stream: IO[bytes],
-) -> tuple[StreamOptions, Iterator[jelly.RdfStreamFrame]]:
+) -> tuple[ConsumerStreamOptions, Iterator[jelly.RdfStreamFrame]]:
     is_delimited = delimited_jelly_hint(bytes_read := input_stream.read(3))
     input_stream.seek(-len(bytes_read), os.SEEK_CUR)
 
