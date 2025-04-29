@@ -36,7 +36,7 @@ def test_last_assigned_index() -> None:
     with patch.object(encoder.lookup, "insert", return_value=passthrough):
         encoder.encode_entry_index("foo")
 
-        assert encoder.last_assigned_index == passthrough
+        assert encoder.last_assigned_index is passthrough
 
 
 def test_last_reused_index() -> None:
@@ -50,7 +50,7 @@ def test_last_reused_index() -> None:
     encoder.lookup.data["foo"] = passthrough  # type: ignore[assignment]
     encoder.encode_term_index("foo")
 
-    assert encoder.last_reused_index == passthrough
+    assert encoder.last_reused_index is passthrough
 
 
 def test_encode_term_index() -> None:
@@ -95,7 +95,7 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
         passthrough = object()
 
         with patch.object(encoder, "encode_term_index", return_value=passthrough):
-            assert encoder.encode_name_term_index("baz") == passthrough
+            assert encoder.encode_name_term_index("baz") is passthrough
 
     with subtests.test("lookup size = 0 fails"):
         encoder = LookupEncoder(lookup_size=0)
@@ -138,7 +138,7 @@ def test_encode_prefix_term_index(subtests: SubTests) -> None:
         passthrough = object()
 
         with patch.object(encoder, "encode_term_index", return_value=passthrough):
-            assert encoder.encode_prefix_term_index("baz") == passthrough
+            assert encoder.encode_prefix_term_index("baz") is passthrough
 
     with subtests.test("lookup size = 0 always encodes 0"):
         encoder = LookupEncoder(lookup_size=0)
@@ -153,15 +153,13 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
         passthrough = object()
 
         with patch.object(encoder, "encode_term_index", return_value=passthrough):
-            assert encoder.encode_datatype_term_index("foo") == passthrough
+            assert encoder.encode_datatype_term_index("foo") is passthrough
 
     with subtests.test("lookup size = 0 always encodes 0"):
         encoder = LookupEncoder(lookup_size=0)
         assert encoder.encode_datatype_term_index("foo") == 0
         assert encoder.encode_datatype_term_index("bar") == 0
 
-        # should not touch the internal encoder
-        with patch.object(
-            encoder, "encode_term_index", return_value=passthrough
-        ) as mock:
+        # Should not touch the internal encoder
+        with patch.object(encoder, "encode_term_index") as mock:
             mock.assert_not_called()
