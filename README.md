@@ -13,4 +13,5 @@ You can also join the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)** to
 **[NeverBlink](https://neverblink.eu)** provides commercial support services for Jelly, including implementing custom features, system integrations, implementations for new frameworks, benchmarking, and more.
 
 ## License
+
 The pyjelly library is licensed under the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
