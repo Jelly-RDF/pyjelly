@@ -27,14 +27,14 @@ class Lookup:
 
     def __init__(self, max_size: int) -> None:
         self.data = OrderedDict[str, int]()
-        self._max_size = max_size
+        self.max_size = max_size
         self._evicting = False
 
     def make_last_to_evict(self, key: str) -> None:
         self.data.move_to_end(key)
 
     def insert(self, key: str) -> int:
-        if not self._max_size:
+        if not self.max_size:
             return 0
         assert key not in self.data, f"key {key!r} already present"
         if self._evicting:
@@ -43,11 +43,11 @@ class Lookup:
         else:
             index = len(self.data) + 1
             self.data[key] = index
-            self._evicting = index == self._max_size
+            self._evicting = index == self.max_size
         return index
 
     def __repr__(self) -> str:
-        max_size, data = self._max_size, self.data
+        max_size, data = self.max_size, self.data
         return f"Lookup({max_size=!r}, {data=!r})"
 
 
@@ -107,6 +107,8 @@ class LookupEncoder:
         return current_index
 
     def encode_prefix_term_index(self, value: str) -> int:
+        if self.lookup.max_size == 0:
+            return 0
         previous_index = self.last_reused_index
         current_index = self.encode_term_index(value)
         if value and previous_index == 0:
@@ -123,4 +125,6 @@ class LookupEncoder:
         return current_index
 
     def encode_datatype_term_index(self, value: str) -> int:
+        if self.lookup.max_size == 0:
+            return 0
         return self.encode_term_index(value)

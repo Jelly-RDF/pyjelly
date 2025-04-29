@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+import pytest
 from inline_snapshot import snapshot
+from pytest_subtests import SubTests
 
 from pyjelly.producing.lookups import LookupEncoder
 
@@ -67,66 +69,99 @@ def test_encode_term_index() -> None:
     assert encoder.encode_term_index("biz") == 3
 
 
-def test_encode_name_term_index() -> None:
-    encoder = LookupEncoder(lookup_size=3)
+def test_encode_name_term_index(subtests: SubTests) -> None:
+    with subtests.test("lookup size = 3 encodes correctly"):
+        encoder = LookupEncoder(lookup_size=3)
 
-    encoder.encode_entry_index("foo")
-    encoder.encode_entry_index("bar")
+        encoder.encode_entry_index("foo")
+        encoder.encode_entry_index("bar")
 
-    # Default value of 0 MUST be interpreted as previous_name_id + 1
-    previous_id = encoder.last_reused_index
-    assert encoder.lookup.data["foo"] == previous_id + 1
-    assert encoder.encode_name_term_index("foo") == 0
+        # Default value of 0 MUST be interpreted as previous_name_id + 1
+        previous_id = encoder.last_reused_index
+        assert encoder.lookup.data["foo"] == previous_id + 1
+        assert encoder.encode_name_term_index("foo") == 0
 
-    previous_id = encoder.last_reused_index
-    assert encoder.lookup.data["bar"] == previous_id + 1
-    assert encoder.encode_name_term_index("bar") == 0
+        previous_id = encoder.last_reused_index
+        assert encoder.lookup.data["bar"] == previous_id + 1
+        assert encoder.encode_name_term_index("bar") == 0
 
-    encoder.encode_entry_index("baz")
-    previous_id = encoder.last_reused_index
-    assert encoder.lookup.data["baz"] == previous_id + 1
-    assert encoder.encode_name_term_index("baz") == 0
+        encoder.encode_entry_index("baz")
+        previous_id = encoder.last_reused_index
+        assert encoder.lookup.data["baz"] == previous_id + 1
+        assert encoder.encode_name_term_index("baz") == 0
 
-    # Test all non-specialized cases are delegated to previously tested
-    # encode_term_index
-    passthrough = object()
+        # Test all non-specialized cases are delegated to previously tested
+        # encode_term_index
+        passthrough = object()
 
-    with patch.object(encoder, "encode_term_index", return_value=passthrough):
-        assert encoder.encode_name_term_index("baz") == passthrough
+        with patch.object(encoder, "encode_term_index", return_value=passthrough):
+            assert encoder.encode_name_term_index("baz") == passthrough
 
+    with subtests.test("lookup size = 0 fails"):
+        encoder = LookupEncoder(lookup_size=0)
 
-def test_encode_prefix_term_index() -> None:
-    encoder = LookupEncoder(lookup_size=3)
+        with pytest.raises(KeyError):
+            encoder.encode_name_term_index("foo") == 0
 
-    encoder.encode_entry_index("foo")
-    encoder.encode_entry_index("bar")
+        with pytest.raises(KeyError):
+            encoder.encode_name_term_index("bar") == 0
 
-    # The default value of 0 MUST be interpreted as the same value
-    # as in the last explicitly specified (non-zero) prefix identifier
-    assert encoder.encode_prefix_term_index("foo") == 1
-    assert encoder.encode_prefix_term_index("foo") == 0
-    assert encoder.encode_prefix_term_index("bar") == 2
-    assert encoder.encode_prefix_term_index("bar") == 0
-
-    encoder.encode_entry_index("baz")
-    assert encoder.encode_prefix_term_index("baz") == 3
-    assert encoder.encode_prefix_term_index("baz") == 0
-
-    encoder.encode_entry_index("qux")
-
-    # Test all non-specialized cases are delegated to previously tested
-    # encode_term_index
-    passthrough = object()
-
-    with patch.object(encoder, "encode_term_index", return_value=passthrough):
-        assert encoder.encode_prefix_term_index("baz") == passthrough
+        # should not touch the internal encoder
+        with patch.object(
+            encoder, "encode_term_index", return_value=passthrough
+        ) as mock:
+            mock.assert_not_called()
 
 
-def test_encode_datatype_term_index() -> None:
-    encoder = LookupEncoder(lookup_size=3)
+def test_encode_prefix_term_index(subtests: SubTests) -> None:
+    with subtests.test("lookup size = 3 encodes correctly"):
+        encoder = LookupEncoder(lookup_size=3)
 
-    # Test all cases are delegated to previously tested encode_term_index
-    passthrough = object()
+        encoder.encode_entry_index("foo")
+        encoder.encode_entry_index("bar")
 
-    with patch.object(encoder, "encode_term_index", return_value=passthrough):
-        assert encoder.encode_datatype_term_index("foo") == passthrough
+        # The default value of 0 MUST be interpreted as the same value
+        # as in the last explicitly specified (non-zero) prefix identifier
+        assert encoder.encode_prefix_term_index("foo") == 1
+        assert encoder.encode_prefix_term_index("foo") == 0
+        assert encoder.encode_prefix_term_index("bar") == 2
+        assert encoder.encode_prefix_term_index("bar") == 0
+
+        encoder.encode_entry_index("baz")
+        assert encoder.encode_prefix_term_index("baz") == 3
+        assert encoder.encode_prefix_term_index("baz") == 0
+
+        encoder.encode_entry_index("qux")
+
+        # Test all non-specialized cases are delegated to previously tested
+        # encode_term_index
+        passthrough = object()
+
+        with patch.object(encoder, "encode_term_index", return_value=passthrough):
+            assert encoder.encode_prefix_term_index("baz") == passthrough
+
+    with subtests.test("lookup size = 0 always encodes 0"):
+        encoder = LookupEncoder(lookup_size=0)
+        assert encoder.encode_datatype_term_index("foo") == 0
+        assert encoder.encode_datatype_term_index("bar") == 0
+
+
+def test_encode_datatype_term_index(subtests: SubTests) -> None:
+    with subtests.test("lookup size = 3 encodes correctly"):
+        encoder = LookupEncoder(lookup_size=3)
+        # Test all cases are delegated to previously tested encode_term_index
+        passthrough = object()
+
+        with patch.object(encoder, "encode_term_index", return_value=passthrough):
+            assert encoder.encode_datatype_term_index("foo") == passthrough
+
+    with subtests.test("lookup size = 0 always encodes 0"):
+        encoder = LookupEncoder(lookup_size=0)
+        assert encoder.encode_datatype_term_index("foo") == 0
+        assert encoder.encode_datatype_term_index("bar") == 0
+
+        # should not touch the internal encoder
+        with patch.object(
+            encoder, "encode_term_index", return_value=passthrough
+        ) as mock:
+            mock.assert_not_called()
