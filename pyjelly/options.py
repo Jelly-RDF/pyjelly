@@ -88,6 +88,7 @@ class ConsumerStreamOptions(StreamOptions):
         validate_type_compatibility(physical_type, logical_type)
 
 
+# Logical stream types that are compatible only with the triples physical stream type.
 TRIPLES_ONLY_LOGICAL_TYPES = {
     jelly.LOGICAL_STREAM_TYPE_GRAPHS,
     jelly.LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS,
