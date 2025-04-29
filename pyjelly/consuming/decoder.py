@@ -19,9 +19,12 @@ class Decoder:
     def decode_stream_frame(self, frame: jelly.RdfStreamFrame) -> Generator[Any]:
         for row_owner in frame.rows:
             row = getattr(row_owner, row_owner.WhichOneof("row"))
-            returned = self.row_handlers[type(row)](self, row)
+            returned = self.decode_row(row)
             if returned is not None:
                 yield returned
+
+    def decode_row(self, row: Any) -> Any | None:
+        return self.row_handlers[type(row)](self, row)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         assert self.options.stream_name == options.stream_name
@@ -39,26 +42,31 @@ class Decoder:
     def ingest_datatype_entry(self, entry: jelly.RdfDatatypeEntry) -> None:
         self.datatypes.assign_entry(index=entry.id, value=entry.value)
 
-    def decode_statement(
-        self, statement: jelly.RdfTriple | jelly.RdfQuad, fields: Sequence[str]
-    ) -> Any:
-        terms = []
-        for term_name in fields:
-            field = statement.WhichOneof(term_name)
-            if field:
-                jelly_term = getattr(statement, field)
-                decoded_term = self.term_decoders[type(jelly_term)](self, jelly_term)
-                self.repeated_terms[term_name] = decoded_term
-            else:
-                decoded_term = self.repeated_terms[term_name]
-            terms.append(decoded_term)
-        return self.transform_statement(terms)
-
     def decode_triple(self, triple: jelly.RdfTriple) -> Any:
         return self.decode_statement(triple, ("subject", "predicate", "object"))
 
     def decode_quad(self, quad: jelly.RdfQuad) -> Any:
         return self.decode_statement(quad, ("subject", "predicate", "object", "graph"))
+
+    def decode_statement(
+        self,
+        statement: jelly.RdfTriple | jelly.RdfQuad,
+        oneofs: Sequence[str],
+    ) -> Any:
+        terms = []
+        for oneof in oneofs:
+            field = statement.WhichOneof(oneof)
+            if field:
+                jelly_term = getattr(statement, field)
+                decoded_term = self.decode_term(jelly_term)
+                self.repeated_terms[oneof] = decoded_term
+            else:
+                decoded_term = self.repeated_terms[oneof]
+            terms.append(decoded_term)
+        return self.transform_statement(terms)
+
+    def decode_term(self, term: Any) -> Any:
+        return self.term_decoders[type(term)](self, term)
 
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         name = self.names.decode_name_term_index(iri.name_id)
@@ -83,6 +91,13 @@ class Decoder:
             datatype=datatype,
         )
 
+    def decode_graph_start(self, graph_start: jelly.RdfGraphStart) -> Any:
+        term = getattr(graph_start, graph_start.WhichOneof("graph"))
+        return self.transform_graph_start(self.decode_term(term))
+
+    def decode_graph_end(self, _: jelly.RdfGraphEnd) -> Any:
+        return self.transform_graph_end()
+
     def transform_statement(self, terms: Iterable[Any]) -> Any:
         return tuple(terms)
 
@@ -103,6 +118,13 @@ class Decoder:
     ) -> Any:
         raise NotImplementedError
 
+    def transform_graph_start(self, graph_id: Any) -> Any:
+        raise NotImplementedError
+
+    def transform_graph_end(self) -> Any:
+        raise NotImplementedError
+
+    # dispatch by invariant type (no C3 resolution)
     row_handlers: ClassVar = {
         jelly.RdfStreamOptions: validate_stream_options,
         jelly.RdfPrefixEntry: ingest_prefix_entry,
@@ -110,6 +132,8 @@ class Decoder:
         jelly.RdfDatatypeEntry: ingest_datatype_entry,
         jelly.RdfTriple: decode_triple,
         jelly.RdfQuad: decode_quad,
+        jelly.RdfGraphStart: decode_graph_start,
+        jelly.RdfGraphEnd: decode_graph_end,
     }
 
     term_decoders: ClassVar = {
