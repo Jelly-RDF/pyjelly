@@ -140,6 +140,11 @@ def test_encode_prefix_term_index(subtests: SubTests) -> None:
         assert encoder.encode_prefix_term_index("foo") == 0
         assert encoder.encode_prefix_term_index("bar") == 0
 
+        # If the [max_prefix_table_size] field is set to 0, the prefix lookup
+        # MUST NOT be used in the stream
+        with patch.object(encoder, "encode_term_index") as mock:
+            mock.assert_not_called()
+
 
 def test_encode_datatype_term_index(subtests: SubTests) -> None:
     with subtests.test("lookup size = 3 encodes correctly"):
@@ -155,7 +160,7 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
         assert encoder.encode_datatype_term_index("foo") == 0
         assert encoder.encode_datatype_term_index("bar") == 0
 
-        # If the [max_datatype_table_size] field is set to 0, the lookup
+        # If the [max_datatype_table_size] field is set to 0, the datatype lookup
         # MUST NOT be used in the stream
         with patch.object(encoder, "encode_term_index") as mock:
             mock.assert_not_called()
