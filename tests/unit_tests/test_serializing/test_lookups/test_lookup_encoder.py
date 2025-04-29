@@ -101,10 +101,10 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
         encoder = LookupEncoder(lookup_size=0)
 
         with pytest.raises(KeyError):
-            encoder.encode_name_term_index("foo") == 0
+            encoder.encode_name_term_index("foo")
 
         with pytest.raises(KeyError):
-            encoder.encode_name_term_index("bar") == 0
+            encoder.encode_name_term_index("bar")
 
         # should not touch the internal encoder
         with patch.object(
