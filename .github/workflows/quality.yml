@@ -21,14 +21,16 @@ defaults:
 jobs:
   quality-gate:
     if: ${{ github.actor != 'dependabot[bot]' && !cancelled() }}
-    name: ${{ matrix.version }} ${{matrix.platform}}
+    name: ${{ matrix.runs-test-cases && '(test cases) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
     runs-on: ${{ matrix.platform }}
 
     strategy:
       fail-fast: false
       # https://blog.jaraco.com/efficient-use-of-ci-resources/
       matrix:
-        version: 
+        runs-test-cases:
+        - false
+        version:
         - '3.9'
         - '3.13'
         platform:
@@ -41,6 +43,9 @@ jobs:
           platform: ubuntu-latest
         - version: '3.12'
           platform: ubuntu-latest
+        - version: '3.13'
+          platform: ubuntu-latest
+          runs-test-cases: true
         - version: '3.14'
           platform: ubuntu-latest
         - version: pypy3.10
@@ -64,6 +69,11 @@ jobs:
     - name: Install
       id: install
       run: ${{ env.uv-sync }}
+
+    - name: Install latest Jelly CLI
+      id: install-cli
+      run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
+      if: ${{ !cancelled() && matrix.runs-test-cases }}
 
     - name: Run unit tests
       id: unit-tests
