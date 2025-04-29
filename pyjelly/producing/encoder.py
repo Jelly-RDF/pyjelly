@@ -6,6 +6,7 @@ from typing import Any, ClassVar, TypeVar
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
+from pyjelly.errors import JellyConformanceError
 from pyjelly.producing.lookups import LookupEncoder
 
 
@@ -79,6 +80,12 @@ class TermEncoder:
         term_rows: tuple[()] | tuple[jelly.RdfStreamRow] = ()
 
         if datatype and datatype != options.STRING_DATATYPE_IRI:
+            if self.datatypes.lookup.max_size == 0:
+                msg = (
+                    "can't encode literal: datatype lookup cannot be used if disabled "
+                    "(its size was set to 0)"
+                )
+                raise JellyConformanceError(msg)
             datatype_entry_id = self.datatypes.encode_entry_index(datatype)
 
             if datatype_entry_id is not None:
