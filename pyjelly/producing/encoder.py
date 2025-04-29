@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from enum import Enum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
@@ -19,10 +19,11 @@ def split_iri(iri_string: str) -> tuple[str, str]:
     return prefix, name
 
 
-RowsAndTerm: TypeAlias = tuple[
-    Sequence[jelly.RdfStreamRow],
-    "jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph",
-]
+TermT = TypeVar("TermT")
+RowsAnd: TypeAlias = tuple[Sequence[jelly.RdfStreamRow], TermT]
+RowsAndTerm: TypeAlias = (
+    "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph]"
+)
 
 
 class TermEncoder:
@@ -43,7 +44,7 @@ class TermEncoder:
         self.prefixes = LookupEncoder(lookup_size=prefix_lookup_size)
         self.datatypes = LookupEncoder(lookup_size=datatype_lookup_size)
 
-    def encode_iri(self, iri_string: str) -> RowsAndTerm:
+    def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
         prefix_id = self.prefixes.encode_entry_index(prefix)
         name_id = self.names.encode_entry_index(name)
@@ -61,10 +62,10 @@ class TermEncoder:
         name_id = self.names.encode_name_term_index(name)
         return term_rows, jelly.RdfIri(prefix_id=prefix_id, name_id=name_id)
 
-    def encode_default_graph(self) -> RowsAndTerm:
+    def encode_default_graph(self) -> RowsAnd[jelly.RdfDefaultGraph]:
         return (), jelly.RdfDefaultGraph()
 
-    def encode_bnode(self, bnode: str) -> RowsAndTerm:
+    def encode_bnode(self, bnode: str) -> RowsAnd[str]:
         return (), bnode
 
     def encode_literal(
@@ -73,7 +74,7 @@ class TermEncoder:
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
-    ) -> RowsAndTerm:
+    ) -> RowsAnd[jelly.RdfLiteral]:
         datatype_id = None
         term_rows: tuple[()] | tuple[jelly.RdfStreamRow] = ()
 
@@ -107,12 +108,6 @@ class Slot(str, Enum):
 
     def __str__(self) -> str:
         return self.value
-
-
-STATEMENT_ONEOF_NAMES = {
-    jelly.RdfTriple: "triple",
-    jelly.RdfQuad: "quad",
-}
 
 
 def new_repeated_terms() -> dict[Slot, object]:
@@ -156,5 +151,17 @@ def encode_triple(
 ) -> list[jelly.RdfStreamRow]:
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
+    rows.append(row)
+    return rows
+
+
+def encode_namespace_declaration(
+    name: str,
+    value: str,
+    term_encoder: TermEncoder,
+) -> list[jelly.RdfStreamRow]:
+    [*rows], iri = term_encoder.encode_iri(value)
+    declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)
+    row = jelly.RdfStreamRow(namespace=declaration)
     rows.append(row)
     return rows

@@ -1,49 +1,75 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import Any
+from typing import Any, ClassVar
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
 from pyjelly.producing.encoder import (
     Slot,
     TermEncoder,
+    encode_namespace_declaration,
     encode_quad,
     encode_triple,
     new_repeated_terms,
 )
-from pyjelly.producing.producers import FrameProducer
+from pyjelly.producing.producers import FlatFrameProducer, FrameProducer
 
 
 class Stream:
+    physical_type: ClassVar[jelly.PhysicalStreamType]
+
     def __init__(
         self,
         *,
-        encoder: TermEncoder,
-        producer: FrameProducer,
-        physical_type: jelly.PhysicalStreamType,
+        options: StreamOptions,
+        encoder_class: type[TermEncoder],
+        producer: FrameProducer | None = None,
     ) -> None:
-        self.encoder = encoder
-        self.producer = producer
-        self.physical_type = physical_type
+        self.options = options
+        self.encoder = encoder_class(
+            prefix_lookup_size=options.prefix_lookup_size,
+            name_lookup_size=options.name_lookup_size,
+            datatype_lookup_size=options.datatype_lookup_size,
+        )
+        self.producer = producer or self.create_default_producer()
         self.repeated_terms = new_repeated_terms()
 
-    def create_jelly_options(self, options: StreamOptions) -> jelly.RdfStreamOptions:
+    def create_default_producer(self) -> FrameProducer:
+        quads = self.physical_type != jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+        return FlatFrameProducer(quads=quads)
+
+    def calculate_version(self) -> int:
+        return 1
+
+    def encode_options(self) -> jelly.RdfStreamOptions:
         return jelly.RdfStreamOptions(
-            stream_name=options.stream_name,
+            stream_name=self.options.stream_name,
             physical_type=self.physical_type,
-            generalized_statements=True,
-            rdf_star=False,
-            max_name_table_size=options.name_lookup_size,
-            max_prefix_table_size=options.prefix_lookup_size,
-            max_datatype_table_size=options.datatype_lookup_size,
+            generalized_statements=self.options.generalized_statements,
+            rdf_star=self.options.rdf_star,
+            max_name_table_size=self.options.name_lookup_size,
+            max_prefix_table_size=self.options.prefix_lookup_size,
+            max_datatype_table_size=self.options.datatype_lookup_size,
             logical_type=self.producer.jelly_type,
-            version=1,
+            version=self.options.version,
         )
 
-    def begin(self, options: StreamOptions) -> None:
-        row = jelly.RdfStreamRow(options=self.create_jelly_options(options))
+    def begin(self) -> None:
+        row = jelly.RdfStreamRow(options=self.encode_options())
         self.producer.add_stream_rows((row,))
+
+    def namespace_declaration(self, name: str, iri: str) -> None:
+        rows = encode_namespace_declaration(
+            name=name,
+            value=iri,
+            term_encoder=self.encoder,
+        )
+        self.producer.add_stream_rows(rows)
+
+
+class TripleStream(Stream):
+    physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
 
     def triple(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_triple(
@@ -56,6 +82,10 @@ class Stream:
             return self.producer.to_stream_frame()
         return None
 
+
+class QuadStream(Stream):
+    physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
+
     def quad(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_quad(
             terms,
@@ -67,17 +97,20 @@ class Stream:
             return self.producer.to_stream_frame()
         return None
 
+
+class GraphStream(TripleStream):
+    physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
+
     def graph(
         self,
         graph_id: object,
         graph: Iterable[Iterable[object]],
     ) -> Generator[jelly.RdfStreamFrame]:
         [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
-        marker_kwargs: dict[str, Any] = {
-            f"g_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}": graph_node
-        }
-        graph_row = jelly.RdfStreamRow(graph_start=jelly.RdfGraphStart(**marker_kwargs))
-        graph_rows.append(graph_row)
+        kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
+        kws: dict[Any, Any] = {kw_name: graph_node}
+        start_row = jelly.RdfStreamRow(graph_start=jelly.RdfGraphStart(**kws))
+        graph_rows.append(start_row)
         self.producer.add_stream_rows(graph_rows)
         for triple in graph:
             if frame := self.triple(triple):
