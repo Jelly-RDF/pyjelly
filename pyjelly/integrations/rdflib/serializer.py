@@ -28,7 +28,8 @@ class RDFLibTermEncoder(TermEncoder):
             return self.encode_literal(
                 lex=term,
                 language=term.language,
-                datatype=term.datatype,
+                # Workaround RDFLib breaking LSP
+                datatype=term.datatype and str(term.datatype),
             )
 
         if isinstance(term, rdflib.BNode):

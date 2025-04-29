@@ -82,7 +82,8 @@ class TermEncoder:
         if datatype and datatype != options.STRING_DATATYPE_IRI:
             if self.datatypes.lookup.max_size == 0:
                 msg = (
-                    "can't encode literal: datatype lookup cannot be used if disabled "
+                    f"can't encode literal with type {datatype}: "
+                    "datatype lookup cannot be used if disabled "
                     "(its size was set to 0)"
                 )
                 raise JellyConformanceError(msg)
