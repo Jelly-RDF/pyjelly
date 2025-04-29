@@ -97,6 +97,7 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
         with patch.object(encoder, "encode_term_index", return_value=passthrough):
             assert encoder.encode_name_term_index("baz") is passthrough
 
+    # [max_name_table_size] (...) MUST be set to a value greater than or equal to 8.
     with subtests.test("lookup size = 0 fails"):
         encoder = LookupEncoder(lookup_size=0)
 
@@ -105,12 +106,6 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
 
         with pytest.raises(KeyError):
             encoder.encode_name_term_index("bar")
-
-        # should not touch the internal encoder
-        with patch.object(
-            encoder, "encode_term_index", return_value=passthrough
-        ) as mock:
-            mock.assert_not_called()
 
 
 def test_encode_prefix_term_index(subtests: SubTests) -> None:
@@ -142,8 +137,8 @@ def test_encode_prefix_term_index(subtests: SubTests) -> None:
 
     with subtests.test("lookup size = 0 always encodes 0"):
         encoder = LookupEncoder(lookup_size=0)
-        assert encoder.encode_datatype_term_index("foo") == 0
-        assert encoder.encode_datatype_term_index("bar") == 0
+        assert encoder.encode_prefix_term_index("foo") == 0
+        assert encoder.encode_prefix_term_index("bar") == 0
 
 
 def test_encode_datatype_term_index(subtests: SubTests) -> None:
@@ -160,6 +155,7 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
         assert encoder.encode_datatype_term_index("foo") == 0
         assert encoder.encode_datatype_term_index("bar") == 0
 
-        # Should not touch the internal encoder
+        # If the [max_datatype_table_size] field is set to 0, the prefix lookup
+        # MUST NOT be used in the stream
         with patch.object(encoder, "encode_term_index") as mock:
             mock.assert_not_called()
