@@ -6,7 +6,7 @@ from pyjelly.options import validate_type_compatibility
 
 
 @pytest.mark.parametrize(
-    "physical_type, logical_type",
+    ("physical_type", "logical_type"),
     [
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_GRAPHS),
@@ -48,7 +48,7 @@ def test_validate_type_compatibility_ok(
 
 
 @pytest.mark.parametrize(
-    "physical_type, logical_type",
+    ("physical_type", "logical_type"),
     [
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_DATASETS),
