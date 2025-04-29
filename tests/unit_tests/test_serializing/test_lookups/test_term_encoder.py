@@ -3,8 +3,6 @@ import pytest
 from pyjelly.errors import JellyConformanceError
 from pyjelly.producing.encoder import TermEncoder
 
-from rdflib import Dataset
-
 
 def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
     encoder = TermEncoder(
