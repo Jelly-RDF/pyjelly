@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 from pyjelly import jelly
+from pyjelly.errors import JellyAssertionError, JellyConformanceError
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
@@ -49,9 +50,9 @@ class StreamOptions:
     stream_name: str | None = None
 
     def __post_init__(self) -> None:
-        assert self.name_lookup_size >= MIN_NAME_LOOKUP_SIZE, (
-            "name lookup size must be at least 8"
-        )
+        if self.name_lookup_size < MIN_NAME_LOOKUP_SIZE:
+            msg = "name lookup size must be at least 8"
+            raise JellyConformanceError(msg)
 
     @staticmethod
     def small() -> StreamOptions:
@@ -84,3 +85,25 @@ class ConsumerStreamOptions(StreamOptions):
         super().__init__(**kwds)
         self.physical_type = physical_type
         self.logical_type = logical_type
+        validate_type_compatibility(physical_type, logical_type)
+
+
+TRIPLES_ONLY_LOGICAL_TYPES = {
+    jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+    jelly.LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS,
+    jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+}
+
+
+def validate_type_compatibility(
+    physical_type: jelly.PhysicalStreamType,
+    logical_type: jelly.LogicalStreamType,
+) -> None:
+    triples_physical_type = physical_type is jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    triples_logical_type = logical_type in TRIPLES_ONLY_LOGICAL_TYPES
+    if triples_physical_type != triples_logical_type:
+        msg = (
+            f"physical type {physical_type} is not compatible "
+            f"with logical type {logical_type}"
+        )
+        raise JellyAssertionError(msg)
