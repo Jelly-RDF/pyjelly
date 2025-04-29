@@ -29,6 +29,7 @@ def id_from_path(path: Path) -> str:
 
 
 def physical_types_glob(pattern: str, base: Path) -> Iterator[Path]:
+    # Adheres to the structure described in conformance_tests/rdf/README.md
     return chain(
         (base / "triples_rdf_1_1").glob(pattern),
         (base / "quads_rdf_1_1").glob(pattern),
