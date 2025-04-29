@@ -40,7 +40,10 @@ from pyjelly.options import validate_type_compatibility
         (jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED, jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED),
     ],
 )
-def test_validate_type_compatibility_ok(physical_type, logical_type):
+def test_validate_type_compatibility_ok(
+    physical_type: jelly.PhysicalStreamType,
+    logical_type: jelly.LogicalStreamType,
+) -> None:
     validate_type_compatibility(physical_type, logical_type)
 
 
@@ -72,6 +75,9 @@ def test_validate_type_compatibility_ok(physical_type, logical_type):
         ),
     ],
 )
-def test_validate_type_compatibility_error(physical_type, logical_type):
+def test_validate_type_compatibility_error(
+    physical_type: jelly.PhysicalStreamType,
+    logical_type: jelly.LogicalStreamType,
+) -> None:
     with pytest.raises(JellyAssertionError):
         validate_type_compatibility(physical_type, logical_type)
