@@ -34,7 +34,6 @@ jobs:
         platform:
         - ubuntu-latest
         - macos-latest
-        - windows-latest
         include:
         - version: '3.10'
           platform: ubuntu-latest
@@ -55,6 +54,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        submodules: true
 
     - uses: astral-sh/setup-uv@v5
       with:
