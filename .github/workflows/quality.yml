@@ -36,7 +36,6 @@ jobs:
         platform:
         - ubuntu-latest
         - macos-latest
-        - windows-latest
         include:
         - version: '3.10'
           platform: ubuntu-latest

@@ -65,6 +65,8 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
+        for prefix, namespace in self.store.namespaces():
+            stream.namespace_declaration(name=prefix, iri=namespace)
         for terms in self.store:
             if frame := stream.triple(terms):
                 yield frame
@@ -84,6 +86,8 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
+        for prefix, namespace in self.store.namespaces():
+            stream.namespace_declaration(name=prefix, iri=namespace)
         for terms in self.store.quads():
             if frame := stream.quad(terms):
                 yield frame
@@ -103,6 +107,8 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
+        for prefix, namespace in self.store.namespaces():
+            stream.namespace_declaration(name=prefix, iri=namespace)
         for graph in self.store.graphs():
             yield from stream.graph(graph_id=graph.identifier, graph=graph)
         if last := stream.producer.to_stream_frame():

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
 from pyjelly.producing.encoder import (
     Slot,
     TermEncoder,
+    encode_namespace_declaration,
     encode_quad,
     encode_triple,
     new_repeated_terms,
@@ -58,6 +59,14 @@ class Stream:
         row = jelly.RdfStreamRow(options=self.encode_options())
         self.producer.add_stream_rows((row,))
 
+    def namespace_declaration(self, name: str, iri: str) -> None:
+        rows = encode_namespace_declaration(
+            name=name,
+            value=iri,
+            term_encoder=self.encoder,
+        )
+        self.producer.add_stream_rows(rows)
+
 
 class TripleStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
@@ -99,9 +108,8 @@ class GraphStream(TripleStream):
     ) -> Generator[jelly.RdfStreamFrame]:
         [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
         kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
-        start_row = jelly.RdfStreamRow(
-            graph_start=jelly.RdfGraphStart(**{kw_name: graph_node})  # type: ignore[arg-type]
-        )
+        kws: dict[Any, Any] = {kw_name: graph_node}
+        start_row = jelly.RdfStreamRow(graph_start=jelly.RdfGraphStart(**kws))
         graph_rows.append(start_row)
         self.producer.add_stream_rows(graph_rows)
         for triple in graph:
