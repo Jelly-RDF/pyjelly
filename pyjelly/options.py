@@ -99,9 +99,9 @@ def validate_type_compatibility(
     physical_type: jelly.PhysicalStreamType,
     logical_type: jelly.LogicalStreamType,
 ) -> None:
-    if logical_type is jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
+    if logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
         return
-    triples_physical_type = physical_type is jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    triples_physical_type = physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
     triples_logical_type = logical_type in TRIPLES_ONLY_LOGICAL_TYPES
     if triples_physical_type != triples_logical_type:
         msg = (

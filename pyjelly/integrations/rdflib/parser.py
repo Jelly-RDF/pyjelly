@@ -92,18 +92,18 @@ class RDFLibJellyParser(RDFLibParser):
         options, frames = get_options_and_frames(input_stream)
         decoder = RDFLibDecoder(options)
 
-        if options.physical_type is jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
+        if options.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
             self.parse_triples(frames=frames, decoder=decoder, sink=sink)
             return
 
         ds = Dataset(store=sink.store, default_union=True)
         ds.default_context = sink
 
-        if options.physical_type is jelly.PHYSICAL_STREAM_TYPE_QUADS:
+        if options.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS:
             self.parse_quads(frames=frames, decoder=decoder, dataset=ds)
             return
 
-        if options.physical_type is jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
+        if options.physical_type == jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
             self.parse_graphs(frames=frames, decoder=decoder, dataset=ds)
             return
 
