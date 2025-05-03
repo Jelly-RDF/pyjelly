@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable
 from typing import Any, ClassVar
 
 from pyjelly import jelly
-from pyjelly.options import StreamOptions
+from pyjelly.options import StreamOptions, validate_type_compatibility
 from pyjelly.producing.encoder import (
     Slot,
     TermEncoder,
@@ -33,6 +33,7 @@ class Stream:
             datatype_lookup_size=options.datatype_lookup_size,
         )
         self.producer = producer or self.create_default_producer()
+        validate_type_compatibility(self.physical_type, self.producer.jelly_type)
         self.repeated_terms = new_repeated_terms()
 
     def create_default_producer(self) -> FrameProducer:
