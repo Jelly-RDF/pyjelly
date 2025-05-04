@@ -27,13 +27,18 @@ class FrameProducer(metaclass=ABCMeta):
     @property
     @abstractmethod
     def stream_frame_ready(self) -> bool:
-        """Determine if a new frame should be emitted based on implementation-specific logic."""
+        """Determine if a new frame should be emitted."""
         raise NotImplementedError
 
-    @cached_property
+    @property
+    @abstractmethod
     def jelly_type(self) -> jelly.LogicalStreamType:
-        """Return the logical stream type for this producer. Defaults to flat triples."""
-        return jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        """
+        Return the logical stream type for this producer.
+
+        Defaults to flat triples.
+        """
+        raise NotImplementedError
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
         """Return the current frame and clears the row buffer if there are any rows."""
