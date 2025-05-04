@@ -18,7 +18,7 @@ class FrameProducer(metaclass=ABCMeta):
     """
 
     def __init__(self) -> None:
-        self._rows = []
+        self._rows: list[jelly.RdfStreamRow] = []
 
     def add_stream_rows(self, rows: Iterable[jelly.RdfStreamRow]) -> None:
         """Add stream rows to the current batch."""
