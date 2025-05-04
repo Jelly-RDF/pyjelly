@@ -33,11 +33,7 @@ class FrameProducer(metaclass=ABCMeta):
     @property
     @abstractmethod
     def jelly_type(self) -> jelly.LogicalStreamType:
-        """
-        Return the logical stream type for this producer.
-
-        Defaults to flat triples.
-        """
+        """Return the logical stream type for this producer."""
         raise NotImplementedError
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
