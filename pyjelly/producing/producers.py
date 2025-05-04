@@ -11,24 +11,32 @@ from pyjelly import jelly
 
 
 class FrameProducer(metaclass=ABCMeta):
-    _rows: list[jelly.RdfStreamRow]
+    """
+    Abstract base class for producing Jelly frames from RDF stream rows.
+
+    Collects stream rows and assembles them into RdfStreamFrame objects when ready.
+    """
 
     def __init__(self) -> None:
         self._rows = []
 
     def add_stream_rows(self, rows: Iterable[jelly.RdfStreamRow]) -> None:
+        """Add stream rows to the current batch."""
         self._rows.extend(rows)
 
     @property
     @abstractmethod
     def stream_frame_ready(self) -> bool:
+        """Determine if a new frame should be emitted based on implementation-specific logic."""
         raise NotImplementedError
 
     @cached_property
     def jelly_type(self) -> jelly.LogicalStreamType:
+        """Return the logical stream type for this producer. Defaults to flat triples."""
         return jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
+        """Return the current frame and clears the row buffer if there are any rows."""
         if not self._rows:
             return None
         frame = jelly.RdfStreamFrame(rows=self._rows)
@@ -38,6 +46,16 @@ class FrameProducer(metaclass=ABCMeta):
 
 @dataclass
 class ManualFrameProducer(FrameProducer):
+    """
+    Produces frames only when manually requested (never automatically).
+
+    !!! warning
+        All stream rows are kept in memory until `to_stream_frame()` is called.
+        This may lead to high memory usage for large streams.
+
+    Used for non-delimited serialization.
+    """
+
     def __init__(
         self,
         *,
@@ -49,11 +67,18 @@ class ManualFrameProducer(FrameProducer):
     @property
     @override
     def stream_frame_ready(self) -> bool:
+        """Always returns False; user must manually flush the frame."""
         return False
 
 
 @dataclass
 class FlatFrameProducer(FrameProducer):
+    """
+    Produces frames automatically when a fixed number of rows is reached.
+
+    Used for delimited encoding (default mode).
+    """
+
     quads: bool
     frame_size: int
 
@@ -67,11 +92,13 @@ class FlatFrameProducer(FrameProducer):
     @property
     @override
     def stream_frame_ready(self) -> bool:
+        """Return True when enough rows have been accumulated to emit a frame."""
         return len(self._rows) >= self.frame_size
 
     @cached_property
     @override
     def jelly_type(self) -> jelly.LogicalStreamType:
+        """Determine the logical type based on whether quads are used."""
         return (
             jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
             if self.quads
