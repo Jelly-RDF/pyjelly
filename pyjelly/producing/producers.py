@@ -63,7 +63,12 @@ class ManualFrameProducer(FrameProducer):
         jelly_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED,
     ) -> None:
         super().__init__()
-        self.jelly_type = jelly_type
+        self._jelly_type = jelly_type
+
+    @property
+    @override
+    def jelly_type(self) -> jelly.LogicalStreamType:
+        return self._jelly_type
 
     @property
     @override
