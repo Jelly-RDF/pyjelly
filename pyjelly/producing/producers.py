@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import cached_property
@@ -20,8 +20,9 @@ class FrameProducer(metaclass=ABCMeta):
         self._rows.extend(rows)
 
     @property
+    @abstractmethod
     def stream_frame_ready(self) -> bool:
-        return False
+        raise NotImplementedError
 
     @cached_property
     def jelly_type(self) -> jelly.LogicalStreamType:
@@ -36,40 +37,43 @@ class FrameProducer(metaclass=ABCMeta):
 
 
 @dataclass
-class FlatFrameProducer(FrameProducer):
-    _rows: list[jelly.RdfStreamRow]
-
-    def __init__(self, *, quads: bool = False) -> None:
+class ManualFrameProducer(FrameProducer):
+    def __init__(
+        self,
+        *,
+        jelly_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED,
+    ) -> None:
         super().__init__()
-        self._quads = quads
-        self._rows = []
+        self.jelly_type = jelly_type
 
-    @cached_property
+    @property
     @override
-    def jelly_type(self) -> jelly.LogicalStreamType:
-        return (
-            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-            if self._quads
-            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
-        )
+    def stream_frame_ready(self) -> bool:
+        return False
 
 
 @dataclass
-class FlatSizedFrameProducer(FlatFrameProducer):
+class FlatFrameProducer(FrameProducer):
+    quads: bool
     frame_size: int
 
     default_frame_size: ClassVar[int] = 250
 
-    def __init__(
-        self,
-        *,
-        quads: bool = False,
-        frame_size: int | None = None,
-    ) -> None:
-        super().__init__(quads=quads)
+    def __init__(self, *, quads: bool, frame_size: int | None = None) -> None:
+        super().__init__()
+        self.quads = quads
         self.frame_size = frame_size or self.default_frame_size
 
     @property
     @override
     def stream_frame_ready(self) -> bool:
         return len(self._rows) >= self.frame_size
+
+    @cached_property
+    @override
+    def jelly_type(self) -> jelly.LogicalStreamType:
+        return (
+            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+            if self.quads
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
