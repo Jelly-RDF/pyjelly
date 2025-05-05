@@ -9,6 +9,8 @@ from pyjelly.errors import JellyAssertionError, JellyConformanceError
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
+MAX_LOOKUP_SIZE: Final[int] = 4096
+
 DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
 DEFAULT_PREFIX_LOOKUP_SIZE: Final[int] = 150
 DEFAULT_DATATYPE_LOOKUP_SIZE: Final[int] = 32
