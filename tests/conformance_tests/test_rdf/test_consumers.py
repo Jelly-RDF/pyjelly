@@ -14,7 +14,6 @@ from tests.conformance_tests.test_rdf.constants import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
-from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
     id_from_path,
     jelly_validate,
