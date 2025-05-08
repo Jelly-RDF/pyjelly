@@ -26,4 +26,4 @@ Hello! If you want to contribute to Jelly and help us make it go fast (in Python
         uv run mypy pyjelly
         uv run mypy tests
         ```
-    2. Running all tests with `pytest`.
+    2. Running the tests with `pytest`.
