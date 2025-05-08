@@ -18,7 +18,7 @@ class Adapter:
     def quad(self, terms: Iterable[Any]) -> Any:
         raise NotImplementedError
 
-    def iri(self, namespace: str, iri: str) -> Any:
+    def iri(self, iri: str) -> Any:
         raise NotImplementedError
 
     def default_graph(self) -> Any:

@@ -14,6 +14,7 @@ from tests.conformance_tests.test_rdf.constants import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
+from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
     id_from_path,
     jelly_validate,
@@ -47,26 +48,27 @@ def test_positive(path: Path) -> None:
         input_filename=path / "in.jelly",
         out_filenames=tuple(path.glob("out_*")),
     )
+    input_filename = str(case.input_filename)
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)
-    dataset = Dataset()
-    frames_as_graphs = []
+    dataset = Graph(store=OrderedMemory())
+    frames_as_graphs: list[Graph] = []
     with patch(
         "pyjelly.integrations.rdflib.parser.RDFLibTriplesAdapter.frame",
         partialmethod(gather, lst=frames_as_graphs),
     ):
-        dataset.parse(location=case.input_filename, format="jelly")
+        dataset.parse(location=input_filename, format="jelly")
     for frame_no, graph in enumerate(frames_as_graphs):
         frame_no_str = str(frame_no + 1).zfill(3)
-        output_filename = output_dir / f"out_{frame_no_str}.jelly"
-        expected_filename = case.input_filename.parent / f"out_{frame_no_str}.nt"
-        assert expected_filename in case.out_filenames
-        graph.serialize(destination=output_filename, format="jelly")
+        output_filename = output_dir / f"out_{frame_no_str}.nt"
+        graph.serialize(destination=output_filename, encoding="utf-8", format="nt")
         jelly_validate(
-            output_filename,
+            case.input_filename,
             "--compare-to-rdf-file",
-            expected_filename,
+            output_filename,
+            "--compare-frame-indices",
+            frame_no,
         )
 
 
@@ -76,9 +78,10 @@ def test_negative(path: Path) -> None:
         input_filename=path / "in.jelly",
         out_filenames=None,
     )
+    input_filename = str(case.input_filename)
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)
     dataset = Dataset()
     with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011, B017, TD002
-        dataset.parse(location=case.input_filename, format="jelly")
+        dataset.parse(location=input_filename, format="jelly")

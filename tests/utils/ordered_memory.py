@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from itertools import repeat
 from typing import Any
 from typing_extensions import TypeAlias
 
-from rdflib import Graph
+from rdflib import Graph, URIRef
 from rdflib.store import Store
 from rdflib.term import Identifier, Node
 
@@ -28,6 +29,21 @@ class OrderedMemory(Store):
     ) -> None:
         super().__init__(configuration=configuration, identifier=identifier)
         self._triples: list[Triple] = []
+        self._namespaces: dict[str, URIRef] = {}
+        self._prefixes: dict[URIRef, str] = {}
+
+    def bind(self, prefix: str, namespace: URIRef, override: bool = True) -> None:  # noqa: ARG002,FBT001,FBT002
+        self._namespaces[prefix] = namespace
+        self._prefixes[namespace] = prefix
+
+    def namespace(self, prefix: str) -> URIRef | None:
+        return self._namespaces.get(prefix, None)
+
+    def prefix(self, namespace: URIRef) -> str | None:
+        return self._prefixes.get(namespace, None)
+
+    def namespaces(self) -> Generator[tuple[str, URIRef]]:
+        yield from self._namespaces.items()
 
     def triples(
         self,

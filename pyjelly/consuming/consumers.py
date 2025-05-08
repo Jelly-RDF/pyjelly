@@ -18,7 +18,7 @@ def consumer_from_jelly_type(
 
 
 class StreamConsumer:
-    registry: ClassVar[dict[jelly.LogicalStreamType, StreamConsumer]] = {}
+    registry: ClassVar[dict[jelly.LogicalStreamType, type[StreamConsumer]]] = {}
 
     jelly_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 

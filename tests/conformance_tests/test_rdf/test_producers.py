@@ -50,7 +50,13 @@ def test_positive(path: Path) -> None:
         options_from=options_filename,
         out_filename=actual_out,
     )
-    jelly_validate(expected_out, actual_out, "--options-file", options_filename)
+    jelly_validate(
+        expected_out,
+        actual_out,
+        "--compare-ordered",
+        "--options-file",
+        options_filename,
+    )
 
 
 @needs_jelly_cli

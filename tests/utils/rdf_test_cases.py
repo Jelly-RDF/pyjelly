@@ -15,9 +15,17 @@ needs_jelly_cli = pytest.mark.skipif(
 )
 
 
+class JellyCLIError(Exception):
+    """Exception raised when jelly-cli command fails."""
+
+
 def jelly_cli(*args: object) -> bytes:
     assert JELLY_CLI
-    return subprocess.check_output([JELLY_CLI, *map(str, args)])  # noqa: S603 internal use
+    cmd = [JELLY_CLI, *map(str, args)]
+    try:
+        return subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # noqa: S603 internal use
+    except subprocess.CalledProcessError as error:
+        raise JellyCLIError(error.output.decode()) from None
 
 
 jelly_validate = partial(jelly_cli, "rdf", "validate")

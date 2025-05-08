@@ -42,7 +42,7 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
         self.graph = graph
 
     def triple(self, terms: Iterable[Any]) -> Any:
-        self.graph.add(terms)
+        self.graph.add(terms)  # type: ignore[arg-type]
 
     def namespace_declaration(self, name: str, iri: str) -> None:
         self.graph.bind(name, self.iri(iri))
@@ -54,10 +54,10 @@ class RDFLibQuadsAdapter(RDFLibAdapter):
         self.dataset = dataset
 
     def namespace_declaration(self, name: str, iri: str) -> None:
-        self.graph.bind(name, self.iri(iri))
+        self.graph.bind(name, self.iri(iri))  # type: ignore[attr-defined]
 
     def quad(self, terms: Iterable[Any]) -> Any:
-        self.dataset.add(terms)
+        self.dataset.add(terms)  # type: ignore[arg-type]
 
 
 class RDFLibGraphsAdapter(RDFLibAdapter):
@@ -75,7 +75,7 @@ class RDFLibGraphsAdapter(RDFLibAdapter):
         self.graph.bind(name, self.iri(iri))
 
     def triple(self, terms: Iterable[Any]) -> None:
-        self.graph.add(terms)
+        self.graph.add(terms)  # type: ignore[arg-type]
 
     def graph_end(self) -> None:
         self.dataset.store.add_graph(self.graph)
@@ -101,6 +101,8 @@ class RDFLibJellyParser(RDFLibParser):
             raise TypeError(msg)
 
         options, frames = get_options_and_frames(input_stream)
+
+        adapter: Adapter
 
         if options.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
             adapter = RDFLibTriplesAdapter(graph=sink, options=options)
