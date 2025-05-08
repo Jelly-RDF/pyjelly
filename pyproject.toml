@@ -29,7 +29,7 @@ jelly = "pyjelly.integrations.rdflib.serializer:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serializer:RDFLibJellySerializer"
 
 [dependency-groups]
-dev = ["mypy>=1.13.0", "ruff>=0.8.6"]
+dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
 maintenance = ["towncrier>=24.8.0"]
 # grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
 protoc = ["grpcio-tools>=1.71.0; implementation_name != 'pypy'"]
