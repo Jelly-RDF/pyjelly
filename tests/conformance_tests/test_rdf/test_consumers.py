@@ -72,6 +72,7 @@ def test_positive(path: Path) -> None:
         )
 
 
+@needs_jelly_cli
 @negative_test_cases_for(RDF_FROM_JELLY_TESTS_DIR)
 def test_negative(path: Path) -> None:
     case = ConsumersTestCase(
