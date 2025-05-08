@@ -52,7 +52,7 @@ def test_positive(path: Path) -> None:
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)
-    dataset = Graph(store=OrderedMemory())
+    dataset = Dataset()
     frames_as_graphs: list[Graph] = []
     with patch(
         "pyjelly.integrations.rdflib.parser.RDFLibTriplesAdapter.frame",
