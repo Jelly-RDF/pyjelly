@@ -13,7 +13,11 @@ from pyjelly.producing.encoder import (
     encode_triple,
     new_repeated_terms,
 )
-from pyjelly.producing.producers import FlatFrameProducer, FrameProducer
+from pyjelly.producing.producers import (
+    FlatFrameProducer,
+    FrameProducer,
+    ManualFrameProducer,
+)
 
 
 class Stream:
@@ -32,7 +36,11 @@ class Stream:
             name_lookup_size=options.name_lookup_size,
             datatype_lookup_size=options.datatype_lookup_size,
         )
-        self.producer = producer or self.create_default_producer()
+        self.producer = (
+            producer or self.create_default_producer()
+            if options.delimited
+            else ManualFrameProducer()
+        )
         validate_type_compatibility(self.physical_type, self.producer.jelly_type)
         self.repeated_terms = new_repeated_terms()
 
