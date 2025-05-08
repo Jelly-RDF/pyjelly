@@ -14,7 +14,7 @@ You can also join the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)** to
 
 ## Contributing
 
-If you'd like to contribute, please follow the appropriate [guidelines](CONTRIBUTING.md).
+If you'd like to contribute, check out our [contributing guidelines](CONTRIBUTING.md).
 
 ## License
 
