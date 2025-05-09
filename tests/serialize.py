@@ -50,6 +50,7 @@ def write_graph(
     graph.parse(location=str(filename))
     producer = None
     if one_frame:
+        assert options is not None
         producer = ManualFrameProducer(jelly_type=options.logical_type)
     with Path(out_filename).open("wb") as file:
         graph.serialize(

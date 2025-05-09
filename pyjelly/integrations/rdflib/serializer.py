@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from typing import IO, Any
-from typing_extensions import override
 
 import rdflib
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
+from typing_extensions import override
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
@@ -53,7 +53,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
             raise NotImplementedError(msg)
         super().__init__(store)
 
-    def namespace_declarations(self, stream: Stream) -> list[tuple[str, str]]:
+    def namespace_declarations(self, stream: Stream) -> None:
         if stream.options.namespace_declarations:
             for prefix, namespace in self.store.namespaces():
                 stream.namespace_declaration(name=prefix, iri=namespace)

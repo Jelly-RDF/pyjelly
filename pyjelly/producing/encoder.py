@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
+
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
@@ -50,12 +51,12 @@ class TermEncoder:
         prefix_entry_index = self.prefixes.encode_entry_index(prefix)
         if prefix_entry_index is None:
             name = iri_string
-            prefix = None
+            prefix = ""
         name_entry_index = self.names.encode_entry_index(name)
 
         term_rows = []
 
-        if prefix is not None:
+        if prefix:
             prefix_entry = jelly.RdfPrefixEntry(id=prefix_entry_index, value=prefix)
             term_rows.append(jelly.RdfStreamRow(prefix=prefix_entry))
 
