@@ -61,7 +61,7 @@ class RdflibSerDes(BaseSerDes):
         return out_stream
 
     def read_triples(self, in_stream: io.BytesIO) -> TripleGraphType:
-        g = Graph(store=OrderedMemory())
+        g = Graph()
         g.parse(data=in_stream.getvalue(), format="nt")
         return g
 
@@ -71,7 +71,7 @@ class RdflibSerDes(BaseSerDes):
         return out_stream
 
     def read_triples_jelly(self, in_stream: io.BytesIO) -> TripleGraphType:
-        g = Graph(store=OrderedMemory())
+        g = Graph()
         g.parse(data=in_stream.getvalue(), format="jelly")
         return g
 
