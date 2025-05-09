@@ -31,7 +31,7 @@ class RDFLibAdapter(Adapter):
         language: str | None = None,
         datatype: str | None = None,
     ) -> rdflib.Literal:
-        return rdflib.Literal(lex, lang=language, datatype=datatype)
+        return rdflib.Literal(lex, lang=language, datatype=datatype, normalize=False)
 
 
 class RDFLibTriplesAdapter(RDFLibAdapter):

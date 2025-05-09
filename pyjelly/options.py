@@ -49,6 +49,7 @@ class StreamOptions:
     rdf_star: bool = False
     version: int = 1
     delimited: bool = True
+    namespace_declarations: bool = False
     stream_name: str | None = None
 
     def __post_init__(self) -> None:
@@ -106,8 +107,10 @@ def validate_type_compatibility(
     triples_physical_type = physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
     triples_logical_type = logical_type in TRIPLES_ONLY_LOGICAL_TYPES
     if triples_physical_type != triples_logical_type:
+        physical_type_name = jelly.PhysicalStreamType.Name(physical_type)
+        logical_type_name = jelly.LogicalStreamType.Name(logical_type)
         msg = (
-            f"physical type {physical_type} is not compatible "
-            f"with logical type {logical_type}"
+            f"physical type {physical_type_name} is not compatible "
+            f"with logical type {logical_type_name}"
         )
         raise JellyAssertionError(msg)

@@ -47,21 +47,25 @@ class TermEncoder:
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
-        prefix_id = self.prefixes.encode_entry_index(prefix)
-        name_id = self.names.encode_entry_index(name)
+        prefix_entry_index = self.prefixes.encode_entry_index(prefix)
+        if prefix_entry_index is None:
+            name = iri_string
+            prefix = None
+        name_entry_index = self.names.encode_entry_index(name)
+
         term_rows = []
 
-        if prefix_id is not None:
-            prefix_entry = jelly.RdfPrefixEntry(id=prefix_id, value=prefix)
+        if prefix is not None:
+            prefix_entry = jelly.RdfPrefixEntry(id=prefix_entry_index, value=prefix)
             term_rows.append(jelly.RdfStreamRow(prefix=prefix_entry))
 
-        if name_id is not None:
-            name_entry = jelly.RdfNameEntry(id=name_id, value=name)
+        if name_entry_index is not None:
+            name_entry = jelly.RdfNameEntry(id=name_entry_index, value=name)
             term_rows.append(jelly.RdfStreamRow(name=name_entry))
 
-        prefix_id = self.prefixes.encode_prefix_term_index(prefix)
-        name_id = self.names.encode_name_term_index(name)
-        return term_rows, jelly.RdfIri(prefix_id=prefix_id, name_id=name_id)
+        prefix_index = self.prefixes.encode_prefix_term_index(prefix)
+        name_index = self.names.encode_name_term_index(name)
+        return term_rows, jelly.RdfIri(prefix_id=prefix_index, name_id=name_index)
 
     def encode_default_graph(self) -> RowsAnd[jelly.RdfDefaultGraph]:
         return (), jelly.RdfDefaultGraph()
