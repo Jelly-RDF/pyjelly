@@ -19,6 +19,12 @@ class RdflibSerDes(BaseSerDes):
     
     def __init__(self) -> None:
         super().__init__(name=self.name)
+        
+    def len_quads(self, graph: QuadGraphType) -> int:
+        return len(list(graph.quads()))
+    
+    def len_triples(self, graph: TripleGraphType) -> int:
+        return len(list(graph.triples((None, None, None))))
 
     def read_quads(self, in_stream: io.BytesIO) -> QuadGraphType:
         g = Dataset()
@@ -35,7 +41,7 @@ class RdflibSerDes(BaseSerDes):
         g.parse(data=in_stream.getvalue(), format="jelly")
         return g
 
-    def write_quads_jelly(self, in_graph: QuadGraphType, options: StreamOptions) -> io.BytesIO:
+    def write_quads_jelly(self, in_graph: QuadGraphType, options: StreamOptions, frame_size: int) -> io.BytesIO:
         out_stream = io.BytesIO()
         in_graph.serialize(destination=out_stream, format="jelly", options=options)
         return out_stream

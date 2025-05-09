@@ -66,8 +66,3 @@ class OrderedMemory(Store):
     ) -> None:
         """Append a triple to the internal list, preserving order."""
         self._triples.append(triple)
-
-
-    def __len__(self, context: _ContextType | None = None) -> int:
-        """Return the number of triples in the store."""
-        return len(self._triples)
