@@ -74,11 +74,7 @@ def test_positive(path: Path) -> None:
 @needs_jelly_cli
 @negative_test_cases_for(RDF_FROM_JELLY_TESTS_DIR)
 def test_negative(path: Path) -> None:
-    case = ConsumersTestCase(
-        input_filename=path / "in.jelly",
-        out_filenames=None,
-    )
-    input_filename = str(case.input_filename)
+    input_filename = str(path / "in.jelly")
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)

@@ -20,19 +20,6 @@ from tests.utils.rdf_test_cases import (
 )
 
 
-@dataclass
-class ProducersTestCase:
-    input_filenames: Sequence[Path]
-    options_filename: Path
-    output_filename: Path | None = None
-
-    def __post_init__(self) -> None:
-        assert any(self.input_filenames)
-        assert self.options_filename.is_file()
-        if self.output_filename is not None:  # none for negative tests
-            assert self.output_filename.is_file()
-
-
 @needs_jelly_cli
 @positive_test_cases_for(RDF_TO_JELLY_TESTS_DIR)
 def test_positive(path: Path) -> None:
@@ -62,16 +49,11 @@ def test_positive(path: Path) -> None:
 @negative_test_cases_for(RDF_TO_JELLY_TESTS_DIR)
 def test_negative(path: Path) -> None:
     options_filename = path / "stream_options.jelly"
-    case = ProducersTestCase(
-        input_filenames=tuple(path.glob("in_*")),
-        options_filename=options_filename,
-        output_filename=None,
-    )
     test_id = id_from_path(path)
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
     with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011,B017,TD002
         write_graph_or_dataset(
-            *map(str, case.input_filenames),
+            *map(str, path.glob("in_*")),
             options_from=options_filename,
             out_filename=actual_out,
         )
