@@ -10,7 +10,7 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
-from pyjelly.producing import GraphStream, QuadStream, TripleStream
+from pyjelly.producing import GraphStream, QuadStream, Stream, TripleStream
 from pyjelly.producing.encoder import RowsAndTerm, Slot, TermEncoder
 from pyjelly.producing.ioutils import write_delimited, write_single
 from pyjelly.producing.producers import FrameProducer
@@ -53,6 +53,11 @@ class RDFLibJellySerializer(RDFLibSerializer):
             raise NotImplementedError(msg)
         super().__init__(store)
 
+    def namespace_declarations(self, stream: Stream) -> None:
+        if stream.options.namespace_declarations:
+            for prefix, namespace in self.store.namespaces():
+                stream.namespace_declaration(name=prefix, iri=namespace)
+
     def triples_stream(
         self,
         *,
@@ -66,8 +71,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
-        for prefix, namespace in self.store.namespaces():
-            stream.namespace_declaration(name=prefix, iri=namespace)
+        self.namespace_declarations(stream)
         for terms in self.store:
             if frame := stream.triple(terms):
                 yield frame
@@ -87,8 +91,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
-        for prefix, namespace in self.store.namespaces():
-            stream.namespace_declaration(name=prefix, iri=namespace)
+        self.namespace_declarations(stream)
         for terms in self.store.quads():
             if frame := stream.quad(terms):
                 yield frame
@@ -108,8 +111,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
             encoder_class=RDFLibTermEncoder,
         )
         stream.begin()
-        for prefix, namespace in self.store.namespaces():
-            stream.namespace_declaration(name=prefix, iri=namespace)
+        self.namespace_declarations(stream)
         for graph in self.store.graphs():
             yield from stream.graph(graph_id=graph.identifier, graph=graph)
         if last := stream.producer.to_stream_frame():

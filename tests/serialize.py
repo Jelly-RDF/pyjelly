@@ -8,7 +8,8 @@ from pathlib import Path
 import rdflib
 
 from pyjelly.consuming.ioutils import get_options_and_frames
-from pyjelly.options import StreamOptions
+from pyjelly.options import ConsumerStreamOptions
+from pyjelly.producing.producers import ManualFrameProducer
 from tests.utils.ordered_memory import OrderedMemory
 
 
@@ -39,19 +40,30 @@ def write_dataset(
 
 def write_graph(
     filename: str | Path,
+    *,
     out_filename: str | Path,
     options_from: str | Path | None = None,
+    one_frame: bool = False,
 ) -> None:
     options = get_options_from(options_from)
     graph = rdflib.Graph(store=OrderedMemory())
     graph.parse(location=str(filename))
+    producer = None
+    if one_frame:
+        assert options is not None
+        producer = ManualFrameProducer(jelly_type=options.logical_type)
     with Path(out_filename).open("wb") as file:
-        graph.serialize(destination=file, format="jelly", options=options)
+        graph.serialize(
+            destination=file,
+            format="jelly",
+            options=options,
+            producer=producer,
+        )
 
 
 def get_options_from(
     options_filename: str | Path | None = None,
-) -> StreamOptions | None:
+) -> ConsumerStreamOptions | None:
     if options_filename is not None:
         with Path(options_filename).open("rb") as options_file:
             options, _ = get_options_and_frames(options_file)
@@ -66,6 +78,7 @@ def write_graph_or_dataset(
     graphs: bool = False,
     out_filename: str | Path = "out.jelly",
     options_from: str | Path | None = None,
+    one_per_frame: bool = False,
 ) -> None:
     if str(first).endswith(".nq") or extra or graphs:
         write_dataset(
@@ -75,7 +88,12 @@ def write_graph_or_dataset(
             options_from=options_from,
         )
     else:
-        write_graph(first, out_filename=out_filename, options_from=options_from)
+        write_graph(
+            first,
+            out_filename=out_filename,
+            options_from=options_from,
+            one_frame=one_per_frame,
+        )
 
 
 if __name__ == "__main__":

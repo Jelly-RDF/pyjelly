@@ -10,9 +10,9 @@ def current_size(lookup: Lookup) -> int:
 
 def test_maintains_size_0() -> None:
     lookup = Lookup(0)
-    assert lookup.insert("foo") == 0
+    assert lookup.insert("foo") is None
     assert current_size(lookup) == 0
-    assert lookup.insert("bar") == 0
+    assert lookup.insert("bar") is None
     assert current_size(lookup) == 0
 
 
