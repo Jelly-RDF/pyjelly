@@ -21,6 +21,7 @@ class RdflibSerDes(BaseSerDes):
 
     Returns:
         _type_: _description_
+
     """
 
     name = "rdflib"
