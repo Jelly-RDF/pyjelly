@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from itertools import repeat
-from typing import Any, Optional
+from typing import Any
 from typing_extensions import TypeAlias
 
 from rdflib import Graph, URIRef
-from rdflib.graph import _ContextType
 from rdflib.store import Store
 from rdflib.term import Identifier, Node
 
