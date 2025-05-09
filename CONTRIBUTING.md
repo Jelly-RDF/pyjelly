@@ -9,7 +9,7 @@ Hello! If you want to contribute to Jelly and help us make it go fast (in Python
 2. If it's not already installed on your machine, [install uv](https://github.com/astral-sh/uv). uv is the project manager of choice for pyjelly. 
     * Make sure you have the correct version of uv installed. You can find it in `pyproject.toml` under `[tool.uv]` as `required-version`. If you have installed uv through the dedicated standalone installer, you can change the version through `uv self.update`:
         ```
-        uv self update version==0.6.17
+        uv self update 0.6.17
         ```
 
 3. Install the project to a virtual environment (typically `.venv` in the project directory) with `uv sync`.
