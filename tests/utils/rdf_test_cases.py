@@ -1,3 +1,4 @@
+import shlex
 import shutil
 import subprocess
 from collections.abc import Callable, Iterator
@@ -15,9 +16,19 @@ needs_jelly_cli = pytest.mark.skipif(
 )
 
 
+class JellyCLIError(Exception):
+    """Exception raised when jelly-cli command fails."""
+
+
 def jelly_cli(*args: object) -> bytes:
     assert JELLY_CLI
-    return subprocess.check_output([JELLY_CLI, *map(str, args)])  # noqa: S603 internal use
+    shell_args = [JELLY_CLI, *map(str, args)]
+    try:
+        return subprocess.check_output(shell_args, stderr=subprocess.STDOUT)  # noqa: S603 internal use
+    except subprocess.CalledProcessError as error:
+        command = shlex.join(shell_args)
+        note = f"Command: {command}"
+        raise JellyCLIError(error.output.decode() + "\n" + note) from None
 
 
 jelly_validate = partial(jelly_cli, "rdf", "validate")
