@@ -891,6 +891,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "protobuf" },
+    { name = "pytest-subtests" },
     { name = "typer" },
     { name = "typing-extensions" },
 ]
@@ -935,6 +936,7 @@ types = [
 [package.metadata]
 requires-dist = [
     { name = "protobuf", specifier = ">=5.29.3" },
+    { name = "pytest-subtests", specifier = ">=0.14.1" },
     { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typer", specifier = ">=0.15.2" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
