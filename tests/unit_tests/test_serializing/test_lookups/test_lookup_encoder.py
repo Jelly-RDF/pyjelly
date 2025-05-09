@@ -109,6 +109,11 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
 
 
 def test_encode_prefix_term_index(subtests: SubTests) -> None:
+    with subtests.test("empty prefix encodes 0"):
+        encoder = LookupEncoder(lookup_size=3)
+        assert encoder.encode_prefix_term_index("") == 0
+        assert not encoder.lookup.data
+
     with subtests.test("lookup size = 3 encodes correctly"):
         encoder = LookupEncoder(lookup_size=3)
 

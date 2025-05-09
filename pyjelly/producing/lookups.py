@@ -109,7 +109,7 @@ class LookupEncoder:
         return current_index
 
     def encode_prefix_term_index(self, value: str) -> int:
-        if self.lookup.max_size == 0:
+        if not value or self.lookup.max_size == 0:
             return 0
         previous_index = self.last_reused_index
         current_index = self.encode_term_index(value)
