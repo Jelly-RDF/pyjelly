@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from itertools import repeat
-from typing import Any
+from typing import Any, Optional
 from typing_extensions import TypeAlias
 
 from rdflib import Graph
+from rdflib.graph import _ContextType
 from rdflib.store import Store
 from rdflib.term import Identifier, Node
 
@@ -49,3 +50,8 @@ class OrderedMemory(Store):
     ) -> None:
         """Append a triple to the internal list, preserving order."""
         self._triples.append(triple)
+
+
+    def __len__(self, context: _ContextType | None = None) -> int:
+        """Return the number of triples in the store."""
+        return len(self._triples)
