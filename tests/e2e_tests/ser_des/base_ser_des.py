@@ -1,4 +1,3 @@
-
 import io
 from abc import ABC, abstractmethod
 from typing import Union
@@ -7,7 +6,6 @@ from rdflib import Dataset, Graph
 
 from pyjelly.options import StreamOptions
 
-# TODO: Remember to add more types to this list with more integrations  # noqa: TD002
 TripleGraphType = Union[Graph]
 QuadGraphType = Union[Dataset]
 
@@ -29,6 +27,32 @@ class BaseSerDes(ABC):
 
     def __init__(self, name: str) -> None:
         self.name = name
+
+    @abstractmethod
+    def len_quads(self, graph: QuadGraphType) -> int:
+        """
+        Get the number of quads in the graph-like structure.
+
+        Args:
+            graph (QuadGraphType): The graph-like structure containing the quads.
+
+        Returns:
+            int: The number of quads in the graph.
+
+        """
+
+    @abstractmethod
+    def len_triples(self, graph: TripleGraphType) -> int:
+        """
+        Get the number of triples in the graph-like structure.
+
+        Args:
+            graph (TripleGraphType): The graph-like structure containing the triples.
+
+        Returns:
+            int: The number of triples in the graph.
+
+        """
 
     @abstractmethod
     def read_quads(self, in_stream: io.BytesIO) -> QuadGraphType:
@@ -57,7 +81,7 @@ class BaseSerDes(ABC):
         """
 
     @abstractmethod
-    def read_quads_jelly(self, in_stream: io.BytesIO) -> QuadGraphType:  # noqa: E501
+    def read_quads_jelly(self, in_stream: io.BytesIO) -> QuadGraphType:
         """
         Read quads from a jelly byte stream.
 
@@ -70,13 +94,16 @@ class BaseSerDes(ABC):
         """
 
     @abstractmethod
-    def write_quads_jelly(self, in_graph: QuadGraphType, options: StreamOptions) -> io.BytesIO:  # noqa: E501
+    def write_quads_jelly(
+        self, in_graph: QuadGraphType, options: StreamOptions, frame_size: int
+    ) -> io.BytesIO:
         """
         Write quads to a jelly byte stream.
 
         Args:
             in_graph (QuadGraphType): The graph-like structure containing the quads.
             options (StreamOptions): The stream options for serialization.
+            frame_size (int): The size of the frame for serialization.
 
         Returns:
             io.BytesIO: The output byte stream containing the serialized quads.
@@ -110,11 +137,11 @@ class BaseSerDes(ABC):
         """
 
     @abstractmethod
-    def read_triples_jelly(self, in_stream: io.BytesIO) -> TripleGraphType:  # noqa: E501
+    def read_triples_jelly(self, in_stream: io.BytesIO) -> TripleGraphType:
         """
 
         Read triples from a jelly byte stream.
-        
+
         Args:
             in_stream (io.BytesIO): The input byte stream to read from.
 
@@ -124,13 +151,16 @@ class BaseSerDes(ABC):
         """
 
     @abstractmethod
-    def write_triples_jelly(self, in_graph: TripleGraphType, options: StreamOptions) -> io.BytesIO:  # noqa: E501
+    def write_triples_jelly(
+        self, in_graph: TripleGraphType, options: StreamOptions, frame_size: int
+    ) -> io.BytesIO:
         """
         Write triples to a jelly byte stream.
 
         Args:
             in_graph (TripleGraphType): The graph-like structure containing the triples.
             options (StreamOptions): The stream options for serialization.
+            frame_size (int): The size of the frame for serialization.
 
         Returns:
             io.BytesIO: The output byte stream containing the serialized triples.
