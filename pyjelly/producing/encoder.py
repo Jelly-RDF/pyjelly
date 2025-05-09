@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from enum import Enum
 from typing import Any, ClassVar, TypeVar
-
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options

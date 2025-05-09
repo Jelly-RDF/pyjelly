@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Generator
 from typing import IO, Any
+from typing_extensions import override
 
 import rdflib
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
-from typing_extensions import override
 
 from pyjelly import jelly
 from pyjelly.options import StreamOptions
