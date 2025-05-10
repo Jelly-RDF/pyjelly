@@ -1,7 +1,5 @@
-import io
-
 from rdflib import Dataset, Graph
-
+import io
 from pyjelly.options import StreamOptions
 from pyjelly.producing.producers import FlatFrameProducer
 from tests.e2e_tests.ser_des.base_ser_des import (
@@ -9,7 +7,6 @@ from tests.e2e_tests.ser_des.base_ser_des import (
     QuadGraphType,
     TripleGraphType,
 )
-from tests.utils.ordered_memory import OrderedMemory
 
 
 class RdflibSerDes(BaseSerDes):
@@ -35,52 +32,52 @@ class RdflibSerDes(BaseSerDes):
     def len_triples(self, graph: TripleGraphType) -> int:
         return len(list(graph.triples((None, None, None))))
 
-    def read_quads(self, in_stream: io.BytesIO) -> QuadGraphType:
+    def read_quads(self, in_bytes: bytes) -> QuadGraphType:
         g = Dataset()
-        g.parse(data=in_stream.getvalue(), format="nquads")
+        g.parse(data=in_bytes, format="nquads")
         return g
 
-    def write_quads(self, in_graph: QuadGraphType) -> io.BytesIO:
-        out_stream = io.BytesIO()
-        in_graph.serialize(destination=out_stream, format="nquads")
-        return out_stream
+    def write_quads(self, in_graph: QuadGraphType) -> bytes:
+        destination = io.BytesIO()
+        out = in_graph.serialize(destination=destination, format="nquads")
+        return destination.getvalue()
 
-    def read_quads_jelly(self, in_stream: io.BytesIO) -> QuadGraphType:
+    def read_quads_jelly(self, in_bytes: bytes) -> QuadGraphType:
         g = Dataset()
-        g.parse(data=in_stream.getvalue(), format="jelly")
+        g.parse(data=in_bytes, format="jelly")
         return g
 
     def write_quads_jelly(
         self, in_graph: QuadGraphType, options: StreamOptions, frame_size: int
-    ) -> io.BytesIO:
-        out_stream = io.BytesIO()
+    ) -> bytes:
+        destination = io.BytesIO()
         producer = FlatFrameProducer(quads=True, frame_size=frame_size)
         in_graph.serialize(
-            destination=out_stream, format="jelly", options=options, producer=producer
+            destination=destination, format="jelly", options=options, producer=producer
         )
-        return out_stream
+        return destination.getvalue()
 
-    def read_triples(self, in_stream: io.BytesIO) -> TripleGraphType:
+    def read_triples(self, in_bytes: bytes) -> TripleGraphType:
         g = Graph()
-        g.parse(data=in_stream.getvalue(), format="nt")
+        g.parse(data=in_bytes, format="nt")
         return g
 
-    def write_triples(self, in_graph: TripleGraphType) -> io.BytesIO:
-        out_stream = io.BytesIO()
-        in_graph.serialize(destination=out_stream, format="nt")
-        return out_stream
+    def write_triples(self, in_graph: TripleGraphType) -> bytes:
+        destination = io.BytesIO()
+        out = in_graph.serialize(destination=destination, format="nt")
+        return destination.getvalue()
 
-    def read_triples_jelly(self, in_stream: io.BytesIO) -> TripleGraphType:
+    def read_triples_jelly(self, in_bytes: bytes) -> TripleGraphType:
         g = Graph()
-        g.parse(data=in_stream.getvalue(), format="jelly")
+        g.parse(data=in_bytes, format="jelly")
         return g
 
     def write_triples_jelly(
         self, in_graph: TripleGraphType, options: StreamOptions, frame_size: int
-    ) -> io.BytesIO:
-        out_stream = io.BytesIO()
+    ) -> bytes:
+        destination = io.BytesIO()
         producer = FlatFrameProducer(quads=False, frame_size=frame_size)
         in_graph.serialize(
-            destination=out_stream, format="jelly", options=options, producer=producer
+            destination = destination, format="jelly", options=options, producer=producer
         )
-        return out_stream
+        return destination.getvalue()
