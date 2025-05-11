@@ -1,5 +1,7 @@
-from rdflib import Dataset, Graph
 import io
+
+from rdflib import Dataset, Graph
+
 from pyjelly.options import StreamOptions
 from pyjelly.producing.producers import FlatFrameProducer
 from tests.e2e_tests.ser_des.base_ser_des import (
@@ -39,7 +41,7 @@ class RdflibSerDes(BaseSerDes):
 
     def write_quads(self, in_graph: QuadGraphType) -> bytes:
         destination = io.BytesIO()
-        out = in_graph.serialize(destination=destination, format="nquads")
+        in_graph.serialize(destination=destination, format="nquads")
         return destination.getvalue()
 
     def read_quads_jelly(self, in_bytes: bytes) -> QuadGraphType:
@@ -64,7 +66,7 @@ class RdflibSerDes(BaseSerDes):
 
     def write_triples(self, in_graph: TripleGraphType) -> bytes:
         destination = io.BytesIO()
-        out = in_graph.serialize(destination=destination, format="nt")
+        in_graph.serialize(destination=destination, format="nt")
         return destination.getvalue()
 
     def read_triples_jelly(self, in_bytes: bytes) -> TripleGraphType:

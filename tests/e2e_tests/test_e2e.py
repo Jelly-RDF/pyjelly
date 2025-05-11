@@ -1,5 +1,5 @@
 from dataclasses import replace
-from itertools import product, chain
+from itertools import chain, product
 from pathlib import Path
 
 import pytest
@@ -10,7 +10,7 @@ from tests.e2e_tests.ser_des.rdflib_ser_des import RdflibSerDes
 
 
 class End2EndOptionSetup:
-    """Set up stream options for E2E tests"""
+    """Set up stream options, file size and file name for E2E tests."""
 
     test_root: Path = Path("tests/e2e_tests/test_cases/")
 
@@ -37,7 +37,7 @@ class End2EndOptionSetup:
     def setup_triple_files(
         self,
     ) -> list[tuple[BaseSerDes, BaseSerDes, StreamOptions, int, Path]]:
-        """Set up options for each of the test triple files"""
+        """Set up options for each of the test triple files."""
         test_dir: Path = self.test_root / "triples_rdf_1_1"
         files = test_dir.glob("*.nt")
         options = self.setup_ser_des()
@@ -46,7 +46,7 @@ class End2EndOptionSetup:
     def setup_quad_files(
         self,
     ) -> list[tuple[BaseSerDes, BaseSerDes, StreamOptions, int, Path]]:
-        """Set up options for each of the test quad files"""
+        """Set up options for each of the test quad files."""
         test_dir: Path = self.test_root / "quads_rdf_1_1"
         files = test_dir.glob("*.nq")
         options = self.setup_ser_des()
