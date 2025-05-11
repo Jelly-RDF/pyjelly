@@ -78,6 +78,6 @@ class RdflibSerDes(BaseSerDes):
         destination = io.BytesIO()
         producer = FlatFrameProducer(quads=False, frame_size=frame_size)
         in_graph.serialize(
-            destination = destination, format="jelly", options=options, producer=producer
+            destination=destination, format="jelly", options=options, producer=producer
         )
         return destination.getvalue()
