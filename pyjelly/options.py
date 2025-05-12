@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import mimetypes
-from dataclasses import dataclass
-from typing import Any, Final
+from contextlib import suppress
+from dataclasses import InitVar, dataclass, field
+from typing import Final
+from typing_extensions import Self
 
 from pyjelly import jelly
 from pyjelly.errors import JellyAssertionError, JellyConformanceError
@@ -10,6 +12,7 @@ from pyjelly.errors import JellyAssertionError, JellyConformanceError
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
 MAX_LOOKUP_SIZE: Final[int] = 4096
+MAX_VERSION: Final[int] = 2
 
 DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
 DEFAULT_PREFIX_LOOKUP_SIZE: Final[int] = 150
@@ -41,54 +44,71 @@ def register_mimetypes(extension: str = ".jelly") -> None:
 
 
 @dataclass(frozen=True)
-class StreamOptions:
-    name_lookup_size: int
-    prefix_lookup_size: int
-    datatype_lookup_size: int
-    generalized_statements: bool = False
-    rdf_star: bool = False
-    version: int = 1
-    delimited: bool = True
-    namespace_declarations: bool = False
-    stream_name: str | None = None
+class LookupPreset:
+    max_names: int = DEFAULT_NAME_LOOKUP_SIZE
+    max_prefixes: int = DEFAULT_PREFIX_LOOKUP_SIZE
+    max_datatypes: int = DEFAULT_DATATYPE_LOOKUP_SIZE
 
     def __post_init__(self) -> None:
-        if self.name_lookup_size < MIN_NAME_LOOKUP_SIZE:
+        if self.max_names < MIN_NAME_LOOKUP_SIZE:
             msg = "name lookup size must be at least 8"
             raise JellyConformanceError(msg)
 
-    @staticmethod
-    def small() -> StreamOptions:
-        return StreamOptions(
-            name_lookup_size=128,
-            prefix_lookup_size=32,
-            datatype_lookup_size=32,
-        )
-
-    @staticmethod
-    def big() -> StreamOptions:
-        return StreamOptions(
-            name_lookup_size=DEFAULT_NAME_LOOKUP_SIZE,
-            prefix_lookup_size=DEFAULT_PREFIX_LOOKUP_SIZE,
-            datatype_lookup_size=DEFAULT_DATATYPE_LOOKUP_SIZE,
-        )
+    @classmethod
+    def small(cls) -> Self:
+        return cls(max_names=128, max_prefixes=32, max_datatypes=32)
 
 
-class ConsumerStreamOptions(StreamOptions):
+@dataclass(frozen=True)
+class StreamTypes:
     physical_type: jelly.PhysicalStreamType
-    logical_type: jelly.LogicalStreamType
+    logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    def __init__(
-        self,
-        *,
-        physical_type: jelly.PhysicalStreamType,
-        logical_type: jelly.LogicalStreamType,
-        **kwds: Any,
-    ) -> None:
-        super().__init__(**kwds)
-        self.physical_type = physical_type
-        self.logical_type = logical_type
-        validate_type_compatibility(physical_type, logical_type)
+    @property
+    def flat(self) -> bool:
+        return self.logical_type in (
+            jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+        )
+
+    def __repr__(self) -> str:
+        with suppress(ValueError):
+            physical_type_name = jelly.PhysicalStreamType.Name(self.physical_type)
+            logical_type_name = jelly.LogicalStreamType.Name(self.logical_type)
+            return f"StreamTypes({physical_type_name}, {logical_type_name})"
+        return f"StreamTypes({self.physical_type}, {self.logical_type})"
+
+    def __post_init__(self) -> None:
+        if self.physical_type == jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED:
+            msg = "physical type must be specified"
+            raise JellyConformanceError(msg)
+        validate_type_compatibility(
+            physical_type=self.physical_type,
+            logical_type=self.logical_type,
+        )
+
+
+@dataclass(frozen=True)
+class StreamOptions:
+    stream_types: StreamTypes
+    lookup_preset: LookupPreset = field(default_factory=LookupPreset)
+    generalized_statements: bool = False
+    rdf_star: bool = False
+    min_version: InitVar[int | None] = None
+    version: int = field(init=False)
+    delimited: bool = True
+    namespace_declarations: bool = False
+    stream_name: str = ""
+
+    def __post_init__(self, min_version: int | None) -> None:
+        if min_version is not None:
+            if min_version < 0 or min_version > MAX_VERSION:
+                msg = f"min version must be between 0 and {MAX_VERSION}"
+                raise JellyConformanceError(msg)
+            version = min_version
+        else:
+            version = MAX_VERSION
+        object.__setattr__(self, "version", version)
 
 
 TRIPLES_ONLY_LOGICAL_TYPES = {
@@ -109,8 +129,5 @@ def validate_type_compatibility(
     if triples_physical_type != triples_logical_type:
         physical_type_name = jelly.PhysicalStreamType.Name(physical_type)
         logical_type_name = jelly.LogicalStreamType.Name(logical_type)
-        msg = (
-            f"physical type {physical_type_name} is not compatible "
-            f"with logical type {logical_type_name}"
-        )
+        msg = f"{physical_type_name} is not compatible with {logical_type_name}"
         raise JellyAssertionError(msg)

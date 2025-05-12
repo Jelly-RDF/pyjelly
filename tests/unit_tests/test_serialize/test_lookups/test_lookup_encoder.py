@@ -4,7 +4,7 @@ import pytest
 from inline_snapshot import snapshot
 from pytest_subtests import SubTests
 
-from pyjelly.producing.lookups import LookupEncoder
+from pyjelly.serialize.lookup import LookupEncoder
 
 
 def test_encode_entry_index() -> None:
@@ -168,4 +168,5 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
         # If the [max_datatype_table_size] field is set to 0, the datatype lookup
         # MUST NOT be used in the stream
         with patch.object(encoder, "encode_term_index") as mock:
+            encoder.encode_datatype_term_index("foo")
             mock.assert_not_called()

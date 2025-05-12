@@ -22,7 +22,7 @@ def workaround_prepopulated_cache(plugin_name: str, extension_class: type[Any]) 
 
 
 @all_entrypoints
-@patch("pyjelly.integrations.rdflib.serializer.RDFLibJellySerializer")
+@patch("pyjelly.integrations.rdflib.serialize.RDFLibJellySerializer")
 def test_jelly_serializer_discovered(mock: MagicMock, file_format: str) -> None:
     workaround_prepopulated_cache(file_format, RDFLibSerializer)
     graph = Graph()
@@ -32,7 +32,7 @@ def test_jelly_serializer_discovered(mock: MagicMock, file_format: str) -> None:
 
 
 @all_entrypoints
-@patch("pyjelly.integrations.rdflib.parser.RDFLibJellyParser")
+@patch("pyjelly.integrations.rdflib.parse.RDFLibJellyParser")
 def test_jelly_parser_discovered(mock: MagicMock, file_format: str) -> None:
     workaround_prepopulated_cache(file_format, RDFLibParser)
     graph = Graph()

@@ -1,32 +1,68 @@
 from __future__ import annotations
 
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Sequence
 from typing import Any, ClassVar
+from typing_extensions import Never
 
 from pyjelly import jelly
-from pyjelly.consuming.lookups import LookupDecoder
-from pyjelly.options import ConsumerStreamOptions
+from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
+from pyjelly.parse.lookup import LookupDecoder
 
 
-class Adapter:
-    def __init__(self, options: ConsumerStreamOptions) -> None:
+def options_from_frame(
+    frame: jelly.RdfStreamFrame,
+    *,
+    delimited: bool,
+) -> StreamOptions:
+    row = frame.rows[0]
+    options = row.options
+    return StreamOptions(
+        stream_types=StreamTypes(
+            physical_type=options.physical_type,
+            logical_type=options.logical_type,
+        ),
+        lookup_preset=LookupPreset(
+            max_names=options.max_name_table_size,
+            max_prefixes=options.max_prefix_table_size,
+            max_datatypes=options.max_datatype_table_size,
+        ),
+        stream_name=options.stream_name,
+        min_version=options.version,
+        delimited=delimited,
+    )
+
+
+def _adapter_missing(feature: str, *, options: StreamOptions) -> Never:
+    physical_type_name = jelly.PhysicalStreamType.Name(
+        options.stream_types.physical_type
+    )
+    logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+    msg = (
+        f"adapter with {physical_type_name} and {logical_type_name} "
+        f"does not implement {feature}"
+    )
+    raise NotImplementedError(msg)
+
+
+class Adapter(metaclass=ABCMeta):
+    def __init__(self, options: StreamOptions) -> None:
         self.options = options
 
-    def triple(self, terms: Iterable[Any]) -> Any:
-        raise NotImplementedError
-
-    def quad(self, terms: Iterable[Any]) -> Any:
-        raise NotImplementedError
-
+    # Obligatory abstract methods--all adapters must implement these
+    @abstractmethod
     def iri(self, iri: str) -> Any:
         raise NotImplementedError
 
+    @abstractmethod
     def default_graph(self) -> Any:
         raise NotImplementedError
 
+    @abstractmethod
     def bnode(self, bnode: str) -> Any:
         raise NotImplementedError
 
+    @abstractmethod
     def literal(
         self,
         lex: str,
@@ -35,14 +71,21 @@ class Adapter:
     ) -> Any:
         raise NotImplementedError
 
-    def graph_start(self, graph_id: Any) -> Any:
-        raise NotImplementedError
+    # Optional abstract methods--not required to be implemented by all adapters
+    def triple(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
+        _adapter_missing("decoding triples", options=self.options)
+
+    def quad(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
+        _adapter_missing("decoding quads", options=self.options)
+
+    def graph_start(self, graph_id: Any) -> Any:  # noqa: ARG002
+        _adapter_missing("decoding graph start markers", options=self.options)
 
     def graph_end(self) -> Any:
-        raise NotImplementedError
+        _adapter_missing("decoding graph end markers", options=self.options)
 
-    def namespace_declaration(self, name: str, iri: str) -> Any:
-        raise NotImplementedError
+    def namespace_declaration(self, name: str, iri: str) -> Any:  # noqa: ARG002
+        _adapter_missing("decoding namespace declarations", options=self.options)
 
     def frame(self) -> Any:
         return None
@@ -51,13 +94,17 @@ class Adapter:
 class Decoder:
     def __init__(self, adapter: Adapter) -> None:
         self.adapter = adapter
-        self.names = LookupDecoder(lookup_size=self.options.name_lookup_size)
-        self.prefixes = LookupDecoder(lookup_size=self.options.prefix_lookup_size)
-        self.datatypes = LookupDecoder(lookup_size=self.options.datatype_lookup_size)
+        self.names = LookupDecoder(lookup_size=self.options.lookup_preset.max_names)
+        self.prefixes = LookupDecoder(
+            lookup_size=self.options.lookup_preset.max_prefixes
+        )
+        self.datatypes = LookupDecoder(
+            lookup_size=self.options.lookup_preset.max_datatypes
+        )
         self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
 
     @property
-    def options(self) -> ConsumerStreamOptions:
+    def options(self) -> StreamOptions:
         return self.adapter.options
 
     def decode_frame(self, frame: jelly.RdfStreamFrame) -> Any:
@@ -67,14 +114,21 @@ class Decoder:
         return self.adapter.frame()
 
     def decode_row(self, row: Any) -> Any | None:
-        return self.row_handlers[type(row)](self, row)
+        try:
+            decode_row = self.row_handlers[type(row)]
+        except KeyError:
+            msg = f"decoder not implemented for {type(row)}"
+            raise TypeError(msg) from None
+        return decode_row(self, row)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         assert self.options.stream_name == options.stream_name
         assert self.options.version >= options.version
-        assert self.options.prefix_lookup_size == options.max_prefix_table_size
-        assert self.options.datatype_lookup_size == options.max_datatype_table_size
-        assert self.options.name_lookup_size == options.max_name_table_size
+        assert self.options.lookup_preset.max_prefixes == options.max_prefix_table_size
+        assert (
+            self.options.lookup_preset.max_datatypes == options.max_datatype_table_size
+        )
+        assert self.options.lookup_preset.max_names == options.max_name_table_size
 
     def ingest_prefix_entry(self, entry: jelly.RdfPrefixEntry) -> None:
         self.prefixes.assign_entry(index=entry.id, value=entry.value)
@@ -86,7 +140,12 @@ class Decoder:
         self.datatypes.assign_entry(index=entry.id, value=entry.value)
 
     def decode_term(self, term: Any) -> Any:
-        return self.term_decoders[type(term)](self, term)
+        try:
+            decode_term = self.term_handlers[type(term)]
+        except KeyError:
+            msg = f"decoder not implemented for {type(term)}"
+            raise TypeError(msg) from None
+        return decode_term(self, term)
 
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         name = self.names.decode_name_term_index(iri.name_id)
@@ -103,7 +162,7 @@ class Decoder:
         language = datatype = None
         if literal.langtag:
             language = literal.langtag
-        elif literal.datatype:
+        elif self.datatypes.lookup_size and literal.HasField("datatype"):
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         return self.adapter.literal(
             lex=literal.lex,
@@ -112,7 +171,8 @@ class Decoder:
         )
 
     def decode_namespace_declaration(
-        self, declaration: jelly.RdfNamespaceDeclaration
+        self,
+        declaration: jelly.RdfNamespaceDeclaration,
     ) -> Any:
         iri = self.decode_iri(declaration.value)
         return self.adapter.namespace_declaration(declaration.name, iri)
@@ -162,7 +222,7 @@ class Decoder:
         jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
     }
 
-    term_decoders: ClassVar = {
+    term_handlers: ClassVar = {
         jelly.RdfIri: decode_iri,
         str: decode_bnode,
         jelly.RdfLiteral: decode_literal,

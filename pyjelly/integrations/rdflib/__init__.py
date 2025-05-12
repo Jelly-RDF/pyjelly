@@ -1,3 +1,4 @@
+import rdflib
 import rdflib.util
 
 from pyjelly import options
@@ -15,9 +16,9 @@ def register_extension_to_rdflib(extension: str = ".jelly") -> None:
     rdflib.util.SUFFIX_FORMAT_MAP[extension.removeprefix(".")] = "jelly"
 
 
-def side_effects() -> None:
+def _side_effects() -> None:
     register_extension_to_rdflib()
 
 
 if options.INTEGRATION_SIDE_EFFECTS:
-    side_effects()
+    _side_effects()

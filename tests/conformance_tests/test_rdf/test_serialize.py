@@ -4,23 +4,28 @@ from pathlib import Path
 
 import pytest
 
-from tests.conformance_tests.test_rdf.constants import (
+from tests.meta import (
     RDF_TO_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
 from tests.serialize import write_graph, write_graph_or_dataset
 from tests.utils.rdf_test_cases import (
+    PhysicalTypeTestCasesDir,
     id_from_path,
     jelly_validate,
     needs_jelly_cli,
-    negative_test_cases_for,
-    positive_test_cases_for,
+    walk_directories,
 )
 
 
 @needs_jelly_cli
-@positive_test_cases_for(RDF_TO_JELLY_TESTS_DIR)
-def test_positive(path: Path) -> None:
+@walk_directories(
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
+    glob="pos_*",
+)
+def test_serializes(path: Path) -> None:
     options_filename = path / "stream_options.jelly"
     input_filenames = tuple(path.glob("in_*"))
     test_id = id_from_path(path)
@@ -29,9 +34,8 @@ def test_positive(path: Path) -> None:
     for input_filename in input_filenames:
         write_graph(
             input_filename,
-            options_from=options_filename,
+            options=options_filename,
             out_filename=actual_out,
-            one_frame=True,
         )
         jelly_validate(
             actual_out,
@@ -44,14 +48,19 @@ def test_positive(path: Path) -> None:
 
 
 @needs_jelly_cli
-@negative_test_cases_for(RDF_TO_JELLY_TESTS_DIR)
-def test_negative(path: Path) -> None:
+@walk_directories(
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
+    RDF_TO_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
+    glob="neg_*",
+)
+def test_serializing_fails(path: Path) -> None:
     options_filename = path / "stream_options.jelly"
     test_id = id_from_path(path)
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
     with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011,B017,TD002
         write_graph_or_dataset(
             *map(str, path.glob("in_*")),
-            options_from=options_filename,
+            options=options_filename,
             out_filename=actual_out,
         )

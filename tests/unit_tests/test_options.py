@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import pytest
 
 from pyjelly import jelly
 from pyjelly.errors import JellyAssertionError
-from pyjelly.options import validate_type_compatibility
+from pyjelly.options import (
+    StreamTypes,
+)
 
 
 @pytest.mark.parametrize(
     ("physical_type", "logical_type"),
-    [
+    VALID_STREAM_TYPE_COMBINATIONS := [
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_GRAPHS),
         (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS),
@@ -30,11 +34,11 @@ from pyjelly.options import validate_type_compatibility
         (jelly.PHYSICAL_STREAM_TYPE_GRAPHS, jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED),
     ],
 )
-def test_validate_type_compatibility_ok(
+def test_stream_types_ok(
     physical_type: jelly.PhysicalStreamType,
     logical_type: jelly.LogicalStreamType,
 ) -> None:
-    validate_type_compatibility(physical_type, logical_type)
+    StreamTypes(physical_type=physical_type, logical_type=logical_type)
 
 
 @pytest.mark.parametrize(
@@ -55,9 +59,9 @@ def test_validate_type_compatibility_ok(
         (jelly.PHYSICAL_STREAM_TYPE_GRAPHS, jelly.LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS),
     ],
 )
-def test_validate_type_compatibility_error(
+def test_stream_types_error(
     physical_type: jelly.PhysicalStreamType,
     logical_type: jelly.LogicalStreamType,
 ) -> None:
     with pytest.raises(JellyAssertionError):
-        validate_type_compatibility(physical_type, logical_type)
+        StreamTypes(physical_type=physical_type, logical_type=logical_type)
