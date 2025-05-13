@@ -90,7 +90,7 @@ class BoundedFrameFlow(FrameFlow):
         return frame
 
 
-# Fall back to FlatFrameFlow for unspecified logical types
+# Fallback for unspecified logical types
 FrameFlow.registry[jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED] = BoundedFrameFlow
 
 
