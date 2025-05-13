@@ -201,22 +201,6 @@ def parse_grouped_dataset_stream(
         yield decoder.decode_frame(frame=frame)
 
 
-def datasets_from_jelly(
-    inp: IO[bytes],
-    store: Store | str = "default",
-) -> Generator[Dataset]:
-    options, frames = get_options_and_frames(inp)
-    assert not options.stream_types.flat, "stream does not yield datasets"
-    assert options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES, (
-        "stream does not yield datasets"
-    )
-    yield from parse_grouped_dataset_stream(
-        frames=frames,
-        options=options,
-        store=store,
-    )
-
-
 def graph_or_dataset_from_jelly(
     inp: IO[bytes],
     sink: Graph,
@@ -229,8 +213,11 @@ def graph_or_dataset_from_jelly(
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         return parse_grouped_graph_stream(frames=frames, sink=sink, options=options)
 
-    msg = "the stream contains multiple datasets; use datasets_from_jelly() instead"
-    raise TypeError(msg)
+    msg = (
+        "the stream contains multiple datasets and cannot be parsed into "
+        "a single dataset"
+    )
+    raise NotImplementedError(msg)
 
 
 class RDFLibJellyParser(RDFLibParser):
