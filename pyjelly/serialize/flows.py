@@ -100,11 +100,3 @@ class FlatTriplesFrameFlow(BoundedFrameFlow):
 
 class FlatQuadsFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-
-
-class GraphFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
-
-
-class DatasetFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
