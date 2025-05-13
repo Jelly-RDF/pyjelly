@@ -60,8 +60,6 @@ def triples_stream(
     for terms in data:
         if frame := stream.triple(terms):
             yield frame
-    if frame := stream.flow.graph_ended():
-        yield frame
     if frame := stream.flow.to_stream_frame():
         yield frame
 
@@ -75,8 +73,6 @@ def quads_stream(stream: QuadStream, data: Graph) -> Generator[jelly.RdfStreamFr
     for terms in data.quads():
         if frame := stream.quad(terms):
             yield frame
-    if frame := stream.flow.dataset_ended():
-        yield frame
     if frame := stream.flow.to_stream_frame():
         yield frame
 
@@ -89,8 +85,6 @@ def graphs_stream(stream: GraphStream, data: Graph) -> Generator[jelly.RdfStream
         namespace_declarations(data, stream)
     for graph in data.graphs():
         yield from stream.graph(graph_id=graph.identifier, graph=graph)
-    if frame := stream.flow.dataset_ended():
-        yield frame
     if last := stream.flow.to_stream_frame():
         yield last
 

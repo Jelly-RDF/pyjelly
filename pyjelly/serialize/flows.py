@@ -19,21 +19,10 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
     logical_type: ClassVar[jelly.LogicalStreamType]
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
 
-    @property
-    def stream_frame_ready(self) -> bool:
-        """Determine if a new frame should be emitted."""
-        raise NotImplementedError
-
-    def graph_ended(self) -> jelly.RdfStreamFrame | None:
-        """Handle the end of a graph; may be overridden by subclasses."""
-        return None
-
-    def dataset_ended(self) -> jelly.RdfStreamFrame | None:
-        """Handle the end of a dataset; may be overridden by subclasses."""
+    def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
         return None
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
-        """Return the current frame and clears the row buffer if there are any rows."""
         if not self:
             return None
         frame = jelly.RdfStreamFrame(rows=self)
@@ -63,15 +52,9 @@ class ManualFrameFlow(FrameFlow):
 
     logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    @property
-    @override
-    def stream_frame_ready(self) -> bool:
-        """Always returns False; user must manually flush the frame."""
-        return False
-
 
 @dataclass
-class FlatFrameFlow(FrameFlow):
+class BoundedFrameFlow(FrameFlow):
     """
     Produces frames automatically when a fixed number of rows is reached.
 
@@ -92,36 +75,36 @@ class FlatFrameFlow(FrameFlow):
         super().__init__(initlist)
         self.frame_size = frame_size or self.default_frame_size
 
-    @property
     @override
-    def stream_frame_ready(self) -> bool:
-        """Return True when enough rows have been accumulated to emit a frame."""
-        return len(self) >= self.frame_size
+    def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
+        if len(self) >= self.frame_size:
+            return self.to_stream_frame()
+        return None
+
+    def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
+        if not self:
+            return None
+        to_serialize = self.data[: self.frame_size]
+        frame = jelly.RdfStreamFrame(rows=to_serialize)
+        self.clear()
+        return frame
 
 
 # Fall back to FlatFrameFlow for unspecified logical types
-FrameFlow.registry[jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED] = FlatFrameFlow
+FrameFlow.registry[jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED] = BoundedFrameFlow
 
 
-class FlatTriplesFrameFlow(FlatFrameFlow):
+class FlatTriplesFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
 
 
-class FlatQuadsFrameFlow(FlatFrameFlow):
+class FlatQuadsFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
 
 
 class GraphFrameFlow(FrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
 
-    @override
-    def graph_ended(self) -> jelly.RdfStreamFrame | None:
-        return self.to_stream_frame()
-
 
 class DatasetFrameFlow(FrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
-
-    @override
-    def dataset_ended(self) -> jelly.RdfStreamFrame | None:
-        return self.to_stream_frame()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import IO, Any, NamedTuple
+from typing import IO, Any
 from typing_extensions import Never, override
 
 import rdflib
@@ -147,11 +147,6 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
             self.dataset = Dataset(store=self.dataset.store)
             return this_dataset
         return super().frame()
-
-
-class ParseResult(NamedTuple):
-    options: StreamOptions
-    frames: Iterable[jelly.RdfStreamFrame]
 
 
 def parse_flat_stream(

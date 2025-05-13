@@ -90,8 +90,8 @@ class TripleStream(Stream):
             repeated_terms=self.repeated_terms,
         )
         self.flow.extend(new_rows)
-        if self.flow.stream_frame_ready:
-            return self.flow.to_stream_frame()
+        if frame := self.flow.frame_from_bounds():
+            return frame
         return None
 
 
@@ -105,8 +105,8 @@ class QuadStream(Stream):
             repeated_terms=self.repeated_terms,
         )
         self.flow.extend(new_rows)
-        if self.flow.stream_frame_ready:
-            return self.flow.to_stream_frame()
+        if frame := self.flow.frame_from_bounds():
+            return frame
         return None
 
 
@@ -129,5 +129,5 @@ class GraphStream(TripleStream):
                 yield frame
         end_row = jelly.RdfStreamRow(graph_end=jelly.RdfGraphEnd())
         self.flow.append(end_row)
-        if self.flow.stream_frame_ready:
+        if self.flow.frame_from_bounds():
             yield self.flow.to_stream_frame()  # type: ignore[misc]
