@@ -28,7 +28,7 @@ def options_from_frame(
             max_datatypes=options.max_datatype_table_size,
         ),
         stream_name=options.stream_name,
-        min_version=options.version,
+        version=options.version,
         delimited=delimited,
     )
 

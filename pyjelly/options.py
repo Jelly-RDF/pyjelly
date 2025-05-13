@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import mimetypes
 from contextlib import suppress
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass, field
 from typing import Final
 from typing_extensions import Self
 
@@ -94,8 +94,7 @@ class StreamOptions:
     lookup_preset: LookupPreset = field(default_factory=LookupPreset)
     generalized_statements: bool = False
     rdf_star: bool = False
-    min_version: InitVar[int | None] = None
-    version: int = field(init=False)
+    version: int = MAX_VERSION
     delimited: bool = True
     namespace_declarations: bool = False
     stream_name: str = ""
