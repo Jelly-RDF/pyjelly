@@ -100,16 +100,6 @@ class StreamOptions:
     namespace_declarations: bool = False
     stream_name: str = ""
 
-    def __post_init__(self, min_version: int | None) -> None:
-        if min_version is not None:
-            if min_version < 0 or min_version > MAX_VERSION:
-                msg = f"min version must be between 0 and {MAX_VERSION}"
-                raise JellyConformanceError(msg)
-            version = min_version
-        else:
-            version = MAX_VERSION
-        object.__setattr__(self, "version", version)
-
 
 TRIPLES_ONLY_LOGICAL_TYPES = {
     jelly.LOGICAL_STREAM_TYPE_GRAPHS,
