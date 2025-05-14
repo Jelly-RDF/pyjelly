@@ -8,7 +8,6 @@ from typing_extensions import Never
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
-from pyjelly.serialize.encode import Slot
 
 
 def options_from_frame(
@@ -193,13 +192,12 @@ class Decoder:
         terms = []
         for oneof in oneofs:
             field = statement.WhichOneof(oneof)
-            slot = getattr(Slot, oneof)
             if field:
                 jelly_term = getattr(statement, field)
                 decoded_term = self.decode_term(jelly_term)
-                self.repeated_terms[slot] = decoded_term
+                self.repeated_terms[oneof] = decoded_term
             else:
-                decoded_term = self.repeated_terms[slot]
+                decoded_term = self.repeated_terms[oneof]
                 if decoded_term is None:
                     msg = f"missing repeated term {oneof}"
                     raise ValueError(msg)
