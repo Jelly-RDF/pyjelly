@@ -81,14 +81,6 @@ class BoundedFrameFlow(FrameFlow):
             return self.to_stream_frame()
         return None
 
-    def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
-        if not self:
-            return None
-        to_serialize = self.data[: self.frame_size]
-        frame = jelly.RdfStreamFrame(rows=to_serialize)
-        self[:] = self.data[self.frame_size :]
-        return frame
-
 
 # Fallback for unspecified logical types
 FrameFlow.registry[jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED] = BoundedFrameFlow

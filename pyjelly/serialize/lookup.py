@@ -35,7 +35,7 @@ class Lookup:
 
     def insert(self, key: str) -> int | None:
         if not self.max_size:
-            msg = "Lookup is disabled"
+            msg = "lookup is zero, cannot insert"
             raise IndexError(msg)
         assert key not in self.data, f"key {key!r} already present"
         if self._evicting:

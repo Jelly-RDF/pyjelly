@@ -86,8 +86,8 @@ def graphs_stream(stream: GraphStream, data: Graph) -> Generator[jelly.RdfStream
         namespace_declarations(data, stream)
     for graph in data.graphs():
         yield from stream.graph(graph_id=graph.identifier, graph=graph)
-    if last := stream.flow.to_stream_frame():
-        yield last
+    if frame := stream.flow.to_stream_frame():
+        yield frame
 
 
 class RDFLibJellySerializer(RDFLibSerializer):
