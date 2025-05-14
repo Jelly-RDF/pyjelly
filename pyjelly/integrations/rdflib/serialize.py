@@ -27,7 +27,8 @@ class RDFLibTermEncoder(TermEncoder):
             return self.encode_literal(
                 lex=term,
                 language=term.language,
-                # Workaround RDFLib breaking LSP
+                # `datatype` is cast to `str` explicitly because
+                # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
                 datatype=term.datatype and str(term.datatype),
             )
 
