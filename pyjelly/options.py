@@ -7,7 +7,11 @@ from typing import Final
 from typing_extensions import Self
 
 from pyjelly import jelly
-from pyjelly.errors import JellyAssertionError, JellyConformanceError
+from pyjelly.errors import (
+    JellyAssertionError,
+    JellyConformanceError,
+    JellyNotImplementedError,
+)
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
@@ -81,7 +85,7 @@ class StreamTypes:
     def __post_init__(self) -> None:
         if self.physical_type == jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED:
             msg = "physical type must be specified"
-            raise JellyConformanceError(msg)
+            raise JellyNotImplementedError(msg)
         validate_type_compatibility(
             physical_type=self.physical_type,
             logical_type=self.logical_type,
