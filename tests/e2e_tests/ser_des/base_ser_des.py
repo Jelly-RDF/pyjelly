@@ -3,7 +3,7 @@ from typing import Union
 
 from rdflib import Dataset, Graph
 
-from pyjelly.options import StreamOptions
+from pyjelly.options import LookupPreset
 
 TripleGraphType = Union[Graph]
 QuadGraphType = Union[Dataset]
@@ -94,14 +94,14 @@ class BaseSerDes(ABC):
 
     @abstractmethod
     def write_quads_jelly(
-        self, in_graph: QuadGraphType, options: StreamOptions, frame_size: int
+        self, in_graph: QuadGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         """
         Write quads to jelly bytes.
 
         Args:
             in_graph (QuadGraphType): The graph-like structure containing the quads.
-            options (StreamOptions): The stream options for serialization.
+            preset (LookupPreset): The stream options lookup preset for serialization.
             frame_size (int): The size of the frame for serialization.
 
         Returns:
@@ -151,14 +151,14 @@ class BaseSerDes(ABC):
 
     @abstractmethod
     def write_triples_jelly(
-        self, in_graph: TripleGraphType, options: StreamOptions, frame_size: int
+        self, in_graph: TripleGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         """
         Write triples to jelly bytes.
 
         Args:
             in_graph (TripleGraphType): The graph-like structure containing the triples.
-            options (StreamOptions): The stream options for serialization.
+            preset (LookupPreset): The stream options lookup preset for serialization.
             frame_size (int): The size of the frame for serialization.
 
         Returns:

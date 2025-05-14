@@ -35,7 +35,8 @@ class Lookup:
 
     def insert(self, key: str) -> int | None:
         if not self.max_size:
-            return None
+            msg = "Lookup is disabled"
+            raise IndexError(msg)
         assert key not in self.data, f"key {key!r} already present"
         if self._evicting:
             _, index = self.data.popitem(last=False)
@@ -95,8 +96,6 @@ class LookupEncoder:
         except KeyError:
             previous_index = self.last_assigned_index
             index = self.lookup.insert(key)
-            if index is None:
-                return None
             self.last_assigned_index = index
             if index == previous_index + 1:
                 return 0

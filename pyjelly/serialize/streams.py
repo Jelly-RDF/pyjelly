@@ -37,7 +37,7 @@ class Stream:
             max_datatypes=options.lookup_preset.max_datatypes,
         )
         flow_class = FrameFlow.registry[self.options.stream_types.logical_type]
-        if options.delimited:
+        if not options.delimited:
             flow_class = ManualFrameFlow
         self.flow = flow_class(**flow_args)
         self.repeated_terms = new_repeated_terms()
@@ -63,10 +63,10 @@ class Stream:
     def enroll(self) -> None:
         if not self.enrolled:
             self.stream_options()
+            self.enrolled = True
 
     def stream_options(self) -> None:
         self.flow.append(encode_options(self.options))
-        self.enrolled = True
 
     def namespace_declaration(self, name: str, iri: str) -> None:
         rows = encode_namespace_declaration(

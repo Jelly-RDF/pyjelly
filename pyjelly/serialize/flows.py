@@ -86,7 +86,7 @@ class BoundedFrameFlow(FrameFlow):
             return None
         to_serialize = self.data[: self.frame_size]
         frame = jelly.RdfStreamFrame(rows=to_serialize)
-        self.clear()
+        self[:] = self.data[self.frame_size :]
         return frame
 
 

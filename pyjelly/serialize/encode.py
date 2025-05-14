@@ -47,15 +47,17 @@ class TermEncoder:
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
-        prefix_entry_index = self.prefixes.encode_entry_index(prefix)
-        if prefix_entry_index is None:
+        if prefix and self.prefixes.lookup.max_size:
+            prefix_entry_index = self.prefixes.encode_entry_index(prefix)
+        else:
             name = iri_string
-            prefix = ""
+            prefix_entry_index = None
+
         name_entry_index = self.names.encode_entry_index(name)
 
         term_rows = []
 
-        if prefix:
+        if prefix_entry_index is not None:
             prefix_entry = jelly.RdfPrefixEntry(id=prefix_entry_index, value=prefix)
             term_rows.append(jelly.RdfStreamRow(prefix=prefix_entry))
 
@@ -145,17 +147,6 @@ def encode_statement(
     return rows, statement
 
 
-def encode_quad(
-    terms: Iterable[object],
-    term_encoder: TermEncoder,
-    repeated_terms: dict[Slot, object],
-) -> list[jelly.RdfStreamRow]:
-    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
-    row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
-    rows.append(row)
-    return rows
-
-
 def encode_triple(
     terms: Iterable[object],
     term_encoder: TermEncoder,
@@ -163,6 +154,17 @@ def encode_triple(
 ) -> list[jelly.RdfStreamRow]:
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
+    rows.append(row)
+    return rows
+
+
+def encode_quad(
+    terms: Iterable[object],
+    term_encoder: TermEncoder,
+    repeated_terms: dict[Slot, object],
+) -> list[jelly.RdfStreamRow]:
+    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
+    row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
     rows.append(row)
     return rows
 
