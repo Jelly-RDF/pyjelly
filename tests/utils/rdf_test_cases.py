@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import shlex
 import shutil
 import subprocess
-from collections.abc import Callable, Iterator
+from enum import Enum
 from functools import partial
-from itertools import chain
 from pathlib import Path
 
 import pytest
@@ -39,25 +40,25 @@ def id_from_path(path: Path) -> str:
     return base.replace("rdf_1_1_", "")
 
 
-def physical_types_glob(pattern: str, base: Path) -> Iterator[Path]:
-    # Adheres to the structure described in conformance_tests/rdf/README.md
-    return chain(
-        (base / "triples_rdf_1_1").glob(pattern),
-        (base / "quads_rdf_1_1").glob(pattern),
-        (base / "graphs_rdf_1_1").glob(pattern),
-    )
+class PhysicalTypeTestCasesDir(str, Enum):
+    TRIPLES = "triples_rdf_1_1"
+    QUADS = "quads_rdf_1_1"
+    GRAPHS = "graphs_rdf_1_1"
+
+    def __str__(self) -> str:
+        return self.value
 
 
-positive_glob = partial(physical_types_glob, "pos_*")
-negative_glob = partial(physical_types_glob, "neg_*")
-
-
-def test_cases_decorator(
-    glob_func: Callable[[Path], Iterator[Path]],
-    path: Path,
+def walk_directories(
+    *dirs: str | Path,
+    glob: str | None = None,
 ) -> pytest.MarkDecorator:
-    return pytest.mark.parametrize("path", glob_func(path), ids=id_from_path)
+    paths: list[Path] = []
 
+    for directory in map(Path, dirs):
+        if not directory.is_dir():
+            # a warning here, albeit potentially helpful, is too noisy in practice
+            continue
+        paths.extend(directory.glob(glob or "*"))
 
-positive_test_cases_for = partial(test_cases_decorator, positive_glob)
-negative_test_cases_for = partial(test_cases_decorator, negative_glob)
+    return pytest.mark.parametrize("path", paths, ids=id_from_path)

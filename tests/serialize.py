@@ -4,23 +4,25 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import Any
 
 import rdflib
 
-from pyjelly.consuming.ioutils import get_options_and_frames
-from pyjelly.options import ConsumerStreamOptions
-from pyjelly.producing.producers import ManualFrameProducer
+from pyjelly.options import StreamOptions
+from pyjelly.parse.ioutils import get_options_and_frames
+from pyjelly.serialize.streams import Stream
 from tests.utils.ordered_memory import OrderedMemory
 
 
 def write_dataset(
     filenames: list[str | Path],
     out_filename: str | Path,
-    *,
-    quads: bool = False,
-    options_from: str | Path | None = None,
+    options: str | StreamOptions | Path | None = None,
+    **flow_args: Any,
 ) -> None:
-    options = get_options_from(options_from)
+    if not isinstance(options, StreamOptions):
+        options = get_options_from(options)
+    assert options
     dataset = rdflib.Dataset()
     for filename in map(str, filenames):
         if filename.endswith(".nq"):
@@ -29,41 +31,35 @@ def write_dataset(
             graph = rdflib.Graph(identifier=filename, store=OrderedMemory())
             graph.parse(location=filename)
             dataset.add_graph(graph)
+    stream = Stream.from_options(options, **flow_args)
     with Path(out_filename).open("wb") as file:
-        dataset.serialize(
-            destination=file,
-            quads=quads,
-            format="jelly",
-            options=options,
-        )
+        dataset.serialize(destination=file, format="jelly", stream=stream)
 
 
 def write_graph(
     filename: str | Path,
     *,
     out_filename: str | Path,
-    options_from: str | Path | None = None,
-    one_frame: bool = False,
+    options: str | StreamOptions | Path | None = None,
+    **flow_args: Any,
 ) -> None:
-    options = get_options_from(options_from)
+    if not isinstance(options, StreamOptions):
+        options = get_options_from(options)
+    assert options
     graph = rdflib.Graph(store=OrderedMemory())
     graph.parse(location=str(filename))
-    producer = None
-    if one_frame:
-        assert options is not None
-        producer = ManualFrameProducer(jelly_type=options.logical_type)
+    stream = Stream.from_options(options, **flow_args)
     with Path(out_filename).open("wb") as file:
         graph.serialize(
             destination=file,
             format="jelly",
-            options=options,
-            producer=producer,
+            stream=stream,
         )
 
 
 def get_options_from(
     options_filename: str | Path | None = None,
-) -> ConsumerStreamOptions | None:
+) -> StreamOptions | None:
     if options_filename is not None:
         with Path(options_filename).open("rb") as options_file:
             options, _ = get_options_and_frames(options_file)
@@ -75,24 +71,23 @@ def get_options_from(
 def write_graph_or_dataset(
     first: str | Path,
     *extra: str | Path,
-    graphs: bool = False,
     out_filename: str | Path = "out.jelly",
-    options_from: str | Path | None = None,
-    one_per_frame: bool = False,
+    options: str | Path | StreamOptions | None = None,
+    **flow_args: Any,
 ) -> None:
-    if str(first).endswith(".nq") or extra or graphs:
+    if str(first).endswith(".nq") or extra:
         write_dataset(
             [first, *extra],
             out_filename=out_filename,
-            quads=not graphs,
-            options_from=options_from,
+            options=options,
+            **flow_args,
         )
     else:
         write_graph(
             first,
             out_filename=out_filename,
-            options_from=options_from,
-            one_frame=one_per_frame,
+            options=options,
+            **flow_args,
         )
 
 
@@ -101,13 +96,11 @@ if __name__ == "__main__":
     cli.add_argument("first", type=str)
     cli.add_argument("extra", nargs="*", type=str)
     cli.add_argument("out", nargs="?", default="out.jelly", type=str)
-    cli.add_argument("--graphs", action="store_true")
     cli.add_argument("--options-from", type=str)
     args = cli.parse_args()
     write_graph_or_dataset(
         args.first,
         *args.extra,
-        graphs=args.graphs,
         out_filename=args.out,
-        options_from=args.options_from,
+        options=args.options_from,
     )

@@ -2,13 +2,15 @@ import io
 
 from rdflib import Dataset, Graph
 
-from pyjelly.options import StreamOptions
-from pyjelly.producing.producers import FlatFrameProducer
+from pyjelly import jelly
+from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
+from pyjelly.serialize.streams import Stream
 from tests.e2e_tests.ser_des.base_ser_des import (
     BaseSerDes,
     QuadGraphType,
     TripleGraphType,
 )
+from tests.utils.ordered_memory import OrderedMemory
 
 
 class RdflibSerDes(BaseSerDes):
@@ -50,17 +52,22 @@ class RdflibSerDes(BaseSerDes):
         return g
 
     def write_quads_jelly(
-        self, in_graph: QuadGraphType, options: StreamOptions, frame_size: int
+        self, in_graph: QuadGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         destination = io.BytesIO()
-        producer = FlatFrameProducer(quads=True, frame_size=frame_size)
-        in_graph.serialize(
-            destination=destination, format="jelly", options=options, producer=producer
+        options = StreamOptions(
+            stream_types=StreamTypes(
+                logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+                physical_type=jelly.PHYSICAL_STREAM_TYPE_QUADS,
+            ),
+            lookup_preset=preset,
         )
+        stream = Stream.from_options(options, frame_size=frame_size)
+        in_graph.serialize(destination=destination, format="jelly", stream=stream)
         return destination.getvalue()
 
     def read_triples(self, in_bytes: bytes) -> TripleGraphType:
-        g = Graph()
+        g = Graph(store=OrderedMemory())
         g.parse(data=in_bytes, format="nt")
         return g
 
@@ -75,11 +82,16 @@ class RdflibSerDes(BaseSerDes):
         return g
 
     def write_triples_jelly(
-        self, in_graph: TripleGraphType, options: StreamOptions, frame_size: int
+        self, in_graph: TripleGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         destination = io.BytesIO()
-        producer = FlatFrameProducer(quads=False, frame_size=frame_size)
-        in_graph.serialize(
-            destination=destination, format="jelly", options=options, producer=producer
+        options = StreamOptions(
+            stream_types=StreamTypes(
+                logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+                physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+            ),
+            lookup_preset=preset,
         )
+        stream = Stream.from_options(options, frame_size=frame_size)
+        in_graph.serialize(destination=destination, format="jelly", stream=stream)
         return destination.getvalue()

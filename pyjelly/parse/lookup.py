@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 
-from pyjelly.errors import JellyAssertionError
+from pyjelly.errors import JellyAssertionError, JellyConformanceError
 from pyjelly.options import MAX_LOOKUP_SIZE
 
 
@@ -34,18 +34,15 @@ class LookupDecoder:
         self.last_assigned_index = 0
         self.last_reused_index = 0
 
-    def assign_entry(self, index: int, value: str) -> str:
+    def assign_entry(self, index: int, value: str) -> None:
         previous_index = self.last_assigned_index
         if index == 0:
             index = previous_index + 1
         assert index > 0
         self.data[index - 1] = value
         self.last_assigned_index = index
-        return value
 
     def at(self, index: int) -> str:
-        if index == 0:
-            return ""
         self.last_reused_index = index
         value = self.data[index - 1]
         if value is None:
@@ -54,10 +51,20 @@ class LookupDecoder:
         return value
 
     def decode_prefix_term_index(self, index: int) -> str:
-        return self.at(index or self.last_reused_index)
+        actual_index = index or self.last_reused_index
+        if actual_index == 0:
+            return ""
+        return self.at(actual_index)
 
     def decode_name_term_index(self, index: int) -> str:
-        return self.at(index or self.last_reused_index + 1)
+        actual_index = index or self.last_reused_index + 1
+        if actual_index == 0:
+            msg = "0 is not a valid name term index"
+            raise JellyConformanceError(msg)
+        return self.at(actual_index)
 
-    def decode_datatype_term_index(self, index: int) -> str:
+    def decode_datatype_term_index(self, index: int) -> str | None:
+        if index == 0:
+            msg = "0 is not a valid datatype term index"
+            raise JellyConformanceError(msg)
         return self.at(index)

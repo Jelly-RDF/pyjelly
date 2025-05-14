@@ -3,14 +3,14 @@ from inline_snapshot import snapshot
 from pytest_subtests import SubTests
 
 from pyjelly.errors import JellyConformanceError
-from pyjelly.producing.encoder import TermEncoder
+from pyjelly.serialize.encode import TermEncoder
 
 
 def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
     encoder = TermEncoder(
-        name_lookup_size=8,
-        prefix_lookup_size=8,
-        datatype_lookup_size=0,
+        max_names=8,
+        max_prefixes=8,
+        max_datatypes=0,
     )
     with pytest.raises(
         JellyConformanceError,
@@ -24,9 +24,9 @@ def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
 
 def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
     encoder = TermEncoder(
-        name_lookup_size=8,
-        prefix_lookup_size=8,
-        datatype_lookup_size=0,
+        max_names=8,
+        max_prefixes=8,
+        max_datatypes=0,
     )
 
     with subtests.test("xsd:string is skipped by datatype lookup → no error"):

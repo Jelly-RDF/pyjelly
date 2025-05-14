@@ -2,9 +2,9 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from pyjelly.consuming.lookups import LookupDecoder
 from pyjelly.errors import JellyAssertionError
 from pyjelly.options import MAX_LOOKUP_SIZE
+from pyjelly.parse.lookup import LookupDecoder
 
 
 @given(st.integers(min_value=1, max_value=MAX_LOOKUP_SIZE))

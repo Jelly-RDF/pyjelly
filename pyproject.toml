@@ -21,12 +21,12 @@ dependencies = [
 rdflib = ["rdflib>=7.1.4"]
 
 [project.entry-points."rdf.plugins.parser"]
-jelly = "pyjelly.integrations.rdflib.parser:RDFLibJellyParser"
-"application/x-jelly-rdf" = "pyjelly.integrations.rdflib.parser:RDFLibJellyParser"
+jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
 
 [project.entry-points."rdf.plugins.serializer"]
-jelly = "pyjelly.integrations.rdflib.serializer:RDFLibJellySerializer"
-"application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serializer:RDFLibJellySerializer"
+jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
+"application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 
 [dependency-groups]
 dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
@@ -47,7 +47,7 @@ extras = ["pyjelly[rdflib]"] # workaround for astral-sh/uv#8607
 types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
-required-version = "==0.6.17"
+required-version = "==0.7.3"
 default-groups = ["dev", "test", "extras", "protoc", "types"]
 
 [tool.mypy]

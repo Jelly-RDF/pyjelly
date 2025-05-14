@@ -7,7 +7,7 @@ from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
 from pyjelly.errors import JellyConformanceError
-from pyjelly.producing.lookups import LookupEncoder
+from pyjelly.serialize.lookup import LookupEncoder
 
 
 def split_iri(iri_string: str) -> tuple[str, str]:
@@ -20,8 +20,8 @@ def split_iri(iri_string: str) -> tuple[str, str]:
     return prefix, name
 
 
-TermT = TypeVar("TermT")
-RowsAnd: TypeAlias = tuple[Sequence[jelly.RdfStreamRow], TermT]
+T = TypeVar("T")
+RowsAnd: TypeAlias = tuple[Sequence[jelly.RdfStreamRow], T]
 RowsAndTerm: TypeAlias = (
     "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph]"
 )
@@ -37,25 +37,27 @@ class TermEncoder:
 
     def __init__(
         self,
-        name_lookup_size: int = options.DEFAULT_NAME_LOOKUP_SIZE,
-        prefix_lookup_size: int = options.DEFAULT_PREFIX_LOOKUP_SIZE,
-        datatype_lookup_size: int = options.DEFAULT_DATATYPE_LOOKUP_SIZE,
+        max_names: int = options.DEFAULT_NAME_LOOKUP_SIZE,
+        max_prefixes: int = options.DEFAULT_PREFIX_LOOKUP_SIZE,
+        max_datatypes: int = options.DEFAULT_DATATYPE_LOOKUP_SIZE,
     ) -> None:
-        self.names = LookupEncoder(lookup_size=name_lookup_size)
-        self.prefixes = LookupEncoder(lookup_size=prefix_lookup_size)
-        self.datatypes = LookupEncoder(lookup_size=datatype_lookup_size)
+        self.names = LookupEncoder(lookup_size=max_names)
+        self.prefixes = LookupEncoder(lookup_size=max_prefixes)
+        self.datatypes = LookupEncoder(lookup_size=max_datatypes)
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
-        prefix_entry_index = self.prefixes.encode_entry_index(prefix)
-        if prefix_entry_index is None:
+        if prefix and self.prefixes.lookup.max_size:
+            prefix_entry_index = self.prefixes.encode_entry_index(prefix)
+        else:
             name = iri_string
-            prefix = ""
+            prefix_entry_index = None
+
         name_entry_index = self.names.encode_entry_index(name)
 
         term_rows = []
 
-        if prefix:
+        if prefix_entry_index is not None:
             prefix_entry = jelly.RdfPrefixEntry(id=prefix_entry_index, value=prefix)
             term_rows.append(jelly.RdfStreamRow(prefix=prefix_entry))
 
@@ -145,17 +147,6 @@ def encode_statement(
     return rows, statement
 
 
-def encode_quad(
-    terms: Iterable[object],
-    term_encoder: TermEncoder,
-    repeated_terms: dict[Slot, object],
-) -> list[jelly.RdfStreamRow]:
-    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
-    row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
-    rows.append(row)
-    return rows
-
-
 def encode_triple(
     terms: Iterable[object],
     term_encoder: TermEncoder,
@@ -163,6 +154,17 @@ def encode_triple(
 ) -> list[jelly.RdfStreamRow]:
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
+    rows.append(row)
+    return rows
+
+
+def encode_quad(
+    terms: Iterable[object],
+    term_encoder: TermEncoder,
+    repeated_terms: dict[Slot, object],
+) -> list[jelly.RdfStreamRow]:
+    rows, statement = encode_statement(terms, term_encoder, repeated_terms)
+    row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
     rows.append(row)
     return rows
 
@@ -177,3 +179,19 @@ def encode_namespace_declaration(
     row = jelly.RdfStreamRow(namespace=declaration)
     rows.append(row)
     return rows
+
+
+def encode_options(options: options.StreamOptions) -> jelly.RdfStreamRow:
+    return jelly.RdfStreamRow(
+        options=jelly.RdfStreamOptions(
+            stream_name=options.stream_name,
+            physical_type=options.stream_types.physical_type,
+            generalized_statements=options.generalized_statements,
+            rdf_star=options.rdf_star,
+            max_name_table_size=options.lookup_preset.max_names,
+            max_prefix_table_size=options.lookup_preset.max_prefixes,
+            max_datatype_table_size=options.lookup_preset.max_datatypes,
+            logical_type=options.stream_types.logical_type,
+            version=options.version,
+        )
+    )

@@ -1,12 +1,14 @@
 import os
 from collections.abc import Generator, Iterator
+from itertools import chain
 from typing import IO
 
 from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
-from pyjelly.consuming import options_from_frame
-from pyjelly.options import ConsumerStreamOptions
+from pyjelly.errors import JellyConformanceError
+from pyjelly.options import StreamOptions
+from pyjelly.parse.decode import options_from_frame
 
 
 def delimited_jelly_hint(header: bytes) -> bool:
@@ -52,26 +54,33 @@ def delimited_jelly_hint(header: bytes) -> bool:
     )
 
 
-def chained_frame_iterator(
-    first_frame: jelly.RdfStreamFrame,
-    input_stream: IO[bytes],
-) -> Generator[jelly.RdfStreamFrame]:
-    yield first_frame
-    while frame := parse_length_prefixed(jelly.RdfStreamFrame, input_stream):
-        yield frame
+def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
+    while frame := parse_length_prefixed(jelly.RdfStreamFrame, inp):
+        if frame.rows:
+            yield frame
 
 
 def get_options_and_frames(
-    input_stream: IO[bytes],
-) -> tuple[ConsumerStreamOptions, Iterator[jelly.RdfStreamFrame]]:
-    is_delimited = delimited_jelly_hint(bytes_read := input_stream.read(3))
-    input_stream.seek(-len(bytes_read), os.SEEK_CUR)
+    inp: IO[bytes],
+) -> tuple[StreamOptions, Iterator[jelly.RdfStreamFrame]]:
+    is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
+    inp.seek(-len(bytes_read), os.SEEK_CUR)
 
     if is_delimited:
-        first_frame = parse_length_prefixed(jelly.RdfStreamFrame, input_stream)
-        options = options_from_frame(first_frame, delimited=True)
-        return options, chained_frame_iterator(first_frame, input_stream)
+        frames = frame_iterator(inp)
+        first_frame = next(frames, None)
+        if first_frame is None:
+            msg = "No non-empty frames found in the stream"
+            raise JellyConformanceError(msg)
 
-    first_frame = parse(jelly.RdfStreamFrame, input_stream.read())
-    options = options_from_frame(first_frame, delimited=False)
-    return options, iter((first_frame,))
+        options = options_from_frame(first_frame, delimited=True)
+        return options, chain((first_frame,), frames)
+
+    frame = parse(jelly.RdfStreamFrame, inp.read())
+
+    if not frame.rows:
+        msg = "The stream is corrupted (only contains an empty frame)"
+        raise JellyConformanceError(msg)
+
+    options = options_from_frame(frame, delimited=False)
+    return options, iter((frame,))
