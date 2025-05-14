@@ -8,7 +8,7 @@ from typing_extensions import Never
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
-from pyjelly.serialize.encode import Slot, new_repeated_terms
+from pyjelly.serialize.encode import Slot
 
 
 def options_from_frame(
@@ -102,9 +102,7 @@ class Decoder:
         self.datatypes = LookupDecoder(
             lookup_size=self.options.lookup_preset.max_datatypes
         )
-        self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = (
-            new_repeated_terms()
-        )
+        self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
 
     @property
     def options(self) -> StreamOptions:

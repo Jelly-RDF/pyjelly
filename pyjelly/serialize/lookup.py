@@ -33,7 +33,7 @@ class Lookup:
     def make_last_to_evict(self, key: str) -> None:
         self.data.move_to_end(key)
 
-    def insert(self, key: str) -> int | None:
+    def insert(self, key: str) -> int:
         if not self.max_size:
             msg = "lookup is zero, cannot insert"
             raise IndexError(msg)
