@@ -28,32 +28,6 @@ class BaseSerDes(ABC):
         self.name = name
 
     @abstractmethod
-    def len_quads(self, graph: QuadGraphType) -> int:
-        """
-        Get the number of quads in the graph-like structure.
-
-        Args:
-            graph (QuadGraphType): The graph-like structure containing the quads.
-
-        Returns:
-            int: The number of quads in the graph.
-
-        """
-
-    @abstractmethod
-    def len_triples(self, graph: TripleGraphType) -> int:
-        """
-        Get the number of triples in the graph-like structure.
-
-        Args:
-            graph (TripleGraphType): The graph-like structure containing the triples.
-
-        Returns:
-            int: The number of triples in the graph.
-
-        """
-
-    @abstractmethod
     def read_quads(self, in_bytes: bytes) -> QuadGraphType:
         """
         Read quads from bytes to a graph-like structure.

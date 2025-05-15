@@ -25,7 +25,7 @@ class RDFLibTermEncoder(TermEncoder):
 
         if isinstance(term, rdflib.Literal):
             return self.encode_literal(
-                lex=term,
+                lex=str(term),
                 language=term.language,
                 # `datatype` is cast to `str` explicitly because
                 # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
