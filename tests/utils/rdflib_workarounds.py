@@ -16,14 +16,8 @@ def fixup_term(term: rdflib.Node) -> None:
     True
     """
     # workaround #99
-    if isinstance(term, rdflib.Literal):
-        if term.datatype == rdflib.XSD.string:
-            term._datatype = None
-        # workaround #101
-        if term.datatype == rdflib.XSD.integer:
-            term._value = "0"
-        if term.datatype == rdflib.XSD.decimal:
-            term._value = "0.0"
+    if isinstance(term, rdflib.Literal) and term.datatype == rdflib.XSD.string:
+        term._datatype = None
 
 
 def fixup_graph(graph: rdflib.Graph) -> None:
