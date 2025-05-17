@@ -51,6 +51,6 @@ jobs:
         id: build
         run: uv build --out-dir dist
 
-      - name: Publish package distributions to TestPyPI
+      - name: Publish package distributions
         uses: pypa/gh-action-pypi-publish@release/v1
   
