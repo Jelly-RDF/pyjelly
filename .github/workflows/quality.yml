@@ -13,6 +13,8 @@ concurrency:
 env:
   FORCE_COLOR: 1
   PY_COLORS: 1
+  UV_LOCKED: 1
+  UV_NO_SYNC: 1
 
 defaults:
   run:
@@ -23,6 +25,9 @@ jobs:
     if: ${{ github.actor != 'dependabot[bot]' && !cancelled() }}
     name: ${{ matrix.runs-test-cases && '(test cases) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
     runs-on: ${{ matrix.platform }}
+
+    env:
+      UV_PYTHON: ${{ matrix.version }}
 
     strategy:
       fail-fast: false
@@ -53,10 +58,6 @@ jobs:
         - version: pypy3.11
           platform: ubuntu-latest
 
-    env:
-      uv-sync: uv sync --frozen --python ${{matrix.version}} --no-group protoc
-      uv-run: uv run --no-sync --frozen --python ${{matrix.version}}
-
     steps:
     - uses: actions/checkout@v4
       with:
@@ -68,29 +69,29 @@ jobs:
 
     - name: Install
       id: install
-      run: ${{ env.uv-sync }}
+      run: uv sync
 
     - name: Install latest Jelly CLI
       id: install-cli
       run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
-      if: ${{ !cancelled() && matrix.runs-test-cases }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.runs-test-cases }}
 
     - name: Run unit tests
       id: unit-tests
-      run: ${{ env.uv-run }} pytest -svv
+      run: uv run pytest -svv
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
 
     - name: Check formatting
       id: formatting
-      run: ${{ env.uv-run }} ruff format . --diff
+      run: uv run ruff format . --diff
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
 
     - name: Lint
       id: linting
-      run: ${{ env.uv-run }} ruff check --output-format github
+      run: uv run ruff check --output-format github
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
 
     - name: Check type safety
       id: types
-      run: ${{ env.uv-run }} mypy .
+      run: uv run mypy .
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}

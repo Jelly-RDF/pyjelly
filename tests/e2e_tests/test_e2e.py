@@ -67,7 +67,7 @@ class TestEnd2End:
             triples = nt_reader.read_triples(f.read())
             jelly_io = ser.write_triples_jelly(triples, preset, frame_size)
             new_g = des.read_triples_jelly(jelly_io)
-            assert nt_reader.len_triples(triples) == des.len_triples(new_g)
+            assert set(triples) == set(new_g)
 
     @pytest.mark.parametrize(
         ("ser", "des", "preset", "frame_size", "file"), setup.setup_quad_files()
@@ -85,4 +85,4 @@ class TestEnd2End:
             quads = nq_reader.read_quads(f.read())
             jelly_io = ser.write_quads_jelly(quads, preset, frame_size)
             new_g = des.read_quads_jelly(jelly_io)
-            assert nq_reader.len_quads(quads) == des.len_quads(new_g)
+            assert set(quads) == set(new_g)

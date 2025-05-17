@@ -11,6 +11,7 @@ from tests.e2e_tests.ser_des.base_ser_des import (
     TripleGraphType,
 )
 from tests.utils.ordered_memory import OrderedMemory
+from tests.utils.rdflib_workarounds import fixup_graph
 
 
 class RdflibSerDes(BaseSerDes):
@@ -30,15 +31,10 @@ class RdflibSerDes(BaseSerDes):
     def __init__(self) -> None:
         super().__init__(name=self.name)
 
-    def len_quads(self, graph: QuadGraphType) -> int:
-        return len(list(graph.quads()))
-
-    def len_triples(self, graph: TripleGraphType) -> int:
-        return len(list(graph.triples((None, None, None))))
-
     def read_quads(self, in_bytes: bytes) -> QuadGraphType:
         g = Dataset()
         g.parse(data=in_bytes, format="nquads")
+        fixup_graph(g)
         return g
 
     def write_quads(self, in_graph: QuadGraphType) -> bytes:
@@ -49,6 +45,7 @@ class RdflibSerDes(BaseSerDes):
     def read_quads_jelly(self, in_bytes: bytes) -> QuadGraphType:
         g = Dataset()
         g.parse(data=in_bytes, format="jelly")
+        fixup_graph(g)
         return g
 
     def write_quads_jelly(
@@ -69,6 +66,7 @@ class RdflibSerDes(BaseSerDes):
     def read_triples(self, in_bytes: bytes) -> TripleGraphType:
         g = Graph(store=OrderedMemory())
         g.parse(data=in_bytes, format="nt")
+        fixup_graph(g)
         return g
 
     def write_triples(self, in_graph: TripleGraphType) -> bytes:
@@ -79,6 +77,7 @@ class RdflibSerDes(BaseSerDes):
     def read_triples_jelly(self, in_bytes: bytes) -> TripleGraphType:
         g = Graph()
         g.parse(data=in_bytes, format="jelly")
+        fixup_graph(g)
         return g
 
     def write_triples_jelly(
