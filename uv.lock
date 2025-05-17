@@ -896,19 +896,6 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-ci = [
-    { name = "hypothesis" },
-    { name = "inline-snapshot" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-accept" },
-    { name = "pytest-mock" },
-    { name = "pytest-subtests" },
-    { name = "pytest-sugar" },
-    { name = "ruff" },
-    { name = "types-protobuf" },
-]
 dev = [
     { name = "mypy" },
     { name = "pre-commit" },
@@ -945,19 +932,6 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-ci = [
-    { name = "hypothesis", specifier = ">=6.131.0" },
-    { name = "inline-snapshot", specifier = ">=0.20.8" },
-    { name = "mypy", specifier = ">=1.13.0" },
-    { name = "pre-commit", specifier = ">=4.2.0" },
-    { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-accept", specifier = ">=0.1.12" },
-    { name = "pytest-mock", specifier = ">=3.14.0" },
-    { name = "pytest-subtests", specifier = ">=0.14.1" },
-    { name = "pytest-sugar", specifier = ">=1.0.0" },
-    { name = "ruff", specifier = ">=0.11.8" },
-    { name = "types-protobuf", specifier = ">=5.29.1.20250315" },
-]
 dev = [
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },

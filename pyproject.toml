@@ -41,15 +41,10 @@ test = [
     "pytest-sugar>=1.0.0",
 ]
 types = ["types-protobuf>=5.29.1.20250315"]
-ci = [
-    { include-group = "dev" },
-    { include-group = "test" },
-    { include-group = "types" },
-]
 
 [tool.uv]
 required-version = "==0.7.3"
-default-groups = ["dev", "test", "protoc", "types"]
+default-groups = ["dev", "test", "types"]
 
 [tool.mypy]
 strict = true

@@ -69,12 +69,12 @@ jobs:
 
     - name: Install
       id: install
-      run: uv sync --only-group ci
+      run: uv sync
 
     - name: Install latest Jelly CLI
       id: install-cli
       run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
-      if: ${{ !cancelled() && matrix.runs-test-cases }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.runs-test-cases }}
 
     - name: Run unit tests
       id: unit-tests
