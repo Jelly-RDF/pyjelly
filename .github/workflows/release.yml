@@ -1,0 +1,56 @@
+name: release
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    tags:
+      - "v.*"
+    
+env:
+  FORCE_COLOR: 1
+  PY_COLORS: 1
+  
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    name: Release to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+    
+      - name: Validate tag
+        id: validate-tag
+        run: |
+          set -Eeuxo pipefail
+
+          project_version=$(uv version --short)
+          tag=${GITHUB_REF#refs/tags/}
+
+          [[ "$tag" == "$project_version" ]] || {
+            echo "Tag $tag does not match project version $project_version"
+            exit 1
+          }
+
+      - name: Build package distributions
+        id: build
+        run: uv build --out-dir dist
+
+      - name: Publish package distributions
+        uses: pypa/gh-action-pypi-publish@release/v1
+  

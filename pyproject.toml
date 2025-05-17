@@ -13,12 +13,9 @@ authors = [
 requires-python = ">=3.9"
 dependencies = [
     "protobuf>=5.29.3",
-    "typer>=0.15.2",
+    "rdflib>=7.1.4",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
-
-[project.optional-dependencies]
-rdflib = ["rdflib>=7.1.4"]
 
 [project.entry-points."rdf.plugins.parser"]
 jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
@@ -43,12 +40,11 @@ test = [
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
 ]
-extras = ["pyjelly[rdflib]"] # workaround for astral-sh/uv#8607
 types = ["types-protobuf>=5.29.1.20250315"]
 
 [tool.uv]
 required-version = "==0.7.3"
-default-groups = ["dev", "test", "extras", "protoc", "types"]
+default-groups = ["dev", "test", "types"]
 
 [tool.mypy]
 strict = true
