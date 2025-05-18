@@ -2,7 +2,17 @@
 
 **pyjelly** is a Python implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. 
 
+Below is a list of all documentation pages about pyjelly, including installation instructions, API reference, and examples.
 
+- **[Getting started](getting-started.md)**: Installation instructions and basic usage examples.
+- **[Overview](overview.md)**: An introduction to the Jelly protocol and the pyjelly library.
+- **[API reference](api.md)**: Detailed documentation of the pyjelly API, including classes, methods, and functions.
+- **[Contributing](contributing/index.md)**: Guidelines for contributing to the pyjelly project, including how to report issues, submit pull requests, and participate in discussions.
+- **[Code of conduct](contributing/code_of_conduct.md)**: The code of conduct for the pyjelly community, outlining expected behavior and guidelines for respectful interactions.
+
+## License
+
+The pyjelly library is licensed under the [Apache 2.0 license](https://github.com/Jelly-RDF/pyjelly/blob/{{ git_tag() }}/LICENSE).
 
 ## Commercial and community support
 
