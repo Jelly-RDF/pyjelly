@@ -6,6 +6,6 @@
 
 * Full support for reading and writing Jelly-encoded RDF data
 * Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) via plugin entry points
-* Support for all stream types defined in the Jelly specification
+* Support for all Jelly stream types
 * Tools for working with delimited and non-delimited Jelly streams
 * Fine-grained control over serialization options, compression, and framing
