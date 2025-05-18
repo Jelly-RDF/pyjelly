@@ -35,7 +35,7 @@ See the full [stream type matrix]({{ proto_link("serialization/#consistency-with
 
 ### Conformance to the Jelly protocol
 
-pyjelly is designed to conform to version `{{ proto_version() }}` of the [Jelly specification]({{ proto_link("specification/") }}). It adheres to:
+pyjelly is designed to conform to [version {{ proto_version() }} of the Jelly specification]({{ proto_link("specification/") }}). It adheres to:
 
 * Stream header structure and metadata.
 * Frame structure and ordering guarantees.
