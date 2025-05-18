@@ -1,6 +1,6 @@
 ## What is Jelly and what is `pyjelly`?
 
-[Jelly]({{ proto_link() }}) is a serialization and streaming protocol for RDF. It enables fast, compact, and flexible transmission of RDF data using Protocol Buffers, supporting both flat and structured streams of triples, quads, graphs, and datasets. Jelly is designed to work well in both batch and real-time settings, including use over files, sockets, or stream processing systems like Kafka or gRPC.
+[Jelly]({{ proto_link() }}) is a serialization format and streaming protocol for RDF knowledge graphs. It enables fast, compact, and flexible transmission of RDF data with Protobuf, supporting both flat and structured streams of triples, quads, graphs, and datasets. Jelly is designed to work well in both batch and real-time settings, including use over files, sockets, or stream processing systems like Kafka or gRPC.
 
 **`pyjelly`** is a Python implementation of the Jelly protocol. It provides:
 
