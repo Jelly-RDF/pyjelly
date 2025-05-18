@@ -8,10 +8,6 @@ on:
   push:
     tags:
       - "v*"
-    
-env:
-  FORCE_COLOR: 1
-  PY_COLORS: 1
   
 defaults:
   run:
@@ -39,7 +35,7 @@ jobs:
         run: |
           set -Eeuxo pipefail
 
-          project_version=$(uv version --short)
+          project_version=v$(uv version --short)
           tag=${GITHUB_REF#refs/tags/}
 
           [[ "$tag" == "$project_version" ]] || {
