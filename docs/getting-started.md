@@ -41,7 +41,7 @@ stream = Stream.from_options(options)
 g.serialize(destination="foaf.jelly", format="jelly", stream=stream)
 ```
 
-This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options. The output format is determined by the `format="jelly"` parameter or inferred from the `.jelly` file extension.
+This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
 
 ### Parsing
 
