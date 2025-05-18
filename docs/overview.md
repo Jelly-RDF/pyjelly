@@ -5,7 +5,7 @@
 **`pyjelly`** is a Python implementation of the Jelly protocol. It provides:
 
 * Full support for reading and writing Jelly-encoded RDF data
-* Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) via plugin entry points
+* Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) (*"works just like Turtle"*)
 * Support for all Jelly stream types
 * Tools for working with delimited and non-delimited Jelly streams
 * Fine-grained control over serialization options, compression, and framing
