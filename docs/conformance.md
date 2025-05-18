@@ -2,21 +2,13 @@
 
 ### Supported stream types
 
-`pyjelly` supports all *physical* stream types defined in the [Jelly protocol specification]({{ proto_link("spec/stream-types") }}), including:
+`pyjelly` supports all [*physical* stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}) including `TRIPLES`, `QUADS` and `GRAPHS`.
 
-* [`TRIPLES`]({{ proto_link("spec/stream-types#triples") }})
-* [`QUADS`]({{ proto_link("spec/stream-types#quads") }})
-* [`GRAPHS`]({{ proto_link("spec/stream-types#graphs") }})
+However, only the following [*logical* stream types]({{ proto_link("specification/serialization/#logical-stream-types") }}) are currently supported: `UNSPECIFIED`, `FLAT_TRIPLES`, `FLAT_QUADS`.
 
-However, only the following *logical* stream types are currently supported:
+> ❌ Grouped logical stream types are **not yet supported**. Frames with grouped logical types will raise an error at parse time.
 
-* [`UNSPECIFIED`]({{ proto_link("spec/stream-types#unspecified") }})
-* [`FLAT_TRIPLES`]({{ proto_link("spec/stream-types#flat-triple-stream") }})
-* [`FLAT_QUADS`]({{ proto_link("spec/stream-types#flat-quad-stream") }})
-
-> ❌ Grouped logical stream types (e.g. [`GRAPH_STREAM`]({{ proto_link("spec/stream-types#graph-stream") }}), [`DATASET_STREAM`]({{ proto_link("spec/stream-types#dataset-stream") }}) etc.) are **not yet supported**. Frames with grouped logical types will raise an error at parse time.
-
-See the full [stream type matrix]({{ proto_link("spec/stream-types#rdf-stax-logical-type--physical-type") }}) for an overview of valid combinations.
+See the full [stream type matrix]({{ proto_link("specification/serialization/#version-compatibility-and-base-types") }}) for an overview of valid combinations.
 
 ### Supported use cases
 
@@ -30,7 +22,7 @@ See the full [stream type matrix]({{ proto_link("spec/stream-types#rdf-stax-logi
 
 ### Conformance to the Jelly protocol
 
-`pyjelly` is designed to conform to version `{{ proto_version() }}` of the [Jelly specification]({{ proto_link("spec/") }}). It adheres to:
+pyjelly is designed to conform to version `{{ proto_version() }}` of the [Jelly specification]({{ proto_link("specification/") }}). It adheres to:
 
 * Stream header structure and metadata
 * Frame structure and ordering guarantees
