@@ -31,7 +31,7 @@ However, only the following [*logical* stream types]({{ proto_link("specificatio
 !!! warning
     Grouped logical stream types are **not yet supported**. Frames with grouped logical types will raise an error at parse time.
 
-See the full [stream type matrix]({{ proto_link("specification/serialization/#version-compatibility-and-base-types") }}) for an overview of valid combinations.
+See the full [stream type matrix]({{ proto_link("serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
 
 ### Conformance to the Jelly protocol
 
