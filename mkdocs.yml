@@ -1,0 +1,124 @@
+site_name: pyjelly
+site_description: pyjelly is a Python implementation of the Jelly RDF streaming protocol.
+site_url: https://jelly-rdf.github.io/pyjelly/
+
+plugins:
+  - search
+  - mike
+  - macros:
+      module_name: docs/env
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - autorefs
+  - markdown-exec
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_root_heading: true
+            heading_level: 3
+            # https://mkdocstrings.github.io/python/usage/#configuration/
+            docstring_style: numpy
+            docstring_options:
+              ignore_init_summary: true
+              trim_doctest_flags: false
+            members_order: source
+            merge_init_into_class: true
+            parameter_headings: true
+            show_submodules: true
+            show_inheritance_diagram: false
+            show_signature_annotations: false
+            signature_crossrefs: true
+            line_length: 60
+            show_labels: false
+            show_symbol_type_heading: false
+            show_symbol_type_toc: true
+            summary: true
+          paths: [pyjelly/]
+          inventories:
+            - http://docs.python.org/3/objects.inv
+            - https://rdflib.readthedocs.io/en/stable/objects.inv
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - footnotes
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+repo_url: https://github.com/Jelly-RDF/pyjelly
+repo_name: Jelly-RDF/pyjelly
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  features:
+    # Behave like an SPA
+    - navigation.instant
+    - navigation.instant.progress
+    # Update anchors in the address bar
+    - navigation.tracking
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-3
+        name: Switch to light mode
+
+  logo: assets/jelly_white.png
+  favicon: assets/jelly_color.png
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Jelly-RDF/pyjelly
+      name: pyjelly on GitHub
+
+nav:
+  - Home: "index.md"
+  - Getting started: "getting-started.md"
+  - Overview and supported features: "overview.md"
+  - API reference: "api.md"
+  - Contributing:
+      - "contributing/index.md"
+      - Code of conduct: "contributing/code_of_conduct.md"
+  - Back to main Jelly docs ↩: "https://w3id.org/jelly/"
