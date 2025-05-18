@@ -5,7 +5,8 @@ site_url: https://jelly-rdf.github.io/pyjelly/
 plugins:
   - search
   - mike
-  - macros
+  - macros:
+      module_name: docs/env
   - git-revision-date-localized:
       enable_creation_date: true
   - autorefs
@@ -18,7 +19,6 @@ plugins:
             heading_level: 3
             # https://mkdocstrings.github.io/python/usage/#configuration/
             docstring_style: numpy
-            docstring_section_style: list
             docstring_options:
               ignore_init_summary: true
               trim_doctest_flags: false
@@ -37,6 +37,7 @@ plugins:
           paths: [pyjelly/]
           inventories:
             - http://docs.python.org/3/objects.inv
+            - https://rdflib.readthedocs.io/en/stable/objects.inv
 
 markdown_extensions:
   - attr_list
@@ -114,13 +115,11 @@ extra:
 
 nav:
   - Home: "index.md"
+  - Overview: "overview.md"
   - Getting started: "getting-started.md"
-  - User guide:
-      - Overview: "user/index.md"
-      - Compatibility policy: "user/compatibility.md"
-  - Developer guide:
-      - Releases: "dev/releases.md"
-      - Implementing Jelly for other libraries: "dev/implementing.md"
+  - Basic usage: "basic-usage.md"
+  - Jelly conformance: "conformance.md"
+  - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"

@@ -26,33 +26,22 @@ def define_env(env):
         print(f"PROTO_TAG env var is set to {proto_tag_raw}")
     else:
         try:
-            proto_tag_raw = (
-                subprocess.run(
-                    ["git", "describe", "--tags"],
-                    cwd="../submodules/protobuf",
-                    check=True,
-                    capture_output=True,
-                )
-                .stdout.decode()
-                .strip()
-            )
+            proto_tag_raw = subprocess.check_output(
+                ["git", "describe", "--tags"],
+                cwd="submodules/protobuf",
+                encoding="utf-8",
+            ).strip()
         except subprocess.CalledProcessError as e:
             print("Failed to call git: ", e.returncode, e.stderr)
-            raise e
+            raise
 
     try:
-        python_tag_raw = (
-            subprocess.run(
-                ["git", "describe", "--tags"],
-                check=True,
-                capture_output=True,
-            )
-            .stdout.decode()
-            .strip()
-        )
+        python_tag_raw = subprocess.check_output(
+            ["uv", "version", "--short"], encoding="utf-8"
+        ).strip()
     except subprocess.CalledProcessError as e:
         print("Failed to call git: ", e.returncode, e.stderr)
-        raise e
+        raise
 
     tag_env_var = os.environ.get("TAG", "dev")
     if tag_env_var == "dev":
