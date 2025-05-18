@@ -98,8 +98,7 @@ def define_env(env):
             return "dev"
         tag = proto_tag()
         if "-" in tag:
-            print("Warning: proto tag contains a hyphen, using dev instead of " + tag)
-            return "dev"
+            tag = tag[: tag.rindex("-")]
         return tag.replace("v", "")
 
     @env.macro
