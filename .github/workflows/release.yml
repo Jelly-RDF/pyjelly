@@ -6,6 +6,7 @@ permissions:
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   
 defaults:
@@ -14,7 +15,6 @@ defaults:
 
 jobs:
   release:
-    # needs: check
     if: ${{ github.ref_type == 'tag' }}
     name: Release to PyPI
     runs-on: ubuntu-latest
