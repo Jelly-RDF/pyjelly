@@ -8,14 +8,10 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-
+  
 defaults:
   run:
     shell: bash
-
-env:
-  UV_LOCKED: 1
-  UV_NO_SYNC: 1
 
 jobs:
   release:
