@@ -86,4 +86,3 @@ jobs:
             uv run mike deploy --push --alias-type=redirect --update-aliases "${V_MAJOR}.${V_MINOR}.x" stable "${TAG#v}"
           else
             uv run mike deploy --push --alias-type=redirect --title "Development version" --update-aliases dev latest
-          fi
