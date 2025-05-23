@@ -1,0 +1,29 @@
+name: news
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, reopened, synchronize]
+
+env:
+  UV_LOCKED: 1
+  UV_NO_SYNC: 1
+
+jobs:
+  check-news-entry:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # `towncrier check` runs `git diff --name-only origin/main...`, which
+        # needs a non-shallow clone.
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+    - name: Install dependencies
+      run: uv sync --group maintenance
+    - name: Check news entry
+      if: >
+        !contains(github.event.pull_request.labels.*.name, 'skip news')
+        && !contains(github.event.pull_request.user.login, '[bot]')
+      run: uv run towncrier check --compare-with origin/${{github.base_ref}}
