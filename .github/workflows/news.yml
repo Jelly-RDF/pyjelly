@@ -26,4 +26,4 @@ jobs:
       if: >
         !contains(github.event.pull_request.labels.*.name, 'skip news')
         && !contains(github.event.pull_request.user.login, '[bot]')
-      run: towncrier check --compare-with origin/${{github.base_ref}}
+      run: uv run towncrier check --compare-with origin/${{github.base_ref}}
