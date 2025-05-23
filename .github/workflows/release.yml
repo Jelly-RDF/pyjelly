@@ -8,10 +8,14 @@ on:
   push:
     branches: [main]
     tags: ['v*']
-  
+
 defaults:
   run:
     shell: bash
+
+env:
+  UV_LOCKED: 1
+  UV_NO_SYNC: 1
 
 jobs:
   release:
@@ -65,7 +69,6 @@ jobs:
           enable-cache: true
   
       - name: Deploy site
-        working-directory: ./docs
         run: |
           set -Eeuxo pipefail
           export TAG='${{ github.ref_name }}'
@@ -79,7 +82,7 @@ jobs:
           then
             V_MAJOR=`echo ${TAG#v} | awk -F '.' '{print $1}'`
             V_MINOR=`echo ${TAG#v} | awk -F '.' '{print $2}'`
-            mike deploy --push --alias-type=redirect --update-aliases "${V_MAJOR}.${V_MINOR}.x" stable "${TAG#v}"
+            uv run mike deploy --push --alias-type=redirect --update-aliases "${V_MAJOR}.${V_MINOR}.x" stable "${TAG#v}"
           else
-            mike deploy --push --alias-type=redirect --title "Development version" --update-aliases dev latest
+            uv run mike deploy --push --alias-type=redirect --title "Development version" --update-aliases dev latest
           fi
