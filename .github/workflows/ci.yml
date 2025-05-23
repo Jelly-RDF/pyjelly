@@ -1,14 +1,14 @@
-name: quality-gate
+name: ci
 
 on:
   push:
-    branches:
-    -  main
+    branches: [main]
+    tags: ['v*']
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     
 env:
   FORCE_COLOR: 1
@@ -21,9 +21,9 @@ defaults:
     shell: bash
 
 jobs:
-  quality-gate:
+  check:
     if: ${{ github.actor != 'dependabot[bot]' && !cancelled() }}
-    name: ${{ matrix.runs-test-cases && '(test cases) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
+    name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
     runs-on: ${{ matrix.platform }}
 
     env:
@@ -33,14 +33,9 @@ jobs:
       fail-fast: false
       # https://blog.jaraco.com/efficient-use-of-ci-resources/
       matrix:
-        runs-test-cases:
-        - false
-        version:
-        - '3.9'
-        - '3.13'
-        platform:
-        - ubuntu-latest
-        - macos-latest
+        conformance-tests: [false]
+        version: ['3.9', '3.13']
+        platform: [ubuntu-latest, macos-latest]
         include:
         - version: '3.10'
           platform: ubuntu-latest
@@ -50,7 +45,7 @@ jobs:
           platform: ubuntu-latest
         - version: '3.13'
           platform: ubuntu-latest
-          runs-test-cases: true
+          conformance-tests: true
         - version: '3.14'
           platform: ubuntu-latest
         - version: pypy3.10
@@ -74,7 +69,7 @@ jobs:
     - name: Install latest Jelly CLI
       id: install-cli
       run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
-      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.runs-test-cases }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
     - name: Run unit tests
       id: unit-tests

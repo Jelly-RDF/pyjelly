@@ -6,8 +6,8 @@ permissions:
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ['v*']
   
 defaults:
   run:
@@ -15,6 +15,7 @@ defaults:
 
 jobs:
   release:
+    if: ${{ github.ref_type == 'tag' }}
     name: Release to PyPI
     runs-on: ubuntu-latest
     permissions:
@@ -50,4 +51,35 @@ jobs:
 
       - name: Publish package distributions
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  release-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
   
+      - name: Deploy site
+        working-directory: ./docs
+        run: |
+          set -Eeuxo pipefail
+          export TAG='${{ github.ref_name }}'
+          uv sync --group docs
+          git fetch origin gh-pages --depth=1
+
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+
+          if [[ $TAG == v* ]]
+          then
+            V_MAJOR=`echo ${TAG#v} | awk -F '.' '{print $1}'`
+            V_MINOR=`echo ${TAG#v} | awk -F '.' '{print $2}'`
+            mike deploy --push --alias-type=redirect --update-aliases "${V_MAJOR}.${V_MINOR}.x" stable "${TAG#v}"
+          else
+            mike deploy --push --alias-type=redirect --title "Development version" --update-aliases dev latest
+          fi
