@@ -9,7 +9,6 @@ env:
   UV_LOCKED: 1
   UV_NO_SYNC: 1
 
-
 jobs:
   check-news-entry:
     runs-on: ubuntu-latest
