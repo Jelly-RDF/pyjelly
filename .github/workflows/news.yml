@@ -5,7 +5,6 @@ on:
     types: [labeled, unlabeled, opened, reopened, synchronize]
 
 env:
-  SKIP_NEWS_FROM_USERS: ['dependabot[bot]', 'pre-commit-ci[bot]']
   UV_LOCKED: 1
   UV_NO_SYNC: 1
 
@@ -26,5 +25,5 @@ jobs:
     - name: Check news entry
       if: >
         !contains(github.event.pull_request.labels.*.name, 'skip news')
-        && !contains(env.SKIP_NEWS_FROM_USERS, github.event.pull_request.user.login)
+        && !contains(github.event.pull_request.user.login, '[bot]')
       run: towncrier check --compare-with origin/${{github.base_ref}}
