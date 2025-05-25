@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable
 from typing import IO, Any
-from typing_extensions import Never, assert_never, override
+from typing_extensions import Never, override
 
 import rdflib
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
@@ -10,10 +10,11 @@ from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
 from rdflib.plugins.stores.memory import Memory
 from rdflib.store import Store
+from rdflib.term import Identifier
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError
-from pyjelly.options import StreamParameters
+from pyjelly.errors import JellyAssertionError, JellyConformanceError
+from pyjelly.options import StreamTypes
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
@@ -43,11 +44,9 @@ class RDFLibAdapter(Adapter):
         return rdflib.Literal(lex, lang=language, datatype=datatype)
 
 
-def _adapter_missing(feature: str, *, options: StreamParameters) -> Never:
-    physical_type_name = jelly.PhysicalStreamType.Name(
-        options.stream_types.physical_type
-    )
-    logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
+    physical_type_name = jelly.PhysicalStreamType.Name(stream_types.physical_type)
+    logical_type_name = jelly.LogicalStreamType.Name(stream_types.logical_type)
     msg = (
         f"adapter with {physical_type_name} and {logical_type_name} "
         f"does not implement {feature}"
@@ -80,7 +79,10 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
             jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
         ):
             return None
-        return _adapter_missing("interpreting frames", options=self.params)
+        return _adapter_missing(
+            "interpreting frames",
+            stream_types=self.options.stream_types,
+        )
 
 
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
@@ -88,7 +90,7 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
         self,
         options: ParserOptions,
         store: Store | str | None = None,
-        store_identifiers: Iterable[rdflib.Identifier] | None = None,
+        store_identifiers: Iterable[Identifier] | None = None,
         store_class: Callable[..., Store] | None = None,
     ) -> None:
         super().__init__(options=options)
@@ -98,6 +100,8 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
                 store_identifiers = INFINITE_BNODES
             else:
                 store_identifiers = None
+        if store_identifiers is not None:
+            store_identifiers = iter(store_identifiers)
         if store_class is None:
             store_class = Memory
         self.store_identifiers = store_identifiers
@@ -124,7 +128,9 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
             jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
         ):
             return None
-        return _adapter_missing("interpreting frames", options=self.params)
+        return _adapter_missing(
+            "interpreting frames", stream_types=self.options.stream_types
+        )
 
 
 class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
@@ -144,7 +150,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
         self,
         options: ParserOptions,
         store: Store | str | None = None,
-        store_identifiers: Iterable[rdflib.Identifier] | None = None,
+        store_identifiers: Iterable[Identifier] | None = None,
         store_class: Callable[..., Store] | None = None,
     ) -> None:
         super().__init__(
@@ -212,6 +218,7 @@ def parse_flat_quads_stream(
 ) -> Dataset:
     assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     sink = sink or Graph(store=store)
+    adapter_class: type[RDFLibQuadsBaseAdapter]
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS:
         adapter_class = RDFLibQuadsAdapter
     else:  # jelly.PHYSICAL_STREAM_TYPE_GRAPHS
@@ -238,9 +245,10 @@ def parse_graph_stream(
 def parse_dataset_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
-    store_identifiers: Iterable[rdflib.Identifier] | None = None,
+    store_identifiers: Iterable[Identifier] | None = None,
     store_class: Callable[..., Store] | None = None,
 ) -> Generator[Dataset]:
+    adapter_class: type[RDFLibQuadsBaseAdapter]
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS:
         adapter_class = RDFLibQuadsAdapter
     else:  # jelly.PHYSICAL_STREAM_TYPE_GRAPHS
@@ -265,7 +273,7 @@ def datasets_from_jelly(
         jelly.LOGICAL_STREAM_TYPE_DATASETS,
         jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
     ):
-        yield graph_or_dataset_from_jelly(inp=inp, sink=Graph(store=store))
+        yield graph_or_dataset_from_jelly(inp=inp, sink=Graph(store=store))  # type: ignore[misc]
 
     else:
         yield from parse_dataset_stream(frames=frames, options=options)
@@ -313,7 +321,12 @@ def graph_or_dataset_from_jelly(
 
         return ds
 
-    assert_never(options.stream_types.logical_type)
+    assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    msg = (
+        "the stream does not specify a logical type, "
+        "interpret the output of get_options_and_frames() manually"
+    )
+    raise JellyAssertionError(msg)
 
 
 class RDFLibJellyParser(RDFLibParser):

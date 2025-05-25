@@ -20,7 +20,7 @@ def options_from_frame(
     frame: jelly.RdfStreamFrame,
     *,
     delimited: bool,
-) -> StreamParameters:
+) -> ParserOptions:
     row = frame.rows[0]
     options = row.options
     return ParserOptions(

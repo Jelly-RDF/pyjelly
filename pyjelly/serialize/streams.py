@@ -59,6 +59,7 @@ class Stream:
         )
 
     def infer_flow(self) -> FrameFlow:
+        flow: FrameFlow
         if self.options.params.delimited:
             if self.options.logical_type != jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
                 flow_class = flow_for_type(self.options.logical_type)
@@ -69,7 +70,7 @@ class Stream:
                 jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
                 jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
             ):
-                flow = flow_class(frame_size=self.options.frame_size)
+                flow = flow_class(frame_size=self.options.frame_size)  # type: ignore[call-overload]
             else:
                 flow = flow_class()
         else:
@@ -131,9 +132,7 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
 
 class TripleStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
-    default_delimited_flow_class: ClassVar[type[FlatTriplesFrameFlow]] = (
-        FlatTriplesFrameFlow
-    )
+    default_delimited_flow_class: ClassVar = FlatTriplesFrameFlow
 
     def __init__(
         self,
@@ -155,15 +154,13 @@ class TripleStream(Stream):
             return frame
         return None
 
-    def graph(self) -> jelly.RdfStreamFrame | None:
+    def graph_to_frame(self) -> jelly.RdfStreamFrame | None:
         return self.flow.frame_from_graph()
 
 
 class QuadStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
-    default_delimited_flow_class: ClassVar[type[FlatQuadsFrameFlow]] = (
-        FlatQuadsFrameFlow
-    )
+    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
 
     def quad(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_quad(
@@ -176,15 +173,13 @@ class QuadStream(Stream):
             return frame
         return None
 
-    def dataset(self) -> jelly.RdfStreamFrame | None:
+    def dataset_to_frame(self) -> jelly.RdfStreamFrame | None:
         return self.flow.frame_from_dataset()
 
 
 class GraphStream(TripleStream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-    default_delimited_flow_class: ClassVar[type[FlatTriplesFrameFlow]] = (
-        FlatQuadsFrameFlow
-    )
+    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
 
     def graph(
         self,
@@ -205,7 +200,7 @@ class GraphStream(TripleStream):
         if self.flow.frame_from_bounds():
             yield self.flow.to_stream_frame()  # type: ignore[misc]
 
-    def dataset(self) -> jelly.RdfStreamFrame | None:
+    def dataset_to_frame(self) -> jelly.RdfStreamFrame | None:
         return self.flow.frame_from_dataset()
 
 

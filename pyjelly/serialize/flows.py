@@ -108,7 +108,7 @@ class DatasetsFrameFlow(FrameFlow):
         return self.to_stream_frame()
 
 
-FLOWS_DISPATCH = {
+FLOWS_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
     jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_GRAPHS: GraphsFrameFlow,
