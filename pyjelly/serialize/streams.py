@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
+from dataclasses import dataclass, field
 from typing import Any, ClassVar
 
 from pyjelly import jelly
-from pyjelly.options import StreamOptions
+from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.serialize.encode import (
     Slot,
     TermEncoder,
@@ -12,53 +13,68 @@ from pyjelly.serialize.encode import (
     encode_options,
     encode_quad,
     encode_triple,
-    new_repeated_terms,
 )
-from pyjelly.serialize.flows import FrameFlow, ManualFrameFlow
+from pyjelly.serialize.flows import (
+    DEFAULT_FRAME_SIZE,
+    BoundedFrameFlow,
+    FlatQuadsFrameFlow,
+    FlatTriplesFrameFlow,
+    FrameFlow,
+    ManualFrameFlow,
+    flow_for_type,
+)
+
+
+@dataclass
+class SerializerOptions:
+    flow: FrameFlow | None = None
+    frame_size: int = DEFAULT_FRAME_SIZE
+    logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    params: StreamParameters = field(default_factory=StreamParameters)
+    lookup_preset: LookupPreset = field(default_factory=LookupPreset)
 
 
 class Stream:
     physical_type: ClassVar[jelly.PhysicalStreamType]
-    registry: ClassVar[dict[jelly.PhysicalStreamType, type[Stream]]] = {}
-    flow: FrameFlow
+    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]]
 
     def __init__(
         self,
         *,
-        options: StreamOptions,
-        encoder_class: type[TermEncoder],
-        **flow_args: Any,
+        encoder: TermEncoder,
+        options: SerializerOptions | None = None,
     ) -> None:
-        assert options.stream_types.physical_type == self.physical_type
+        if options is None:
+            options = SerializerOptions()
+        self.encoder = encoder
         self.options = options
-        self.encoder = encoder_class(
-            max_prefixes=options.lookup_preset.max_prefixes,
-            max_names=options.lookup_preset.max_names,
-            max_datatypes=options.lookup_preset.max_datatypes,
-        )
-        flow_class = FrameFlow.registry[self.options.stream_types.logical_type]
-        if not options.delimited:
-            flow_class = ManualFrameFlow
-        self.flow = flow_class(**flow_args)
-        self.repeated_terms = new_repeated_terms()
+        if options.flow is None:
+            flow = self.infer_flow()
+        self.flow = flow
+        self.repeated_terms = dict.fromkeys(Slot)
         self.enrolled = False
-
-    @staticmethod
-    def from_options(
-        options: StreamOptions,
-        encoder_class: type[TermEncoder] | None = None,
-        **flow_args: Any,
-    ) -> Any:
-        if encoder_class is None:
-            from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
-
-            encoder_class = RDFLibTermEncoder
-        stream_class = Stream.registry[options.stream_types.physical_type]
-        return stream_class(
-            options=options,
-            encoder_class=encoder_class,
-            **flow_args,
+        self.stream_types = StreamTypes(
+            physical_type=self.physical_type,
+            logical_type=flow.logical_type,
         )
+
+    def infer_flow(self) -> FrameFlow:
+        if self.options.params.delimited:
+            if self.options.logical_type != jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
+                flow_class = flow_for_type(self.options.logical_type)
+            else:
+                flow_class = self.default_delimited_flow_class
+
+            if self.options.logical_type in (
+                jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            ):
+                flow = flow_class(frame_size=self.options.frame_size)
+            else:
+                flow = flow_class()
+        else:
+            flow = ManualFrameFlow(logical_type=self.options.logical_type)
+        return flow
 
     def enroll(self) -> None:
         if not self.enrolled:
@@ -66,7 +82,17 @@ class Stream:
             self.enrolled = True
 
     def stream_options(self) -> None:
-        self.flow.append(encode_options(self.options))
+        self.flow.append(
+            encode_options(
+                lookup_preset=self.encoder.lookup_preset,
+                stream_types=self.stream_types,
+                params=self.options.params,
+            )
+        )
+
+    def namespace_declarations(self, decls: Iterable[tuple[str, str]]) -> None:
+        for name, iri in decls:
+            self.namespace_declaration(name, iri)
 
     def namespace_declaration(self, name: str, iri: str) -> None:
         rows = encode_namespace_declaration(
@@ -76,12 +102,47 @@ class Stream:
         )
         self.flow.extend(rows)
 
-    def __init_subclass__(cls) -> None:
-        cls.registry[cls.physical_type] = cls
+    @classmethod
+    def for_rdflib(cls, options: SerializerOptions | None = None) -> Stream:
+        if cls is Stream:
+            msg = "Stream is an abstract base class, use a subclass instead"
+            raise TypeError(msg)
+        from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
+
+        if options is None:
+            options = SerializerOptions()
+        return cls(
+            encoder=RDFLibTermEncoder(lookup_preset=options.lookup_preset),
+            options=options,
+        )
+
+
+def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
+    try:
+        stream_cls = STREAM_DISPATCH[physical_type]
+    except KeyError:
+        msg = (
+            "no stream class for physical type "
+            f"{jelly.PhysicalStreamType.Name(physical_type)}"
+        )
+        raise NotImplementedError(msg) from None
+    return stream_cls
 
 
 class TripleStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    default_delimited_flow_class: ClassVar[type[FlatTriplesFrameFlow]] = (
+        FlatTriplesFrameFlow
+    )
+
+    def __init__(
+        self,
+        *,
+        encoder: TermEncoder,
+        options: SerializerOptions | None = None,
+    ) -> None:
+        super().__init__(encoder=encoder, options=options)
+        del self.repeated_terms[Slot.graph]
 
     def triple(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_triple(
@@ -94,9 +155,15 @@ class TripleStream(Stream):
             return frame
         return None
 
+    def graph(self) -> jelly.RdfStreamFrame | None:
+        return self.flow.frame_from_dataset()
+
 
 class QuadStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
+    default_delimited_flow_class: ClassVar[type[FlatQuadsFrameFlow]] = (
+        FlatQuadsFrameFlow
+    )
 
     def quad(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_quad(
@@ -109,9 +176,15 @@ class QuadStream(Stream):
             return frame
         return None
 
+    def dataset(self) -> jelly.RdfStreamFrame | None:
+        return self.flow.frame_from_dataset()
+
 
 class GraphStream(TripleStream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
+    default_delimited_flow_class: ClassVar[type[FlatTriplesFrameFlow]] = (
+        FlatQuadsFrameFlow
+    )
 
     def graph(
         self,
@@ -131,3 +204,13 @@ class GraphStream(TripleStream):
         self.flow.append(end_row)
         if self.flow.frame_from_bounds():
             yield self.flow.to_stream_frame()  # type: ignore[misc]
+
+    def dataset(self) -> jelly.RdfStreamFrame | None:
+        return self.flow.frame_from_dataset()
+
+
+STREAM_DISPATCH: dict[jelly.PhysicalStreamType, type[Stream]] = {
+    jelly.PHYSICAL_STREAM_TYPE_TRIPLES: TripleStream,
+    jelly.PHYSICAL_STREAM_TYPE_QUADS: QuadStream,
+    jelly.PHYSICAL_STREAM_TYPE_GRAPHS: GraphStream,
+}

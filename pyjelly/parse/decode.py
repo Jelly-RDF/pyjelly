@@ -2,22 +2,28 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Any, ClassVar
+from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
 
 from pyjelly import jelly
-from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
+from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
+
+
+class ParserOptions(NamedTuple):
+    stream_types: StreamTypes
+    lookup_preset: LookupPreset
+    params: StreamParameters
 
 
 def options_from_frame(
     frame: jelly.RdfStreamFrame,
     *,
     delimited: bool,
-) -> StreamOptions:
+) -> StreamParameters:
     row = frame.rows[0]
     options = row.options
-    return StreamOptions(
+    return ParserOptions(
         stream_types=StreamTypes(
             physical_type=options.physical_type,
             logical_type=options.logical_type,
@@ -27,17 +33,17 @@ def options_from_frame(
             max_prefixes=options.max_prefix_table_size,
             max_datatypes=options.max_datatype_table_size,
         ),
-        stream_name=options.stream_name,
-        version=options.version,
-        delimited=delimited,
+        params=StreamParameters(
+            stream_name=options.stream_name,
+            version=options.version,
+            delimited=delimited,
+        ),
     )
 
 
-def _adapter_missing(feature: str, *, options: StreamOptions) -> Never:
-    physical_type_name = jelly.PhysicalStreamType.Name(
-        options.stream_types.physical_type
-    )
-    logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
+    physical_type_name = jelly.PhysicalStreamType.Name(stream_types.physical_type)
+    logical_type_name = jelly.LogicalStreamType.Name(stream_types.logical_type)
     msg = (
         f"adapter with {physical_type_name} and {logical_type_name} "
         f"does not implement {feature}"
@@ -46,7 +52,7 @@ def _adapter_missing(feature: str, *, options: StreamOptions) -> Never:
 
 
 class Adapter(metaclass=ABCMeta):
-    def __init__(self, options: StreamOptions) -> None:
+    def __init__(self, options: ParserOptions) -> None:
         self.options = options
 
     # Obligatory abstract methods--all adapters must implement these
@@ -73,19 +79,26 @@ class Adapter(metaclass=ABCMeta):
 
     # Optional abstract methods--not required to be implemented by all adapters
     def triple(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding triples", options=self.options)
+        _adapter_missing("decoding triples", stream_types=self.options.stream_types)
 
     def quad(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding quads", options=self.options)
+        _adapter_missing("decoding quads", stream_types=self.options.stream_types)
 
     def graph_start(self, graph_id: Any) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding graph start markers", options=self.options)
+        _adapter_missing(
+            "decoding graph start markers", stream_types=self.options.stream_types
+        )
 
     def graph_end(self) -> Any:
-        _adapter_missing("decoding graph end markers", options=self.options)
+        _adapter_missing(
+            "decoding graph end markers", stream_types=self.options.stream_types
+        )
 
     def namespace_declaration(self, name: str, iri: str) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding namespace declarations", options=self.options)
+        _adapter_missing(
+            "decoding namespace declarations",
+            stream_types=self.options.stream_types,
+        )
 
     def frame(self) -> Any:
         return None
@@ -104,7 +117,7 @@ class Decoder:
         self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
 
     @property
-    def options(self) -> StreamOptions:
+    def options(self) -> ParserOptions:
         return self.adapter.options
 
     def decode_frame(self, frame: jelly.RdfStreamFrame) -> Any:
@@ -122,13 +135,14 @@ class Decoder:
         return decode_row(self, row)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
-        assert self.options.stream_name == options.stream_name
-        assert self.options.version >= options.version
-        assert self.options.lookup_preset.max_prefixes == options.max_prefix_table_size
-        assert (
-            self.options.lookup_preset.max_datatypes == options.max_datatype_table_size
-        )
-        assert self.options.lookup_preset.max_names == options.max_name_table_size
+        stream_types, lookup_preset, params = self.options
+        assert stream_types.physical_type == options.physical_type
+        assert stream_types.logical_type == options.logical_type
+        assert params.stream_name == options.stream_name
+        assert params.version >= options.version
+        assert lookup_preset.max_prefixes == options.max_prefix_table_size
+        assert lookup_preset.max_datatypes == options.max_datatype_table_size
+        assert lookup_preset.max_names == options.max_name_table_size
 
     def ingest_prefix_entry(self, entry: jelly.RdfPrefixEntry) -> None:
         self.prefixes.assign_entry(index=entry.id, value=entry.value)

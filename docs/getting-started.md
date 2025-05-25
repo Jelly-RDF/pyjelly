@@ -29,16 +29,7 @@ from pyjelly import jelly
 
 g = Graph()
 g.parse("http://xmlns.com/foaf/spec/index.rdf")
-
-options = StreamOptions(
-    stream_types=StreamTypes(
-        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-    )
-)
-stream = Stream.from_options(options)
-
-g.serialize(destination="foaf.jelly", format="jelly", stream=stream)
+g.serialize(destination="foaf.jelly", format="jelly")
 ```
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.

@@ -12,7 +12,13 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 from pyjelly import jelly
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
-from pyjelly.serialize.streams import GraphStream, QuadStream, Stream, TripleStream
+from pyjelly.serialize.streams import (
+    GraphStream,
+    QuadStream,
+    SerializerOptions,
+    Stream,
+    TripleStream,
+)
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -49,44 +55,57 @@ def stream_frames(stream: Stream, data: Graph) -> Generator[jelly.RdfStreamFrame
     raise TypeError(msg)
 
 
-@stream_frames.register
-def triples_stream(
+@stream_frames.register(TripleStream)
+def triples_stream_frames(
     stream: TripleStream,
-    data: Graph,
+    data: Graph | Dataset,
 ) -> Generator[jelly.RdfStreamFrame]:
-    assert not isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
-    for terms in data:
-        if frame := stream.triple(terms):
+    graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
+    for graph in graphs:
+        for terms in graph:
+            if frame := stream.triple(terms):
+                yield frame
+        if frame := stream.graph():
             yield frame
-    if frame := stream.flow.to_stream_frame():
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
 @stream_frames.register
-def quads_stream(stream: QuadStream, data: Graph) -> Generator[jelly.RdfStreamFrame]:
+def quads_stream_frames(
+    stream: QuadStream,
+    data: Dataset,
+) -> Generator[jelly.RdfStreamFrame]:
     assert isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
     for terms in data.quads():
         if frame := stream.quad(terms):
             yield frame
-    if frame := stream.flow.to_stream_frame():
+    if frame := stream.dataset():
+        yield frame
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
 @stream_frames.register
-def graphs_stream(stream: GraphStream, data: Graph) -> Generator[jelly.RdfStreamFrame]:
+def graphs_stream_frames(
+    stream: GraphStream,
+    data: Dataset,
+) -> Generator[jelly.RdfStreamFrame]:
     assert isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
     for graph in data.graphs():
         yield from stream.graph(graph_id=graph.identifier, graph=graph)
-    if frame := stream.flow.to_stream_frame():
+    if frame := stream.dataset():
+        yield frame
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
@@ -109,11 +128,36 @@ class RDFLibJellySerializer(RDFLibSerializer):
     def serialize(  # type: ignore[override]
         self,
         out: IO[bytes],
+        base: str | None = None,
+        encoding: str | None = None,
         /,
         *,
-        stream: Stream,
+        options: SerializerOptions | None = None,
+        stream: Stream | None = None,
         **unused: Any,
     ) -> None:
-        write = write_delimited if stream.options.delimited else write_single
+        if not hasattr(out, "name") and encoding == "utf-8":
+            msg = (
+                'due to RDFLib limitations, encoding="jelly" must be passed '
+                "to serialize() when not using a file-like object"
+            )
+            raise TypeError(msg)
+
+        if options is None:
+            logical_type = (
+                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+                if isinstance(self.store, Dataset)
+                else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+            )
+            options = SerializerOptions(logical_type=logical_type)
+        if stream is None:
+            if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
+                self.store, Dataset
+            ):
+                stream_cls = QuadStream
+            else:
+                stream_cls = TripleStream
+            stream = stream_cls.for_rdflib(options=options)
+        write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
