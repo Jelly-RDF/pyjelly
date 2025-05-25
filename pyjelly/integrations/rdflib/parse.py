@@ -95,11 +95,11 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
     ) -> None:
         super().__init__(options=options)
         self.store = store
-        if store_identifiers is None:
-            if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_DATASETS:
-                store_identifiers = INFINITE_BNODES
-            else:
-                store_identifiers = None
+        if (
+            store_identifiers is None
+            and options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_DATASETS
+        ):
+            store_identifiers = INFINITE_BNODES
         if store_identifiers is not None:
             store_identifiers = iter(store_identifiers)
         if store_class is None:
