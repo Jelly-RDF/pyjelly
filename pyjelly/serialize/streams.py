@@ -156,7 +156,7 @@ class TripleStream(Stream):
         return None
 
     def graph(self) -> jelly.RdfStreamFrame | None:
-        return self.flow.frame_from_dataset()
+        return self.flow.frame_from_graph()
 
 
 class QuadStream(Stream):
