@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import mimetypes
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Final
 from typing_extensions import Self
 
@@ -10,7 +10,6 @@ from pyjelly import jelly
 from pyjelly.errors import (
     JellyAssertionError,
     JellyConformanceError,
-    JellyNotImplementedError,
 )
 
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
@@ -65,7 +64,7 @@ class LookupPreset:
 
 @dataclass(frozen=True)
 class StreamTypes:
-    physical_type: jelly.PhysicalStreamType
+    physical_type: jelly.PhysicalStreamType = jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED
     logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
     @property
@@ -83,9 +82,6 @@ class StreamTypes:
         return f"StreamTypes({self.physical_type}, {self.logical_type})"
 
     def __post_init__(self) -> None:
-        if self.physical_type == jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED:
-            msg = "physical type must be specified"
-            raise JellyNotImplementedError(msg)
         validate_type_compatibility(
             physical_type=self.physical_type,
             logical_type=self.logical_type,
@@ -93,9 +89,7 @@ class StreamTypes:
 
 
 @dataclass(frozen=True)
-class StreamOptions:
-    stream_types: StreamTypes
-    lookup_preset: LookupPreset = field(default_factory=LookupPreset)
+class StreamParameters:
     generalized_statements: bool = False
     rdf_star: bool = False
     version: int = MAX_VERSION
@@ -115,7 +109,10 @@ def validate_type_compatibility(
     physical_type: jelly.PhysicalStreamType,
     logical_type: jelly.LogicalStreamType,
 ) -> None:
-    if logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
+    if (
+        physical_type == jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED
+        or logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    ):
         return
     triples_physical_type = physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
     triples_logical_type = logical_type in TRIPLES_ONLY_LOGICAL_TYPES

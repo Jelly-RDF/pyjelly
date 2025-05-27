@@ -37,13 +37,14 @@ class TermEncoder:
 
     def __init__(
         self,
-        max_names: int = options.DEFAULT_NAME_LOOKUP_SIZE,
-        max_prefixes: int = options.DEFAULT_PREFIX_LOOKUP_SIZE,
-        max_datatypes: int = options.DEFAULT_DATATYPE_LOOKUP_SIZE,
+        lookup_preset: options.LookupPreset | None = None,
     ) -> None:
-        self.names = LookupEncoder(lookup_size=max_names)
-        self.prefixes = LookupEncoder(lookup_size=max_prefixes)
-        self.datatypes = LookupEncoder(lookup_size=max_datatypes)
+        if lookup_preset is None:
+            lookup_preset = options.LookupPreset()
+        self.lookup_preset = lookup_preset
+        self.names = LookupEncoder(lookup_size=lookup_preset.max_names)
+        self.prefixes = LookupEncoder(lookup_size=lookup_preset.max_prefixes)
+        self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
@@ -124,11 +125,6 @@ class Slot(str, Enum):
         return self.value
 
 
-def new_repeated_terms() -> dict[Slot, object]:
-    """Create a new dictionary for repeated terms."""
-    return dict.fromkeys(Slot)
-
-
 def encode_statement(
     terms: Iterable[object],
     term_encoder: TermEncoder,
@@ -181,17 +177,21 @@ def encode_namespace_declaration(
     return rows
 
 
-def encode_options(options: options.StreamOptions) -> jelly.RdfStreamRow:
+def encode_options(
+    lookup_preset: options.LookupPreset,
+    stream_types: options.StreamTypes,
+    params: options.StreamParameters,
+) -> jelly.RdfStreamRow:
     return jelly.RdfStreamRow(
         options=jelly.RdfStreamOptions(
-            stream_name=options.stream_name,
-            physical_type=options.stream_types.physical_type,
-            generalized_statements=options.generalized_statements,
-            rdf_star=options.rdf_star,
-            max_name_table_size=options.lookup_preset.max_names,
-            max_prefix_table_size=options.lookup_preset.max_prefixes,
-            max_datatype_table_size=options.lookup_preset.max_datatypes,
-            logical_type=options.stream_types.logical_type,
-            version=options.version,
+            stream_name=params.stream_name,
+            physical_type=stream_types.physical_type,
+            generalized_statements=params.generalized_statements,
+            rdf_star=params.rdf_star,
+            max_name_table_size=lookup_preset.max_names,
+            max_prefix_table_size=lookup_preset.max_prefixes,
+            max_datatype_table_size=lookup_preset.max_datatypes,
+            logical_type=stream_types.logical_type,
+            version=params.version,
         )
     )

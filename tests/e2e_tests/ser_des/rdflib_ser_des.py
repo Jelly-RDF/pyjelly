@@ -2,9 +2,13 @@ import io
 
 from rdflib import Dataset, Graph
 
-from pyjelly import jelly
-from pyjelly.options import LookupPreset, StreamOptions, StreamTypes
-from pyjelly.serialize.streams import Stream
+from pyjelly.options import LookupPreset
+from pyjelly.serialize.flows import FlatQuadsFrameFlow, FlatTriplesFrameFlow
+from pyjelly.serialize.streams import (
+    QuadStream,
+    SerializerOptions,
+    TripleStream,
+)
 from tests.e2e_tests.ser_des.base_ser_des import (
     BaseSerDes,
     QuadGraphType,
@@ -52,14 +56,11 @@ class RdflibSerDes(BaseSerDes):
         self, in_graph: QuadGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         destination = io.BytesIO()
-        options = StreamOptions(
-            stream_types=StreamTypes(
-                logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-                physical_type=jelly.PHYSICAL_STREAM_TYPE_QUADS,
-            ),
+        options = SerializerOptions(
+            flow=FlatQuadsFrameFlow(frame_size=frame_size),
             lookup_preset=preset,
         )
-        stream = Stream.from_options(options, frame_size=frame_size)
+        stream = QuadStream.for_rdflib(options)
         in_graph.serialize(destination=destination, format="jelly", stream=stream)
         return destination.getvalue()
 
@@ -84,13 +85,10 @@ class RdflibSerDes(BaseSerDes):
         self, in_graph: TripleGraphType, preset: LookupPreset, frame_size: int
     ) -> bytes:
         destination = io.BytesIO()
-        options = StreamOptions(
-            stream_types=StreamTypes(
-                logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-                physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
-            ),
+        options = SerializerOptions(
+            flow=FlatTriplesFrameFlow(frame_size=frame_size),
             lookup_preset=preset,
         )
-        stream = Stream.from_options(options, frame_size=frame_size)
+        stream = TripleStream.for_rdflib(options)
         in_graph.serialize(destination=destination, format="jelly", stream=stream)
         return destination.getvalue()

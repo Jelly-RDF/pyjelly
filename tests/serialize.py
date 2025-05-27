@@ -4,23 +4,22 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
 
 import rdflib
 
-from pyjelly.options import StreamOptions
+from pyjelly.parse.decode import ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.streams import Stream
+from pyjelly.serialize.flows import flow_for_type
+from pyjelly.serialize.streams import SerializerOptions, stream_for_type
 from tests.utils.ordered_memory import OrderedMemory
 
 
 def write_dataset(
     filenames: list[str | Path],
     out_filename: str | Path,
-    options: str | StreamOptions | Path | None = None,
-    **flow_args: Any,
+    options: str | ParserOptions | Path | None = None,
 ) -> None:
-    if not isinstance(options, StreamOptions):
+    if not isinstance(options, ParserOptions):
         options = get_options_from(options)
     assert options
     dataset = rdflib.Dataset()
@@ -31,7 +30,13 @@ def write_dataset(
             graph = rdflib.Graph(identifier=filename, store=OrderedMemory())
             graph.parse(location=filename)
             dataset.add_graph(graph)
-    stream = Stream.from_options(options, **flow_args)
+    stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
+        SerializerOptions(
+            flow=flow_for_type(options.stream_types.logical_type)(),
+            lookup_preset=options.lookup_preset,
+            params=options.params,
+        )
+    )
     with Path(out_filename).open("wb") as file:
         dataset.serialize(destination=file, format="jelly", stream=stream)
 
@@ -40,15 +45,21 @@ def write_graph(
     filename: str | Path,
     *,
     out_filename: str | Path,
-    options: str | StreamOptions | Path | None = None,
-    **flow_args: Any,
+    options: str | ParserOptions | Path | None = None,
 ) -> None:
-    if not isinstance(options, StreamOptions):
+    if not isinstance(options, ParserOptions):
         options = get_options_from(options)
     assert options
     graph = rdflib.Graph(store=OrderedMemory())
     graph.parse(location=str(filename))
-    stream = Stream.from_options(options, **flow_args)
+
+    stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
+        SerializerOptions(
+            lookup_preset=options.lookup_preset,
+            flow=flow_for_type(options.stream_types.logical_type)(),
+            params=options.params,
+        )
+    )
     with Path(out_filename).open("wb") as file:
         graph.serialize(
             destination=file,
@@ -59,7 +70,7 @@ def write_graph(
 
 def get_options_from(
     options_filename: str | Path | None = None,
-) -> StreamOptions | None:
+) -> ParserOptions | None:
     if options_filename is not None:
         with Path(options_filename).open("rb") as options_file:
             options, _ = get_options_and_frames(options_file)
@@ -72,23 +83,12 @@ def write_graph_or_dataset(
     first: str | Path,
     *extra: str | Path,
     out_filename: str | Path = "out.jelly",
-    options: str | Path | StreamOptions | None = None,
-    **flow_args: Any,
+    options: str | Path | ParserOptions | None = None,
 ) -> None:
     if str(first).endswith(".nq") or extra:
-        write_dataset(
-            [first, *extra],
-            out_filename=out_filename,
-            options=options,
-            **flow_args,
-        )
+        write_dataset([first, *extra], out_filename=out_filename, options=options)
     else:
-        write_graph(
-            first,
-            out_filename=out_filename,
-            options=options,
-            **flow_args,
-        )
+        write_graph(first, out_filename=out_filename, options=options)
 
 
 if __name__ == "__main__":
