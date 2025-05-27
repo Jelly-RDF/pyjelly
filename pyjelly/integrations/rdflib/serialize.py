@@ -49,44 +49,51 @@ def stream_frames(stream: Stream, data: Graph) -> Generator[jelly.RdfStreamFrame
     raise TypeError(msg)
 
 
-@stream_frames.register
-def triples_stream(
+@stream_frames.register(TripleStream)
+def triples_stream_frames(
     stream: TripleStream,
-    data: Graph,
+    data: Graph | Dataset,
 ) -> Generator[jelly.RdfStreamFrame]:
-    assert not isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
-    for terms in data:
-        if frame := stream.triple(terms):
-            yield frame
-    if frame := stream.flow.to_stream_frame():
+    graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
+    for graph in graphs:
+        for terms in graph:
+            if frame := stream.triple(terms):
+                yield frame
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
 @stream_frames.register
-def quads_stream(stream: QuadStream, data: Graph) -> Generator[jelly.RdfStreamFrame]:
+def quads_stream_frames(
+    stream: QuadStream,
+    data: Dataset,
+) -> Generator[jelly.RdfStreamFrame]:
     assert isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
     for terms in data.quads():
         if frame := stream.quad(terms):
             yield frame
-    if frame := stream.flow.to_stream_frame():
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
 @stream_frames.register
-def graphs_stream(stream: GraphStream, data: Graph) -> Generator[jelly.RdfStreamFrame]:
+def graphs_stream_frames(
+    stream: GraphStream,
+    data: Dataset,
+) -> Generator[jelly.RdfStreamFrame]:
     assert isinstance(data, Dataset)
     stream.enroll()
-    if stream.options.namespace_declarations:
+    if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
     for graph in data.graphs():
         yield from stream.graph(graph_id=graph.identifier, graph=graph)
-    if frame := stream.flow.to_stream_frame():
+    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
 
 
@@ -114,6 +121,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
         stream: Stream,
         **unused: Any,
     ) -> None:
-        write = write_delimited if stream.options.delimited else write_single
+        write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)

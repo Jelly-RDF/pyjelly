@@ -8,6 +8,8 @@ from typing_extensions import override
 
 from pyjelly import jelly
 
+DEFAULT_FRAME_SIZE = 250
+
 
 class FrameFlow(UserList[jelly.RdfStreamRow]):
     """
@@ -16,7 +18,7 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
     Collects stream rows and assembles them into RdfStreamFrame objects when ready.
     """
 
-    logical_type: ClassVar[jelly.LogicalStreamType]
+    logical_type: jelly.LogicalStreamType
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
 
     def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
@@ -28,15 +30,6 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
         frame = jelly.RdfStreamFrame(rows=self)
         self.clear()
         return frame
-
-    def __init_subclass__(cls) -> None:
-        """
-        Register subclasses of FrameFlow with their logical stream type.
-
-        This allows for dynamic dispatch based on the logical stream type.
-        """
-        if cls.logical_type != jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
-            cls.registry[cls.logical_type] = cls
 
 
 class ManualFrameFlow(FrameFlow):
@@ -62,9 +55,7 @@ class BoundedFrameFlow(FrameFlow):
     """
 
     logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
-
     frame_size: int
-    default_frame_size: ClassVar[int] = 250
 
     def __init__(
         self,
@@ -73,7 +64,7 @@ class BoundedFrameFlow(FrameFlow):
         frame_size: int | None = None,
     ) -> None:
         super().__init__(initlist)
-        self.frame_size = frame_size or self.default_frame_size
+        self.frame_size = frame_size or DEFAULT_FRAME_SIZE
 
     @override
     def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
@@ -82,13 +73,26 @@ class BoundedFrameFlow(FrameFlow):
         return None
 
 
-# Fallback for unspecified logical types
-FrameFlow.registry[jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED] = BoundedFrameFlow
-
-
 class FlatTriplesFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
 
 
 class FlatQuadsFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+
+
+FLOWS_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
+    jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
+    jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
+}
+
+
+def flow_for_type(logical_type: jelly.LogicalStreamType) -> type[FrameFlow]:
+    try:
+        return FLOWS_DISPATCH[logical_type]
+    except KeyError:
+        msg = (
+            "unsupported logical stream type: "
+            f"{jelly.LogicalStreamType.Name(logical_type)}"
+        )
+        raise NotImplementedError(msg) from None
