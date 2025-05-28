@@ -12,7 +12,13 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 from pyjelly import jelly
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
-from pyjelly.serialize.streams import GraphStream, QuadStream, Stream, TripleStream
+from pyjelly.serialize.streams import (
+    GraphStream,
+    QuadStream,
+    SerializerOptions,
+    Stream,
+    TripleStream,
+)
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -118,9 +124,26 @@ class RDFLibJellySerializer(RDFLibSerializer):
         out: IO[bytes],
         /,
         *,
-        stream: Stream,
+        stream: Stream | None = None,
+        options: SerializerOptions | None = None,
         **unused: Any,
     ) -> None:
+        if options is None:
+            logical_type = (
+                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+                if isinstance(self.store, Dataset)
+                else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+            )
+            options = SerializerOptions(logical_type=logical_type)
+        if stream is None:
+            stream_cls: type[Stream]
+            if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
+                self.store, Dataset
+            ):
+                stream_cls = QuadStream
+            else:
+                stream_cls = TripleStream
+            stream = stream_cls.for_rdflib(options=options)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
