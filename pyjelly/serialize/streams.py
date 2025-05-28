@@ -16,6 +16,9 @@ from pyjelly.serialize.encode import (
 )
 from pyjelly.serialize.flows import (
     DEFAULT_FRAME_SIZE,
+    BoundedFrameFlow,
+    FlatQuadsFrameFlow,
+    FlatTriplesFrameFlow,
     FrameFlow,
     ManualFrameFlow,
     flow_for_type,
@@ -33,6 +36,7 @@ class SerializerOptions:
 
 class Stream:
     physical_type: ClassVar[jelly.PhysicalStreamType]
+    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]]
 
     def __init__(
         self,
@@ -41,10 +45,13 @@ class Stream:
         options: SerializerOptions | None = None,
     ) -> None:
         self.encoder = encoder
-        self.options = options
         if options is None:
             options = SerializerOptions()
-        self.flow = options.flow
+        self.options = options
+        flow = options.flow
+        if flow is None:
+            flow = self.infer_flow()
+        self.flow = flow
         self.repeated_terms = dict.fromkeys(Slot)
         self.enrolled = False
         self.stream_types = StreamTypes(
@@ -100,8 +107,11 @@ class Stream:
             raise TypeError(msg)
         from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
 
+        lookup_preset: LookupPreset | None = None
+        if options is not None:
+            lookup_preset = options.lookup_preset
         return cls(
-            encoder=RDFLibTermEncoder(lookup_preset=options.lookup_preset),
+            encoder=RDFLibTermEncoder(lookup_preset=lookup_preset),
             options=options,
         )
 
@@ -120,6 +130,7 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
 
 class TripleStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    default_delimited_flow_class: ClassVar = FlatTriplesFrameFlow
 
     def triple(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_triple(
@@ -135,6 +146,7 @@ class TripleStream(Stream):
 
 class QuadStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_QUADS
+    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
 
     def quad(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         new_rows = encode_quad(
@@ -150,6 +162,7 @@ class QuadStream(Stream):
 
 class GraphStream(TripleStream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
+    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
 
     def graph(
         self,
