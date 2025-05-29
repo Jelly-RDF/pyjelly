@@ -118,6 +118,43 @@ class RDFLibJellySerializer(RDFLibSerializer):
             raise NotImplementedError(msg)
         super().__init__(store)
 
+    def guess_options(self) -> SerializerOptions:
+        """
+        Guess the serializer options based on the store type.
+
+        >>> RDFLibJellySerializer(Graph()).guess_options().logical_type
+        1
+        >>> RDFLibJellySerializer(Dataset()).guess_options().logical_type
+        2
+        """
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+            if isinstance(self.store, Dataset)
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
+        return SerializerOptions(logical_type=logical_type)
+
+    def guess_stream(self, options: SerializerOptions) -> Stream:
+        """
+        Return an appropriate stream implementation for the given options.
+
+        >>> graph_ser = RDFLibJellySerializer(Graph())
+        >>> ds_ser = RDFLibJellySerializer(Dataset())
+
+        >>> type(graph_ser.guess_stream(graph_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.TripleStream'>
+        >>> type(ds_ser.guess_stream(ds_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.QuadStream'>
+        """
+        stream_cls: type[Stream]
+        if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
+            self.store, Dataset
+        ):
+            stream_cls = QuadStream
+        else:
+            stream_cls = TripleStream
+        return stream_cls.for_rdflib(options=options)
+
     @override
     def serialize(  # type: ignore[override]
         self,
@@ -129,21 +166,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         **unused: Any,
     ) -> None:
         if options is None:
-            logical_type = (
-                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-                if isinstance(self.store, Dataset)
-                else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
-            )
-            options = SerializerOptions(logical_type=logical_type)
+            options = self.guess_options()
         if stream is None:
-            stream_cls: type[Stream]
-            if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
-                self.store, Dataset
-            ):
-                stream_cls = QuadStream
-            else:
-                stream_cls = TripleStream
-            stream = stream_cls.for_rdflib(options=options)
+            stream = self.guess_stream(options)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
