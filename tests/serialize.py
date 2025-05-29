@@ -9,7 +9,6 @@ import rdflib
 
 from pyjelly.parse.decode import ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.flows import flow_for_type
 from pyjelly.serialize.streams import SerializerOptions, stream_for_type
 from tests.utils.ordered_memory import OrderedMemory
 
@@ -32,7 +31,7 @@ def write_dataset(
             dataset.add_graph(graph)
     stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
         SerializerOptions(
-            flow=flow_for_type(options.stream_types.logical_type)(),
+            logical_type=options.stream_types.logical_type,
             lookup_preset=options.lookup_preset,
             params=options.params,
         )
@@ -56,7 +55,7 @@ def write_graph(
     stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
         SerializerOptions(
             lookup_preset=options.lookup_preset,
-            flow=flow_for_type(options.stream_types.logical_type)(),
+            logical_type=options.stream_types.logical_type,
             params=options.params,
         )
     )

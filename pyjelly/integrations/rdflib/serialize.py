@@ -12,7 +12,13 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 from pyjelly import jelly
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
-from pyjelly.serialize.streams import GraphStream, QuadStream, Stream, TripleStream
+from pyjelly.serialize.streams import (
+    GraphStream,
+    QuadStream,
+    SerializerOptions,
+    Stream,
+    TripleStream,
+)
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -112,15 +118,57 @@ class RDFLibJellySerializer(RDFLibSerializer):
             raise NotImplementedError(msg)
         super().__init__(store)
 
+    def guess_options(self) -> SerializerOptions:
+        """
+        Guess the serializer options based on the store type.
+
+        >>> RDFLibJellySerializer(Graph()).guess_options().logical_type
+        1
+        >>> RDFLibJellySerializer(Dataset()).guess_options().logical_type
+        2
+        """
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+            if isinstance(self.store, Dataset)
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
+        return SerializerOptions(logical_type=logical_type)
+
+    def guess_stream(self, options: SerializerOptions) -> Stream:
+        """
+        Return an appropriate stream implementation for the given options.
+
+        >>> graph_ser = RDFLibJellySerializer(Graph())
+        >>> ds_ser = RDFLibJellySerializer(Dataset())
+
+        >>> type(graph_ser.guess_stream(graph_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.TripleStream'>
+        >>> type(ds_ser.guess_stream(ds_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.QuadStream'>
+        """
+        stream_cls: type[Stream]
+        if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
+            self.store, Dataset
+        ):
+            stream_cls = QuadStream
+        else:
+            stream_cls = TripleStream
+        return stream_cls.for_rdflib(options=options)
+
     @override
     def serialize(  # type: ignore[override]
         self,
         out: IO[bytes],
         /,
         *,
-        stream: Stream,
+        stream: Stream | None = None,
+        options: SerializerOptions | None = None,
         **unused: Any,
     ) -> None:
+        if options is None:
+            options = self.guess_options()
+        if stream is None:
+            stream = self.guess_stream(options)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)

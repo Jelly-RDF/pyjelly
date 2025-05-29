@@ -45,6 +45,15 @@ class ManualFrameFlow(FrameFlow):
 
     logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
+    def __init__(
+        self,
+        initlist: Iterable[jelly.RdfStreamRow] | None = None,
+        *,
+        logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED,
+    ) -> None:
+        super().__init__(initlist)
+        self.logical_type = logical_type
+
 
 @dataclass
 class BoundedFrameFlow(FrameFlow):
