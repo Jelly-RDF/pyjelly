@@ -21,7 +21,7 @@ def write_dataset(
     if not isinstance(options, ParserOptions):
         options = get_options_from(options)
     assert options
-    dataset = rdflib.Dataset()
+    dataset = rdflib.Dataset(store=OrderedMemory())
     for filename in map(str, filenames):
         if filename.endswith(".nq"):
             dataset.parse(location=filename)

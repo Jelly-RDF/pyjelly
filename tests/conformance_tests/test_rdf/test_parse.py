@@ -13,6 +13,7 @@ from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
+from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
     PhysicalTypeTestCasesDir,
     id_from_path,
@@ -63,6 +64,7 @@ def test_parses(path: Path) -> None:
             )
             jelly_validate(
                 input_filename,
+                "--compare-ordered",
                 "--compare-frame-indices",
                 frame_no,
                 "--compare-to-rdf-file",
@@ -83,6 +85,6 @@ def test_parsing_fails(path: Path) -> None:
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)
-    dataset = Dataset()
+    dataset = Dataset(store=OrderedMemory())
     with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011, B017, TD002
         dataset.parse(location=input_filename, format="jelly")
