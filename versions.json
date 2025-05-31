@@ -10,8 +10,8 @@
     "version": "0.1.x",
     "title": "0.1.x",
     "aliases": [
-      "stable",
-      "0.1.0"
+      "0.1.0",
+      "stable"
     ]
   }
 ]
