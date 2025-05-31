@@ -178,6 +178,15 @@ wheels = [
 ]
 
 [[package]]
+name = "detect-test-pollution"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/45/c1e5d4aa0e6c64e87a284bb12e3b607474dd5c8218ed7464f9491781b86d/detect_test_pollution-1.2.0.tar.gz", hash = "sha256:94f383759bbab309771ceedb8dd526a62fa59607e5f7e41f5b33bbc656bfcea9", size = 6768, upload-time = "2023-09-28T20:26:01.412Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/a4/696c220231ee35466269c93f51f782b889f4dde73fc6f1d105e89a1c135e/detect_test_pollution-1.2.0-py2.py3-none-any.whl", hash = "sha256:96095425dadf95d4ceabd585659ccc3197e88dfb1efb02a8479b27d8ad1a3afb", size = 7290, upload-time = "2023-09-28T20:26:00.26Z" },
+]
+
+[[package]]
 name = "distlib"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -1320,6 +1329,7 @@ protoc = [
     { name = "grpcio-tools", marker = "implementation_name != 'pypy'" },
 ]
 test = [
+    { name = "detect-test-pollution" },
     { name = "hypothesis" },
     { name = "inline-snapshot" },
     { name = "pytest" },
@@ -1362,6 +1372,7 @@ profiling = [
 ]
 protoc = [{ name = "grpcio-tools", marker = "implementation_name != 'pypy'", specifier = ">=1.71.0" }]
 test = [
+    { name = "detect-test-pollution", specifier = ">=1.2.0" },
     { name = "hypothesis", specifier = ">=6.131.0" },
     { name = "inline-snapshot", specifier = ">=0.20.8" },
     { name = "pytest", specifier = ">=8.3.4" },

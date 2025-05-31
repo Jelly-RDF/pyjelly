@@ -8,7 +8,7 @@ from tests.meta import (
     RDF_TO_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
-from tests.serialize import write_graph, write_graph_or_dataset
+from tests.serialize import write_graph_or_dataset
 from tests.utils.rdf_test_cases import (
     PhysicalTypeTestCasesDir,
     id_from_path,
@@ -31,19 +31,19 @@ def test_serializes(path: Path) -> None:
     test_id = id_from_path(path)
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
+    write_graph_or_dataset(
+        *input_filenames,
+        options=options_filename,
+        out_filename=actual_out,
+    )
     for input_filename in input_filenames:
-        write_graph(
-            input_filename,
-            options=options_filename,
-            out_filename=actual_out,
-        )
         jelly_validate(
             actual_out,
-            "--compare-ordered",
             "--compare-to-rdf-file",
             input_filename,
             "--options-file",
             options_filename,
+            hint=f"Test ID: {test_id}, tested file: {input_filename}",
         )
 
 

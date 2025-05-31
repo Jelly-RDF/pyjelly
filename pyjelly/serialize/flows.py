@@ -21,6 +21,22 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
     logical_type: jelly.LogicalStreamType
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
 
+    def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
+        """
+        Treat the current rows as a graph and produce a frame.
+
+        Default implementation returns None.
+        """
+        return None
+
+    def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
+        """
+        Treat the current rows as a graph and produce a frame.
+
+        Default implementation returns None.
+        """
+        return None
+
     def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
         return None
 
@@ -90,15 +106,31 @@ class FlatQuadsFrameFlow(BoundedFrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
 
 
-FLOWS_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
+class GraphsFrameFlow(FrameFlow):
+    logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
+
+    def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
+        return self.to_stream_frame()
+
+
+class DatasetsFrameFlow(FrameFlow):
+    logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
+
+    def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
+        return self.to_stream_frame()
+
+
+FLOW_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
     jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
+    jelly.LOGICAL_STREAM_TYPE_GRAPHS: GraphsFrameFlow,
+    jelly.LOGICAL_STREAM_TYPE_DATASETS: DatasetsFrameFlow,
 }
 
 
 def flow_for_type(logical_type: jelly.LogicalStreamType) -> type[FrameFlow]:
     try:
-        return FLOWS_DISPATCH[logical_type]
+        return FLOW_DISPATCH[logical_type]
     except KeyError:
         msg = (
             "unsupported logical stream type: "

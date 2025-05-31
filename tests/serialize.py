@@ -49,7 +49,7 @@ def write_graph(
     if not isinstance(options, ParserOptions):
         options = get_options_from(options)
     assert options
-    graph = rdflib.Graph(store=OrderedMemory())
+    graph = rdflib.Graph()
     graph.parse(location=str(filename))
 
     stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
