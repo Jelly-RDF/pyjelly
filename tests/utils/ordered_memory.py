@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
+from typing import Any
 from typing_extensions import TypeAlias
 
 from rdflib.graph import Graph
 from rdflib.store import Store
-from rdflib.term import Node, URIRef
+from rdflib.term import Identifier, Node, URIRef
 
 Triple: TypeAlias = tuple[Node, Node, Node]
 
@@ -19,7 +20,7 @@ class OrderedMemory(Store):
     def __init__(
         self,
         configuration: str | None = None,
-        identifier: Node | None = None,
+        identifier: Identifier | None = None,
     ) -> None:
         super().__init__(configuration=configuration, identifier=identifier)
         self._quads: list[tuple[Triple, Graph | None]] = []
@@ -35,13 +36,13 @@ class OrderedMemory(Store):
             self._seen_contexts[str(context.identifier)] = context
 
     def triples(
-        self, triple_pattern: object = None, context: Graph | None = None
-    ) -> Iterator[tuple[Triple, Graph | None]]:
+        self, triple_pattern: Any = None, context: Graph | None = None
+    ) -> Iterator[tuple[Triple, Iterator[Graph | None]]]:
         for triple, ctx in self._quads:
             if context is None or context == ctx:
-                yield triple, ctx
+                yield triple, iter((ctx,))
 
-    def contexts(self, triple: Triple | None = None) -> Iterator[Graph]:
+    def contexts(self, triple: Triple | None = None) -> Generator[Graph]:
         if triple is None:
             yield from self._seen_contexts.values()
         else:
