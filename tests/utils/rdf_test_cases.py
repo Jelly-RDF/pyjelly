@@ -21,7 +21,7 @@ class JellyCLIError(Exception):
     """Exception raised when jelly-cli command fails."""
 
 
-def jelly_cli(*args: object) -> bytes:
+def jelly_cli(*args: object, hint: str | None = None) -> bytes:
     assert JELLY_CLI
     shell_args = [JELLY_CLI, *map(str, args)]
     try:
@@ -29,6 +29,8 @@ def jelly_cli(*args: object) -> bytes:
     except subprocess.CalledProcessError as error:
         command = shlex.join(shell_args)
         note = f"Command: {command}"
+        if hint:
+            note += f"\nHint: {hint}"
         raise JellyCLIError(error.output.decode() + "\n" + note) from None
 
 

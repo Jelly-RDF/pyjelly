@@ -32,6 +32,7 @@ maintenance = ["towncrier>=24.8.0"]
 protoc = ["grpcio-tools>=1.71.0; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
 test = [
+    "detect-test-pollution>=1.2.0",
     "hypothesis>=6.131.0",
     "inline-snapshot>=0.20.8",
     "pytest>=8.3.4",
