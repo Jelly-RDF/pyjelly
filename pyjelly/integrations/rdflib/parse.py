@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Generator, Iterable
 from typing import IO, Any
 from typing_extensions import Never, override
 
@@ -168,12 +168,12 @@ def parse_flat_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     store: Store | str = "default",
-    sink: Graph | None = None,
+    identifier: str | None = None,
 ) -> Dataset | Graph:
     assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
     adapter = RDFLibTriplesAdapter(options, store=store)
-    if sink is not None:
-        adapter.graph = sink
+    if identifier is not None:
+        adapter.graph = Graph(identifier=identifier, store=store)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
         decoder.decode_frame(frame=frame)
@@ -184,27 +184,73 @@ def parse_flat_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     store: Store | str = "default",
-    sink: Graph | None = None,
+    identifier: str | None = None,
 ) -> Dataset:
     assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-    sink = sink or Graph(store=store)
     adapter_class: type[RDFLibQuadsBaseAdapter]
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS:
         adapter_class = RDFLibQuadsAdapter
     else:  # jelly.PHYSICAL_STREAM_TYPE_GRAPHS
         adapter_class = RDFLibGraphsAdapter
     adapter = adapter_class(options=options, store=store)
-    adapter.dataset.default_context = sink
+    adapter.dataset.default_context = Graph(identifier=identifier, store=store)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
         decoder.decode_frame(frame=frame)
     return adapter.dataset
 
 
-def graph_or_dataset_from_jelly(
+def parse_graph_stream(
+    frames: Iterable[jelly.RdfStreamFrame],
+    options: ParserOptions,
+    store: Store | str = "default",
+) -> Generator[Graph]:
+    assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    adapter = RDFLibTriplesAdapter(options, store=store)
+    decoder = Decoder(adapter=adapter)
+    for frame in frames:
+        yield decoder.decode_frame(frame=frame)
+
+
+def graphs_from_jelly(
     inp: IO[bytes],
-    sink: Graph,
-) -> Dataset | Graph:
+) -> Generator[Any] | Generator[Dataset] | Generator[Graph]:
+    options, frames = get_options_and_frames(inp)
+
+    if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES:
+        yield parse_flat_triples_stream(
+            frames=frames,
+            options=options,
+            store="default",
+        )
+        return
+
+    if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS:
+        yield parse_flat_quads_stream(
+            frames=frames,
+            options=options,
+            store="default",
+        )
+        return
+
+    if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS:
+        yield from parse_graph_stream(
+            frames=frames,
+            options=options,
+            store="default",
+        )
+        return
+
+    logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+    msg = f"the stream type {logical_type_name} is not supported "
+    raise NotImplementedError(msg)
+
+
+def graph_from_jelly(
+    inp: IO[bytes],
+    store: Store | str = "default",
+    identifier: str | None = None,
+) -> Any | Dataset | Graph:
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_DATASETS:
@@ -218,17 +264,30 @@ def graph_or_dataset_from_jelly(
         return parse_flat_triples_stream(
             frames=frames,
             options=options,
-            store=sink.store,
-            sink=sink,
+            store=store,
+            identifier=identifier,
         )
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS:
         return parse_flat_quads_stream(
             frames=frames,
             options=options,
-            store=sink.store,
-            sink=sink,
+            store=store,
+            identifier=identifier,
         )
+
+    if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS:
+        ds = Dataset(store=store, default_union=True)
+        ds.default_context = Graph(identifier=identifier, store=store)
+
+        for graph in parse_graph_stream(
+            frames=frames,
+            options=options,
+            store=store,
+        ):
+            ds.add_graph(graph)
+
+        return ds
 
     logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
     msg = f"the stream type {logical_type_name} is not supported "
@@ -245,4 +304,8 @@ class RDFLibJellyParser(RDFLibParser):
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
-        graph_or_dataset_from_jelly(inp, sink=sink)
+        graph_from_jelly(
+            inp,
+            identifier=sink.identifier,
+            store=sink.store,
+        )
