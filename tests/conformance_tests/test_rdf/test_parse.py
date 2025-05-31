@@ -22,7 +22,7 @@ from tests.utils.rdf_test_cases import (
 )
 
 
-def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> None:
+def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
     template = "%s " * (3 + (context != DATASET_DEFAULT_GRAPH_ID)) + ".\n"
     args = (
         triple[0].n3(),
