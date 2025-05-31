@@ -31,7 +31,7 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
 
     def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
         """
-        Treat the current rows as a graph and produce a frame.
+        Treat the current rows as a dataset and produce a frame.
 
         Default implementation returns None.
         """
