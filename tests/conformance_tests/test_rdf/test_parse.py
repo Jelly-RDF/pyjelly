@@ -52,6 +52,7 @@ def test_parses(path: Path) -> None:
         graph.serialize(destination=output_filename, encoding="utf-8", format="nt")
         jelly_validate(
             input_filename,
+            "--compare-ordered",
             "--compare-to-rdf-file",
             output_filename,
             "--compare-frame-indices",

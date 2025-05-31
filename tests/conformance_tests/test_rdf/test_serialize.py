@@ -39,6 +39,7 @@ def test_serializes(path: Path) -> None:
     for input_filename in input_filenames:
         jelly_validate(
             actual_out,
+            "--compare-ordered",
             "--compare-to-rdf-file",
             input_filename,
             "--options-file",
