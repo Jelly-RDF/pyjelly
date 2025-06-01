@@ -71,9 +71,9 @@ def test_graphs() -> None:
 
     out = ds_out.serialize(options=options, encoding="jelly", format="jelly")
 
-    options, _ = get_options_and_frames(io.BytesIO(out))
-    assert options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
-    assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    options_out, _ = get_options_and_frames(io.BytesIO(out))
+    assert options_out.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    assert options_out.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS
 
     graphs_out = sorted(ds_out.graphs(), key=len)
 
