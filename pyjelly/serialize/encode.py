@@ -48,14 +48,13 @@ class TermEncoder:
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
         prefix, name = split_iri(iri_string)
-        if prefix and self.prefixes.lookup.max_size:
+        if self.prefixes.lookup.max_size:
             prefix_entry_index = self.prefixes.encode_entry_index(prefix)
         else:
             name = iri_string
             prefix_entry_index = None
 
         name_entry_index = self.names.encode_entry_index(name)
-
         term_rows = []
 
         if prefix_entry_index is not None:

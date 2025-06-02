@@ -8,22 +8,26 @@ from pyjelly.serialize.lookup import LookupEncoder
 
 
 def test_encode_entry_index() -> None:
-    encoder = LookupEncoder(lookup_size=3)
+    encoder = LookupEncoder(lookup_size=4)
 
     entry_index = encoder.encode_entry_index("foo")
     assert encoder.lookup.data["foo"] == 1
     # If 0 appears in the first IRI of the stream it MUST be interpreted as 1
     assert entry_index == 0
 
-    entry_index = encoder.encode_entry_index("bar")
-    assert encoder.lookup.data["bar"] == 2
+    entry_index = encoder.encode_entry_index("")
+    assert encoder.lookup.data[""] == 2
     # default value of 0 MUST be interpreted as previous_name_id + 1
+    assert entry_index == 0
+
+    entry_index = encoder.encode_entry_index("bar")
+    assert encoder.lookup.data["bar"] == 3
     assert entry_index == 0
 
     encoder.last_assigned_index = 10
     entry_index = encoder.encode_entry_index("baz")
     # default value behavior works only if value equals previous + 1
-    assert entry_index == snapshot(3)
+    assert entry_index == snapshot(4)
 
 
 def test_last_assigned_index() -> None:
@@ -109,10 +113,18 @@ def test_encode_name_term_index(subtests: SubTests) -> None:
 
 
 def test_encode_prefix_term_index(subtests: SubTests) -> None:
-    with subtests.test("empty prefix encodes 0"):
+    with subtests.test("empty prefix encodes 0 at first"):
         encoder = LookupEncoder(lookup_size=3)
         assert encoder.encode_prefix_term_index("") == 0
         assert not encoder.lookup.data
+
+    with subtests.test("empty prefix encoded after non-empty prefix"):
+        encoder = LookupEncoder(lookup_size=3)
+        encoder.encode_entry_index("foo")
+        encoder.encode_entry_index("")
+
+        assert encoder.encode_prefix_term_index("foo") == 1
+        assert encoder.encode_prefix_term_index("") == 2
 
     with subtests.test("lookup size = 3 encodes correctly"):
         encoder = LookupEncoder(lookup_size=3)
