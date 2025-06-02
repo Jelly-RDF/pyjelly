@@ -214,31 +214,20 @@ def parse_graph_stream(
 
 def graphs_from_jelly(
     inp: IO[bytes],
+    store: Store | str = "default",
 ) -> Generator[Any] | Generator[Dataset] | Generator[Graph]:
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES:
-        yield parse_flat_triples_stream(
-            frames=frames,
-            options=options,
-            store="default",
-        )
+        yield parse_flat_triples_stream(frames=frames, options=options, store=store)
         return
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS:
-        yield parse_flat_quads_stream(
-            frames=frames,
-            options=options,
-            store="default",
-        )
+        yield parse_flat_quads_stream(frames=frames, options=options, store=store)
         return
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS:
-        yield from parse_graph_stream(
-            frames=frames,
-            options=options,
-            store="default",
-        )
+        yield from parse_graph_stream(frames=frames, options=options, store=store)
         return
 
     logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
@@ -280,11 +269,7 @@ def graph_from_jelly(
         ds = Dataset(store=store, default_union=True)
         ds.default_context = Graph(identifier=identifier, store=store)
 
-        for graph in parse_graph_stream(
-            frames=frames,
-            options=options,
-            store=store,
-        ):
+        for graph in parse_graph_stream(frames=frames, options=options, store=store):
             ds.add_graph(graph)
 
         return ds
@@ -295,11 +280,7 @@ def graph_from_jelly(
 
 
 class RDFLibJellyParser(RDFLibParser):
-    def parse(
-        self,
-        source: InputSource,
-        sink: Graph,
-    ) -> None:
+    def parse(self, source: InputSource, sink: Graph) -> None:
         inp = source.getByteStream()  # type: ignore[no-untyped-call]
         if inp is None:
             msg = "expected source to be a stream of bytes"
