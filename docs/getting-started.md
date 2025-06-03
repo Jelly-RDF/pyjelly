@@ -2,12 +2,12 @@
 
 This guide shows how to install pyjelly and prepare your environment for use with RDFLib.
 
-## Installation
+## Installation (with RDFLib)
 
 Install pyjelly from PyPI:
 
 ```
-pip install pyjelly
+pip install pyjelly[rdflib]
 ```
 
 pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux, macOS, Windows).

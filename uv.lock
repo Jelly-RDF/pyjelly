@@ -1298,8 +1298,12 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "protobuf" },
-    { name = "rdflib" },
     { name = "typing-extensions" },
+]
+
+[package.optional-dependencies]
+rdflib = [
+    { name = "rdflib" },
 ]
 
 [package.dev-dependencies]
@@ -1317,6 +1321,9 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings" },
     { name = "mkdocstrings-python" },
+]
+extras = [
+    { name = "pyjelly", extra = ["rdflib"] },
 ]
 maintenance = [
     { name = "towncrier" },
@@ -1345,9 +1352,10 @@ types = [
 [package.metadata]
 requires-dist = [
     { name = "protobuf", specifier = ">=5.29.3" },
-    { name = "rdflib", specifier = ">=7.1.4" },
+    { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
+provides-extras = ["rdflib"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1365,6 +1373,7 @@ docs = [
     { name = "mkdocstrings", specifier = ">=0.29.1" },
     { name = "mkdocstrings-python", specifier = ">=1.16.10" },
 ]
+extras = [{ name = "pyjelly", extras = ["rdflib"] }]
 maintenance = [{ name = "towncrier", specifier = ">=24.8.0" }]
 profiling = [
     { name = "memray", specifier = ">=1.16.0" },
