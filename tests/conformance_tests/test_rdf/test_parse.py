@@ -56,7 +56,9 @@ def test_parses(path: Path) -> None:
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True)
     with input_filename.open("rb") as input_file:
-        for frame_no, graph in enumerate(graphs_from_jelly(input_file)):
+        for frame_no, graph in enumerate(
+            graphs_from_jelly(input_file, store=OrderedMemory())
+        ):
             extension = f"n{'quads' if isinstance(graph, Dataset) else 'triples'}"
             output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
             graph.serialize(
