@@ -58,7 +58,7 @@ docs = [
 ]
 
 [tool.uv]
-required-version = "==0.7.3"
+required-version = "~=0.7.3"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
