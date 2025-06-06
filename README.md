@@ -1,15 +1,15 @@
 # pyjelly
 
 > [!Warning]
-> pyjelly is in early development! The API is unstable and breaking changes may occur in the coming weeks.
+> pyjelly is in early development, so some breaking changes may still occur from time to time.
 
-**pyjelly** is a Python implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. 
+**pyjelly** is a Python implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs.
 
 **Documentation, usage guide and more: https://w3id.org/jelly/pyjelly**
 
 ## Contributing and support
 
-This project is still in early development—you can stay tuned by [watching this repository](https://docs.github.com/en/account-and-profile/managing-subscriptions-and-notifications-on-github/setting-up-notifications/about-notifications#subscription-options).
+This project is being actively developed – you can stay tuned by [watching this repository](https://docs.github.com/en/account-and-profile/managing-subscriptions-and-notifications-on-github/setting-up-notifications/about-notifications#subscription-options).
 
 You can also join the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)** to ask questions about pyjelly and to be up-to-date with the development activities.
 

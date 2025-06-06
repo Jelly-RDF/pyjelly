@@ -1,11 +1,9 @@
 # pyjelly
 
-!!! warning "pyjelly is in early development!"
-    The API is unstable and breaking changes may occur in the coming weeks.
+!!! warning "Early development"
+    pyjelly is in early development, so some breaking changes may still occur from time to time.
 
-**pyjelly** is a Python implementation of [Jelly]({{ proto_link("") }}), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. 
-
-Below is a list of all documentation pages about pyjelly, including installation instructions, API reference, and examples.
+**pyjelly** is a Python implementation of [Jelly]({{ proto_link("") }}), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. It works great with [rdflib](getting-started.md).
 
 - **[Getting started](getting-started.md)**: Installation instructions and basic usage examples.
 - **[Overview](overview.md)**: An introduction to the Jelly protocol and the pyjelly library.
