@@ -27,7 +27,7 @@ from rdflib import Graph
 
 g = Graph()
 g.parse("http://xmlns.com/foaf/spec/index.rdf")
-g.serialize(destination="triples.jelly", format="jelly")
+g.serialize(destination="foaf.jelly", format="jelly")
 ```
 
 To read a Jelly file and convert it to an rdflib Graph, you can use:
