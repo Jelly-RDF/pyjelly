@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-# TODO: Remove this list once the failing test cases are fixed.
+# TODO(Piotr): Remove this list once the failing test cases are fixed.
 # See https://github.com/Jelly-RDF/pyjelly/issues/145
 failing_test_cases = [
     "from_jelly_triples_pos_008",
