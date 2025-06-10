@@ -56,7 +56,6 @@ jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 
 [dependency-groups]
 dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
-maintenance = ["towncrier>=24.8.0"]
 # grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
 protoc = ["grpcio-tools>=1.71.0; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
@@ -176,43 +175,3 @@ ignore = [
     # Rationale: In reality, this check causes more trouble than prevents bad things
     "SLF001",
 ]
-
-# https://towncrier.readthedocs.io/en/stable/markdown.html
-[tool.towncrier]
-directory = "news"
-package = "pyjelly"
-filename = "CHANGELOG.md"
-start_string = "<!-- insertion marker -->\n"
-underlines = ["", "", ""]
-title_format = "## [{version}](https://github.com/Jelly-RDF/pyjelly/tree/{version}) ({project_date})"
-issue_format = "[#{issue}](https://github.com/Jelly-RDF/pyjelly/issues/{issue})"
-
-[[tool.towncrier.type]]
-directory = "security"
-name = "Security"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "removed"
-name = "Removed"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "deprecated"
-name = "Deprecated"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "added"
-name = "Added"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "changed"
-name = "Changed"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "fixed"
-name = "Fixed"
-showcontent = true
