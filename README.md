@@ -24,13 +24,10 @@ To write an RDF graph to a Jelly file, you can use the following code:
 
 ```python
 from rdflib import Graph
-from pyjelly.serialize.streams import Stream
-from pyjelly.options import StreamOptions, StreamTypes
-from pyjelly import jelly
 
 g = Graph()
 g.parse("http://xmlns.com/foaf/spec/index.rdf")
-g.serialize(destination="foaf.jelly", format="jelly")
+g.serialize(destination="triples.jelly", format="jelly")
 ```
 
 To read a Jelly file and convert it to an rdflib Graph, you can use:

@@ -23,13 +23,10 @@ To serialize a graph to the Jelly format:
 
 ```python
 from rdflib import Graph
-from pyjelly.serialize.streams import Stream
-from pyjelly.options import StreamOptions, StreamTypes
-from pyjelly import jelly
 
 g = Graph()
 g.parse("http://xmlns.com/foaf/spec/index.rdf")
-g.serialize(destination="foaf.jelly", format="jelly")
+g.serialize(destination="triples.jelly", format="jelly")
 ```
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
