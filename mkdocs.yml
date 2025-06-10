@@ -117,7 +117,7 @@ nav:
   - Home: "index.md"
   - Getting started: "getting-started.md"
   - Overview and supported features: "overview.md"
-  - Changelog: "changelog.md"
+  - Changelog: "https://github.com/Jelly-RDF/pyjelly/releases"
   - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
