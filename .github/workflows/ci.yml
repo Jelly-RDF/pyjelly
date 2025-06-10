@@ -46,8 +46,9 @@ jobs:
         - version: '3.13'
           platform: ubuntu-latest
           conformance-tests: true
-        - version: '3.14'
-          platform: ubuntu-latest
+        # rdflib appears to be broken on 3.14
+        # - version: '3.14'
+        #   platform: ubuntu-latest
         - version: pypy3.10
           platform: ubuntu-latest  
         - version: pypy3.11
