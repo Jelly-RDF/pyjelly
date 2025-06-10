@@ -41,7 +41,7 @@ Homepage = "https://w3id.org/jelly/pyjelly"
 Documentation = "https://w3id.org/jelly/pyjelly"
 Repository = "https://github.com/Jelly-RDF/pyjelly"
 Issues = "https://github.com/Jelly-RDF/pyjelly/issues"
-Changelog = "https://github.com/Jelly-RDF/pyjelly/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/Jelly-RDF/pyjelly/releases"
 
 [project.optional-dependencies]
 rdflib = ["rdflib>=7.1.4"]
