@@ -8,9 +8,9 @@
 
 ## Features
 
-- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly).
+- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
 - **Seamless integration with [rdflib](https://rdflib.readthedocs.io/)**
-- **Stream processing support** for large datasets or streams of many RDF graphs/datasets.
+- **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
 ## Getting started
 
