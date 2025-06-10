@@ -529,20 +529,53 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#submit-feedback" class="md-nav__link">
+  <a href="#giving-feedback" class="md-nav__link">
     <span class="md-ellipsis">
-      Submit Feedback
+      Giving feedback
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#contributions" class="md-nav__link">
+  <a href="#contributing-code" class="md-nav__link">
     <span class="md-ellipsis">
-      Contributions
+      Contributing code
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contributing-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Contributing documentation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Contributing documentation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#previewing-documentation-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      Previewing documentation locally
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      Further reading
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -594,7 +627,7 @@
 <p><a href="https://docs.python.org/3/library/venv.html#how-venvs-work">Activate the environment</a> or use <a href="https://docs.astral.sh/uv/guides/projects/"><code>uv run</code> to run commands and code</a>. </p>
 </li>
 </ol>
-<h2 id="submit-feedback">Submit Feedback</h2>
+<h2 id="giving-feedback">Giving feedback</h2>
 <p>The best way to send feedback is to file an issue at <a href="https://github.com/Jelly-RDF/pyjelly/issues">https://github.com/Jelly-RDF/pyjelly/issues</a></p>
 <p>If you are proposing a feature:</p>
 <ol>
@@ -602,7 +635,7 @@
 <li>Keep the scope as narrow as possible, to make it easier to implement.</li>
 <li>Contributions are always welcome! Consider if you can help with implementing the feature.</li>
 </ol>
-<h2 id="contributions">Contributions</h2>
+<h2 id="contributing-code">Contributing code</h2>
 <ol>
 <li>Every major pull request should be connected to an issue. If you see a problem, first create an issue.<ul>
 <li>For minor issues (typos, small fixes) make sure you describe your problem well in the PR.</li>
@@ -621,6 +654,24 @@ This helps us follow best practices and keep the codebase in shape.</li>
 </ul>
 </li>
 </ol>
+<h2 id="contributing-documentation">Contributing documentation</h2>
+<p>The documentation is written in Markdown and built using <a href="https://www.mkdocs.org/">MkDocs</a>, using <a href="https://squidfunk.github.io/mkdocs-material/">Material for MkDocs</a>.</p>
+<p>To edit a documentation page, simply click the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg></span> button in the top-right of the page.</p>
+<p>It will take you to GitHub, where you can edit the Markdown file and submit a pull request. You can also clone <a href="https://github.com/Jelly-RDF/pyjelly">the repository</a> and edit the files locally. The source files are in the <code>docs</code> directory.</p>
+<h3 id="previewing-documentation-locally">Previewing documentation locally</h3>
+<p>Install dependencies for docs:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>docs
+</span></code></pre></div>
+<p>Then, start a local docs server:</p>
+<div class="language-shell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>serve
+</span></code></pre></div>
+<h3 id="further-reading">Further reading</h3>
+<ul>
+<li><a href="https://w3id.org/jelly/dev/contributing/#editing-documentation">More information on editing Jelly docs</a></li>
+<li><a href="https://squidfunk.github.io/mkdocs-material/reference/">Material for MkDocs reference</a></li>
+<li><a href="https://www.mkdocs.org/user-guide/writing-your-docs/">MkDocs documentation</a></li>
+<li><a href="https://mkdocs-macros-plugin.readthedocs.io/en/latest/">Macro plugin documentation</a></li>
+</ul>
 
 
 
@@ -643,7 +694,7 @@ This helps us follow best practices and keep the codebase in shape.</li>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 6, 2025 17:41:51">June 6, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 10, 2025 17:01:45">June 10, 2025</span>
   </span>
 
     
@@ -653,7 +704,7 @@ This helps us follow best practices and keep the codebase in shape.</li>
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 8, 2025 20:08:54">May 8, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 18, 2025 16:36:47">May 18, 2025</span>
   </span>
 
     
