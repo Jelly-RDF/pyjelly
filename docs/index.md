@@ -1,25 +1,31 @@
 # pyjelly
 
-!!! warning "Early development"
-    pyjelly is in early development, so some breaking changes may still occur from time to time.
+[![PyPI – Version](https://img.shields.io/pypi/v/pyjelly)](https://pypi.org/project/pyjelly/) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyjelly)](https://pypi.org/project/pyjelly/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![CI status](https://github.com/Jelly-RDF/pyjelly/actions/workflows/ci.yml/badge.svg)](https://github.com/Jelly-RDF/pyjelly/actions/workflows/ci.yml) [![Discord](https://img.shields.io/discord/1333391881404420179?label=Discord%20chat)](https://discord.gg/A8sN5XwVa5)
 
 **pyjelly** is a Python implementation of [Jelly]({{ proto_link("") }}), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. It works great with [rdflib](getting-started.md).
 
-- **[Getting started](getting-started.md)**: Installation instructions and basic usage examples.
-- **[Overview](overview.md)**: An introduction to the Jelly protocol and the pyjelly library.
-- **[API reference](api.md)**: Detailed documentation of the pyjelly API, including classes, methods, and functions.
-- **[Contributing](contributing/index.md)**: Guidelines for contributing to the pyjelly project, including how to report issues, submit pull requests, and participate in discussions.
-- **[Code of conduct](contributing/code_of_conduct.md)**: The code of conduct for the pyjelly community, outlining expected behavior and guidelines for respectful interactions.
+## Features
 
-## License
+- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
+- **Seamless integration with [rdflib](https://rdflib.readthedocs.io/)**
+- **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
-The pyjelly library is licensed under the [Apache 2.0 license](https://github.com/Jelly-RDF/pyjelly/blob/{{ git_tag() }}/LICENSE).
+## Documentation
+
+- **[Getting started](getting-started.md)**
+- **[Overview and supported features](overview.md)**
+- **[API reference](api.md)**
+- **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
 ## Commercial and community support
 
 **[NeverBlink](https://neverblink.eu)** provides commercial support services for Jelly, including implementing custom features, system integrations, implementations for new frameworks, benchmarking, and more.
 
 Community support is available on the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)**.
+
+## License
+
+The pyjelly library is licensed under the [Apache 2.0 license](https://github.com/Jelly-RDF/pyjelly/blob/{{ git_tag() }}/LICENSE).
 
 ----
 

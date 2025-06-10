@@ -112,14 +112,17 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/Jelly-RDF/pyjelly
       name: pyjelly on GitHub
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/A8sN5XwVa5
+      name: Community Discord server
 
 nav:
   - Home: "index.md"
   - Getting started: "getting-started.md"
   - Overview and supported features: "overview.md"
-  - Changelog: "changelog.md"
   - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"
+  - Changelog: "changelog.md"
   - Back to main Jelly docs ↩: "https://w3id.org/jelly/"
