@@ -15,7 +15,7 @@ Hi! This guide explains how to get started with developing pyjelly and contribut
 
 4. [Activate the environment](https://docs.python.org/3/library/venv.html#how-venvs-work) or use [`uv run` to run commands and code](https://docs.astral.sh/uv/guides/projects/). 
 
-## Submit Feedback
+## Giving feedback
 
 The best way to send feedback is to file an issue at [https://github.com/Jelly-RDF/pyjelly/issues](https://github.com/Jelly-RDF/pyjelly/issues)
 
@@ -25,7 +25,7 @@ If you are proposing a feature:
 2. Keep the scope as narrow as possible, to make it easier to implement.
 3. Contributions are always welcome! Consider if you can help with implementing the feature.
 
-## Contributions
+## Contributing code
 
 1. Every major pull request should be connected to an issue. If you see a problem, first create an issue.
     * For minor issues (typos, small fixes) make sure you describe your problem well in the PR.
@@ -37,3 +37,32 @@ If you are proposing a feature:
     * Type safety (`mypy`)
     * Formatting and linting (`ruff` or via `pre-commit`)
     This helps us follow best practices and keep the codebase in shape.
+
+## Contributing documentation
+
+The documentation is written in Markdown and built using [MkDocs](https://www.mkdocs.org/), using [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/).
+
+To edit a documentation page, simply click the :material-file-edit-outline: button in the top-right of the page.
+
+It will take you to GitHub, where you can edit the Markdown file and submit a pull request. You can also clone [the repository](https://github.com/Jelly-RDF/pyjelly) and edit the files locally. The source files are in the `docs` directory.
+
+### Previewing documentation locally
+
+Install dependencies for docs:
+
+```shell
+uv sync --group docs
+```
+
+Then, start a local docs server:
+
+```shell
+uv run mkdocs serve
+```
+
+### Further reading
+
+- [More information on editing Jelly docs]({{ proto_link( 'contributing#editing-documentation' ) }})
+- [Material for MkDocs reference](https://squidfunk.github.io/mkdocs-material/reference/)
+- [MkDocs documentation](https://www.mkdocs.org/user-guide/writing-your-docs/)
+- [Macro plugin documentation](https://mkdocs-macros-plugin.readthedocs.io/en/latest/)
