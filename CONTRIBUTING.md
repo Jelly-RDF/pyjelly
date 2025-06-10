@@ -62,7 +62,7 @@ uv run mkdocs serve
 
 ### Further reading
 
-- [More information on editing Jelly docs]({{ proto_link( 'contributing#editing-documentation' ) }})
+- [More information on editing Jelly docs](https://w3id.org/jelly/dev/contributing/#editing-documentation)
 - [Material for MkDocs reference](https://squidfunk.github.io/mkdocs-material/reference/)
 - [MkDocs documentation](https://www.mkdocs.org/user-guide/writing-your-docs/)
 - [Macro plugin documentation](https://mkdocs-macros-plugin.readthedocs.io/en/latest/)
