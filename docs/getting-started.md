@@ -23,9 +23,6 @@ To serialize a graph to the Jelly format:
 
 ```python
 from rdflib import Graph
-from pyjelly.serialize.streams import Stream
-from pyjelly.options import StreamOptions, StreamTypes
-from pyjelly import jelly
 
 g = Graph()
 g.parse("http://xmlns.com/foaf/spec/index.rdf")

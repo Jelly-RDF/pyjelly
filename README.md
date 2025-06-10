@@ -6,6 +6,41 @@
 
 **Documentation, usage guide and more: https://w3id.org/jelly/pyjelly**
 
+## Features
+
+- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
+- **Seamless integration with [rdflib](https://rdflib.readthedocs.io/)**
+- **Stream processing support** for large datasets or streams of many RDF graphs/datasets
+
+## Getting started
+
+To get started with pyjelly, you can install it via pip:
+
+```bash
+pip install pyjelly[rdflib]
+```
+
+To write an RDF graph to a Jelly file, you can use the following code:
+
+```python
+from rdflib import Graph
+
+g = Graph()
+g.parse("http://xmlns.com/foaf/spec/index.rdf")
+g.serialize(destination="foaf.jelly", format="jelly")
+```
+
+To read a Jelly file and convert it to an rdflib Graph, you can use:
+
+```python
+from rdflib import Graph
+
+g = Graph()
+g.parse("foaf.jelly", format="jelly")
+```
+
+**See more examples, [API reference](https://w3id.org/jelly/pyjelly/dev/api), and more in the [documentation](https://w3id.org/jelly/pyjelly).**
+
 ## Contributing and support
 
 This project is being actively developed – you can stay tuned by [watching this repository](https://docs.github.com/en/account-and-profile/managing-subscriptions-and-notifications-on-github/setting-up-notifications/about-notifications#subscription-options).
