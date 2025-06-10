@@ -4,18 +4,44 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyjelly"
-version = "0.2.0"
+version = "0.2.1"
 readme = "README.md"
-description = "Jelly RDF implementation for Python"
+description = "Jelly-RDF implementation for Python"
 authors = [
-    { name = "Bartosz Sławecki", email = "bartosz@neverblink.eu" },
-    { name = "Anastasiya Danilenka", email = "anastasiya@neverblink.eu" },
+    { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
 requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Topic :: Database",
+    "Topic :: File Formats",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
+license = "Apache-2.0"
 dependencies = [
     "protobuf>=5.29.3",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
+
+[project.urls]
+Homepage = "https://w3id.org/jelly/pyjelly"
+Documentation = "https://w3id.org/jelly/pyjelly"
+Repository = "https://github.com/Jelly-RDF/pyjelly"
+Issues = "https://github.com/Jelly-RDF/pyjelly/issues"
+Changelog = "https://github.com/Jelly-RDF/pyjelly/releases"
 
 [project.optional-dependencies]
 rdflib = ["rdflib>=7.1.4"]
