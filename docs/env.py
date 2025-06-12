@@ -106,6 +106,32 @@ def define_env(env):
         version = proto_version()
         return f"https://w3id.org/jelly/{version}/{page}"
 
+    @env.macro
+    def code_example(file_name):
+        with open(f"examples/{file_name}", "r") as f:
+            code = f.read()
+        return f"""
+```python
+{code}
+```
+"""
+
+    @env.macro
+    def code_example_box(file_name):
+        name = f"examples/{file_name}"
+        with open(name, "r") as f:
+            code = f.read()
+        code = code.replace("\n", "\n    ")
+        return f"""
+??? example "Example: {file_name} (click to expand)"
+
+    **[:octicons-code-24: Source code on GitHub]({git_link(name)})**
+
+    ```python title="{file_name}" linenums="1"
+    {code}
+    ```
+"""
+
     def transform_nav_item(item):
         if list(item.values())[0] == "https://w3id.org/jelly/":
             return {list(item.keys())[0]: proto_link("")}

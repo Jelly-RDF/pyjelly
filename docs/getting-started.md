@@ -21,13 +21,7 @@ Once installed, pyjelly integrates with RDFLib automatically. You can immediatel
 
 To serialize a graph to the Jelly format:
 
-```python
-from rdflib import Graph
-
-g = Graph()
-g.parse("http://xmlns.com/foaf/spec/index.rdf")
-g.serialize(destination="foaf.jelly", format="jelly")
-```
+{{ code_example('rdflib/01_serialize.py') }}
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
 
@@ -35,23 +29,16 @@ This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-
 
 To load RDF data from a `.jelly` file:
 
-```python
-from rdflib import Graph
-
-g = Graph()
-g.parse("foaf.jelly")
-
-print("Parsed triples:")
-for s, p, o in g:
-    print(f"{s} {p} {o}")
-```
+{{ code_example('rdflib/02_parse.py') }}
 
 RDFLib will reconstruct the graph from the serialized Jelly stream.
 
 ### File extension support
 
-You can omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format using pyjelly's entry point:
+You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
 
-```python
-g.parse("foaf.jelly")  # format inferred automatically
-```
+{{ code_example('rdflib/03_parse_autodetect.py') }}
+
+!!! warning 
+
+    Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in the `serialize()` or `parse()` call before.

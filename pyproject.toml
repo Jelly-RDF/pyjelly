@@ -101,7 +101,7 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules"]
+addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=**examples"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
@@ -111,6 +111,9 @@ packages = ["pyjelly"]
 
 [tool.ruff.lint]
 extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004"] }
+exclude = [
+    "**examples/**",
+]
 select = ["ALL"]
 ignore = [
     # Description: Dynamically typed expressions (typing.Any) are disallowed
