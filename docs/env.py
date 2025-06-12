@@ -108,7 +108,7 @@ def define_env(env):
 
     @env.macro
     def code_example(file_name):
-        with open(f'examples/{file_name}', 'r') as f:
+        with open(f"examples/{file_name}", "r") as f:
             code = f.read()
         return f"""
 ```python
@@ -118,8 +118,8 @@ def define_env(env):
 
     @env.macro
     def code_example_box(file_name):
-        name = f'examples/{file_name}'
-        with open(name, 'r') as f:
+        name = f"examples/{file_name}"
+        with open(name, "r") as f:
             code = f.read()
         code = code.replace("\n", "\n    ")
         return f"""
