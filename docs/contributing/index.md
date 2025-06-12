@@ -60,6 +60,13 @@ Then, start a local docs server:
 uv run mkdocs serve
 ```
 
+### Further reading
+
+- [More information on editing Jelly docs]({{ proto_link("contributing/#editing-documentation") }})
+- [Material for MkDocs reference](https://squidfunk.github.io/mkdocs-material/reference/)
+- [MkDocs documentation](https://www.mkdocs.org/user-guide/writing-your-docs/)
+- [Macro plugin documentation](https://mkdocs-macros-plugin.readthedocs.io/en/latest/)
+
 ## Making releases
 
 1. Make sure you are on the `main` branch and that it is up-to-date: `git checkout main && git pull`.
@@ -72,10 +79,3 @@ uv run mkdocs serve
 6. Create a new tag for the release. For example, for version 1.2.3: `git tag v1.2.3`. **The tag must start with `v`!**
 7. Push the tag to GitHub: `git push origin v1.2.3`.
 8. The release will be automatically built and published to PyPI.
-
-### Further reading
-
-- [More information on editing Jelly docs]({{ proto_link("contributing/#editing-documentation") }})
-- [Material for MkDocs reference](https://squidfunk.github.io/mkdocs-material/reference/)
-- [MkDocs documentation](https://www.mkdocs.org/user-guide/writing-your-docs/)
-- [Macro plugin documentation](https://mkdocs-macros-plugin.readthedocs.io/en/latest/)
