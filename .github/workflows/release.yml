@@ -56,6 +56,16 @@ jobs:
       - name: Publish package distributions
         uses: pypa/gh-action-pypi-publish@release/v1
 
+      - name: 'Create a GitHub release'
+        uses: ncipollo/release-action@v1.16.0
+        with:
+          prerelease: false
+          draft: false
+          makeLatest: true
+          tag: "${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
+          generateReleaseNotes: true
+
   release-docs:
     runs-on: ubuntu-latest
     steps:
