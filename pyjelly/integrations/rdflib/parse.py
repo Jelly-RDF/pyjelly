@@ -216,6 +216,21 @@ def graphs_from_jelly(
     inp: IO[bytes],
     store: Store | str = "default",
 ) -> Generator[Any] | Generator[Dataset] | Generator[Graph]:
+    """Takes jelly file and returns parsed graphs based on the detected logical type.
+    
+    TODO: ig should be made logical-type-agnostic but we need to decide on the default logical-type agnostic behaviour
+
+    Args:
+        inp (IO[bytes]): input jelly buffered binary stream
+        store (Store | str, optional): Defaults to "default". Store is just an rdflib Store or a custom OrderedMemory extension of rdflib
+        "default" is also the part of the rdflib
+    Raises:
+        NotImplementedError: is raised if a logical type is not implemented
+
+    Yields:
+        Generator[Any] | Generator[Dataset] | Generator[Graph]: returns graphs/datasets based on the type of input
+        TODO: should be aligned with the default behaviour
+    """
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES:
