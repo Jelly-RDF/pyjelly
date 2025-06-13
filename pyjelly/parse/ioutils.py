@@ -62,17 +62,21 @@ def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
 def get_options_and_frames(
     inp: IO[bytes],
 ) -> tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]:
-    """Returns stream options and frames from the buffered binary stream.
+    """
+    Return stream options and frames from the buffered binary stream.
 
     Args:
         inp (IO[bytes]): jelly buffered binary stream
 
     Raises:
         JellyConformanceError: if no non-empty frames detected in the delimited stream
-        JellyConformanceError: if non-delimited, error is raised if no rows are detected (empty frame)
+        JellyConformanceError: if non-delimited,
+            error is raised if no rows are detected (empty frame)
 
     Returns:
-        tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds stream types, lookup presets and other stream options
+        tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:
+            stream types, lookup presets and other stream options
+
     """
     is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
     inp.seek(-len(bytes_read), os.SEEK_CUR)
