@@ -31,6 +31,16 @@ class OrderedMemory(Store):
     def add(
         self, triple: Triple, context: Graph | None = None, quoted: bool = False
     ) -> None:
+        """
+        Add a triple to existing context (Graph) and adds context to list.
+
+        Args:
+            triple (Triple): a tuple of terms
+            context (Graph | None, optional): Defaults to None.
+            quoted (bool, optional): _description_. Defaults to False.
+            TODO: why is quoted arg here?
+
+        """
         self._quads.append((triple, context))
         if context is not None:
             self._seen_contexts[str(context.identifier)] = context
