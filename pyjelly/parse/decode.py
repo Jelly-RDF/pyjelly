@@ -148,6 +148,16 @@ class Decoder:
         return self.adapter.options
 
     def decode_frame(self, frame: jelly.RdfStreamFrame) -> Any:
+        """
+        Decode a frame to custom object based on adapter implementation.
+
+        Args:
+            frame (jelly.RdfStreamFrame): jelly frame
+
+        Returns:
+            Any: custom obj based on adapter logic
+
+        """
         for row_owner in frame.rows:
             row = getattr(row_owner, row_owner.WhichOneof("row"))
             self.decode_row(row)
