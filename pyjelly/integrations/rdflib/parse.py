@@ -186,7 +186,7 @@ class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
 
 class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     """
-    Extend RDFLibQuadsBaseAdapter with graph physical type specifics.
+    Extension of RDFLibQuadsBaseAdapter for the GRAPHS physical type.
 
     Notes: introduces graph start/end, checks if graph exists,
         dataset store management.
