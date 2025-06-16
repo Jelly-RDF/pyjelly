@@ -79,7 +79,7 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     Triples adapter RDFLib implementation.
 
     Notes: has internal graph object which tracks
-        triples and namesapces and can get flushed between frames.
+        triples and namespaces and can get flushed between frames.
     """
 
     graph: Graph
