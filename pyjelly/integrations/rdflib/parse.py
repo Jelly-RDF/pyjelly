@@ -163,7 +163,7 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
 
 class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
     """
-    Extended RDFLib adapted for quads physical type.
+    Extended RDFLib adapter for the QUADS physical type.
 
     Notes:
         Adds triples and namespaces directly to
