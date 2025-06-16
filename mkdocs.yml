@@ -125,4 +125,5 @@ nav:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"
   - Changelog: "https://github.com/Jelly-RDF/pyjelly/releases"
+  - Licensing and citation: "https://w3id.org/jelly/dev/licensing"
   - Back to main Jelly docs ↩: "https://w3id.org/jelly/"
