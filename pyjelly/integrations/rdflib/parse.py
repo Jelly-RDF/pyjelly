@@ -368,6 +368,8 @@ def parse_jelly_flat(
 
     if options.stream_types.physical_type in (jelly.PHYSICAL_STREAM_TYPE_QUADS,
                                               jelly.PHYSICAL_STREAM_TYPE_GRAPHS):
+        # a hack to bypass RDFLib wrapping dataset into graph before calling parse
+        sink = Dataset(sink.store)
         parse_flat_quads_stream(
             frames=frames,
             options=options,
@@ -382,6 +384,7 @@ def parse_jelly_flat(
 
 
 class RDFLibJellyParser(RDFLibParser):
+    
     def parse(self, source: InputSource, sink: StatementSink) -> None:
         """
         Parse jelly file into provided RDFLib Graph/Dataset.
@@ -402,3 +405,4 @@ class RDFLibJellyParser(RDFLibParser):
             inp,
             sink=sink,
         )
+        

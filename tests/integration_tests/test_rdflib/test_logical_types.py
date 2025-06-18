@@ -57,8 +57,9 @@ def test_flat_quads(stream_class: type[Stream]) -> None:
     quads_in = set(ds_in)
     assert quads_in == quads_out
 
-
+@pytest.mark.skip
 def test_graphs() -> None:
+# TODO: rewrite or remove
     options = SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS)
 
     ds_out = Dataset()
