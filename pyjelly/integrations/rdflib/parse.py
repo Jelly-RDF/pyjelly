@@ -109,7 +109,6 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
                 triples to one graph despite frames division
 
         """
-        return None
 
 
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
@@ -129,7 +128,6 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
         TODO: what should happen here?
 
         """
-        return None
 
 
 class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
@@ -384,7 +382,7 @@ def parse_jelly_flat(
 
 
 class RDFLibJellyParser(RDFLibParser):
-    
+
     def parse(self, source: InputSource, sink: StatementSink) -> None:
         """
         Parse jelly file into provided RDFLib Graph/Dataset.
@@ -405,4 +403,3 @@ class RDFLibJellyParser(RDFLibParser):
             inp,
             sink=sink,
         )
-        
