@@ -99,7 +99,7 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     def namespace_declaration(self, name: str, iri: str) -> None:
         self.graph.bind(name, self.iri(iri))
 
-    def frame(self) -> Graph | None:
+    def frame(self) -> None:
         """
         Finalize one frame in triples stream.
 
@@ -122,7 +122,7 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
         self.dataset = dataset
 
     @override
-    def frame(self) -> Dataset | None:
+    def frame(self) -> None:
         """
         Finalize one frame in quads stream.
 
@@ -175,7 +175,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     def __init__(
         self,
         options: ParserOptions,
-        dataset: Store | str,
+        dataset: StatementSink,
     ) -> None:
         super().__init__(options=options, dataset=dataset)
         self._graph = None
@@ -204,7 +204,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
         self.dataset.store.add_graph(self.graph)
         self._graph = None
 
-    def frame(self) -> Dataset | None:
+    def frame(self) -> None:
         """
         Finalize one frame in graphs stream.
 
