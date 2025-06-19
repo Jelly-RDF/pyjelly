@@ -316,15 +316,15 @@ def graphs_from_jelly(
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES:
-        yield parse_flat_triples_stream(frames=frames, options=options, store=store) # type: ignore[call-arg]
+        yield parse_flat_triples_stream(frames=frames, options=options, store=store)  # type: ignore[call-arg]
         return
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS:
-        yield parse_flat_quads_stream(frames=frames, options=options, store=store) # type: ignore[call-arg]
+        yield parse_flat_quads_stream(frames=frames, options=options, store=store)  # type: ignore[call-arg]
         return
 
     if options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_GRAPHS:
-        yield from parse_graph_stream(frames=frames, options=options, store=store) # type: ignore[call-arg]
+        yield from parse_graph_stream(frames=frames, options=options, store=store)  # type: ignore[call-arg]
         return
 
     logical_type_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
@@ -332,10 +332,7 @@ def graphs_from_jelly(
     raise NotImplementedError(msg)
 
 
-def parse_jelly_flat(
-    inp: IO[bytes],
-    sink: StatementSink
-) -> None:
+def parse_jelly_flat(inp: IO[bytes], sink: StatementSink) -> None:
     """
     Parse jelly file with FLAT physical type.
 
@@ -356,26 +353,22 @@ def parse_jelly_flat(
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        parse_flat_triples_stream(
-            frames=frames,
-            options=options,
-            graph=sink
-        )
+        parse_flat_triples_stream(frames=frames, options=options, graph=sink)
         return
 
-    if options.stream_types.physical_type in (jelly.PHYSICAL_STREAM_TYPE_QUADS,
-                                              jelly.PHYSICAL_STREAM_TYPE_GRAPHS):
+    if options.stream_types.physical_type in (
+        jelly.PHYSICAL_STREAM_TYPE_QUADS,
+        jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+    ):
         # a hack to bypass RDFLib wrapping dataset into graph before calling parse
         dataset = Dataset(sink.store)
         parse_flat_quads_stream(
-            frames=frames,
-            options=options,
-            dataset=dataset # type: ignore[arg-type]
+            frames=frames, options=options, dataset=dataset  # type: ignore[arg-type]
         )
         return
     physical_type_name = jelly.PhysicalStreamType.Name(
         options.stream_types.physical_type
-        )
+    )
     msg = f"the stream type {physical_type_name} is not supported "
     raise NotImplementedError(msg)
 
