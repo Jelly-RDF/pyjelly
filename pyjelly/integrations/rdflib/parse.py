@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import Callable, IO, Any, Optional
+from typing import IO, Any, Callable
 from typing_extensions import Never, override
 
 import rdflib
@@ -165,7 +165,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 
     """
 
-    _graph_id: Optional[str]
+    _graph_id: str | None
 
     def __init__(
         self,
