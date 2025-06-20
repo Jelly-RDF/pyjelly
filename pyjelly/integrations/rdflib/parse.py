@@ -330,9 +330,8 @@ def graphs_from_jelly(
 
 def parse_jelly_flat(
     inp: IO[bytes],
-    sink: Graph,
-    lambda_graph: Callable[[Any, Any], Graph],
-    lambda_dataset: Callable[[Any], Dataset],
+    graph_factory: Callable[[], Graph],
+    dataset_factory: Callable[[], Dataset],
 ) -> Any | Dataset | Graph:
     """
     Parse jelly file with FLAT physical type.
@@ -342,9 +341,8 @@ def parse_jelly_flat(
 
     Args:
         inp (IO[bytes]): input jelly buffered binary stream
-        sink (Graph): RDFLib Graph
-        lambda_graph (Callable): lambda to construct a Graph
-        lambda_dataset (Callable): lambda to construct a Dataset
+        graph_factory (Callable): lambda to construct a Graph
+        dataset_factory (Callable): lambda to construct a Dataset
 
     Raises:
         NotImplementedError: if physical type is not supported
@@ -356,7 +354,7 @@ def parse_jelly_flat(
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        graph = lambda_graph(sink.store, sink.identifier)
+        graph = graph_factory()
         parse_flat_triples_stream(frames=frames, options=options, graph=graph)
         return graph
 
@@ -364,7 +362,7 @@ def parse_jelly_flat(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        dataset = lambda_dataset(sink.store)
+        dataset = dataset_factory()
         parse_flat_quads_stream(
             frames=frames,
             options=options,
@@ -397,9 +395,6 @@ class RDFLibJellyParser(RDFLibParser):
             raise TypeError(msg)
         parse_jelly_flat(
             inp,
-            sink=sink,
-            lambda_graph=lambda store, identifier: Graph(
-                store=store, identifier=identifier
-            ),
-            lambda_dataset=lambda store: Dataset(store=store),
+            graph_factory=lambda: Graph(store=sink.store, identifier=sink.identifier),
+            dataset_factory=lambda: Dataset(store=sink.store),
         )
