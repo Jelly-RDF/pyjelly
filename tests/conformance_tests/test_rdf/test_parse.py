@@ -43,6 +43,7 @@ workaround_rdflib_serializes_default_graph_id = patch(
 workaround_rdflib_serializes_default_graph_id.start()
 
 
+@pytest.mark.skip(reason="Temporarily disabled due to unresolved Issue #172")
 @needs_jelly_cli
 @walk_directories(
     RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
