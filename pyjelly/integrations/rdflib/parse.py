@@ -122,7 +122,10 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
         """
         Finalize one frame in quads stream.
 
-        TODO: what should happen here?
+        If grouped parsing -- construct a new dataset per frame.
+        TODO: replace the dataset parameter with a dataset factory
+
+        If flat parsing -- use the same dataset.
 
         """
 
@@ -244,6 +247,7 @@ def parse_flat_quads_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         dataset (Dataset): RDFLib dataset
+        TODO: parameter specifying whether this is flat or grouped parsing.
 
     Returns:
         Dataset: RDFLib dataset (one!)
@@ -273,6 +277,7 @@ def parse_graph_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         dataset: RDFLib dataset. Defaults to "default".
+        TODO: parameter specifying whether this is flat or grouped parsing.
 
     Yields:
         Generator[Graph]: returns one graph per frame
