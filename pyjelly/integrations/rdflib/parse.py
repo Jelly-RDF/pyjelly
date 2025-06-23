@@ -223,7 +223,8 @@ def parse_flat_triples_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         graph_factory (Callable): Lambda to construct a graph
-        parsing_mode (ParsingMode): FLAT/GROUPED
+        parsing_mode (ParsingMode): specifies whether this is
+            a flat or grouped parsing.
 
     Yields:
         Generator[Graph]: RDFLib Graph(s)
@@ -255,7 +256,8 @@ def parse_flat_quads_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         dataset_factory (Callable): Lambda to construct a dataset
-        parsing_mode: parameter specifying whether this is flat or grouped parsing.
+        parsing_mode (ParsingMode): specifies whether this is
+            a flat or grouped parsing.
 
     Yields:
         Generator[Dataset]: RDFLib dataset(s)
