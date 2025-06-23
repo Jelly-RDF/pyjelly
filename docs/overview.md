@@ -26,11 +26,6 @@ pyjelly is suitable for:
 
 pyjelly supports all [*physical* stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}) including `TRIPLES`, `QUADS` and `GRAPHS`.
 
-However, only the following [*logical* stream types]({{ proto_link("specification/serialization/#logical-stream-types") }}) are currently supported: `UNSPECIFIED`, `FLAT_TRIPLES`, `FLAT_QUADS`.
-
-!!! warning
-    Grouped logical stream types are **not yet supported**. Frames with grouped logical types will raise an error at parse time.
-
 See the full [stream type matrix]({{ proto_link("serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
 
 ### Conformance to the Jelly protocol
