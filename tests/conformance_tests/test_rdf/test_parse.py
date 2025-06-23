@@ -8,7 +8,7 @@ from rdflib import Dataset, Graph, Literal, Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
-from pyjelly.integrations.rdflib.parse import graphs_from_jelly
+from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
@@ -43,7 +43,6 @@ workaround_rdflib_serializes_default_graph_id = patch(
 workaround_rdflib_serializes_default_graph_id.start()
 
 
-@pytest.mark.skip(reason="Temporarily disabled due to unresolved Issue #172")
 @needs_jelly_cli
 @walk_directories(
     RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
@@ -58,7 +57,11 @@ def test_parses(path: Path) -> None:
     output_dir.mkdir(exist_ok=True)
     with input_filename.open("rb") as input_file:
         for frame_no, graph in enumerate(
-            graphs_from_jelly(input_file, store=OrderedMemory())
+            parse_jelly_grouped(
+                input_file,
+                graph_factory=lambda: Graph(store=OrderedMemory()),
+                dataset_factory=lambda: Dataset(store=OrderedMemory()),
+            )
         ):
             extension = f"n{'quads' if isinstance(graph, Dataset) else 'triples'}"
             output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"

@@ -67,8 +67,9 @@ def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
 
 
 class Adapter(metaclass=ABCMeta):
-    def __init__(self, options: ParserOptions) -> None:
+    def __init__(self, options: ParserOptions, is_grouped_parsing: bool) -> None:
         self.options = options
+        self.is_grouped_parsing = is_grouped_parsing
 
     # Obligatory abstract methods--all adapters must implement these
     @abstractmethod
@@ -161,7 +162,8 @@ class Decoder:
         for row_owner in frame.rows:
             row = getattr(row_owner, row_owner.WhichOneof("row"))
             self.decode_row(row)
-        return self.adapter.frame()
+        if self.adapter.is_grouped_parsing:
+            return self.adapter.frame()
 
     def decode_row(self, row: Any) -> Any | None:
         """
