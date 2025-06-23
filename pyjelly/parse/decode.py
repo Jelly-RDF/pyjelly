@@ -2,12 +2,28 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Sequence
+from enum import Enum, auto
 from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
 
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
+
+
+class ParsingMode(Enum):
+    """
+    Specifies how jelly frames should be treated.
+
+    Modes:
+    FLAT
+        Yield all frames as one Graph or Dataset.
+    GROUPED
+        Yield one Graph/Dataset per frame (grouped parsing).
+    """
+
+    FLAT = auto()
+    GROUPED = auto()
 
 
 class ParserOptions(NamedTuple):
@@ -67,8 +83,11 @@ def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
 
 
 class Adapter(metaclass=ABCMeta):
-    def __init__(self, options: ParserOptions) -> None:
+    def __init__(
+        self, options: ParserOptions, parsing_mode: ParsingMode = ParsingMode.FLAT
+    ) -> None:
         self.options = options
+        self.parsing_mode = parsing_mode
 
     # Obligatory abstract methods--all adapters must implement these
     @abstractmethod
@@ -161,7 +180,9 @@ class Decoder:
         for row_owner in frame.rows:
             row = getattr(row_owner, row_owner.WhichOneof("row"))
             self.decode_row(row)
-        return self.adapter.frame()
+        if self.adapter.parsing_mode is ParsingMode.GROUPED:
+            return self.adapter.frame()
+        return None
 
     def decode_row(self, row: Any) -> Any | None:
         """
