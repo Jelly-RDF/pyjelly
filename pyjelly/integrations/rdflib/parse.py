@@ -12,7 +12,7 @@ from rdflib.parser import Parser as RDFLibParser
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.options import StreamTypes
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
+from pyjelly.parse.decode import Adapter, Decoder, ParserOptions, ParsingMode
 from pyjelly.parse.ioutils import get_options_and_frames
 
 
@@ -87,12 +87,12 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
         self,
         options: ParserOptions,
         graph_factory: Callable[[], Graph],
-        is_grouped_parsing: bool,
+        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(options=options, is_grouped_parsing=is_grouped_parsing)
+        super().__init__(options=options, parsing_mode=parsing_mode)
         self.graph = graph_factory()
         self.graph_factory = graph_factory
-        self.is_grouped_parsing = is_grouped_parsing
+        self.parsing_mode = parsing_mode
 
     @override
     def triple(self, terms: Iterable[Any]) -> Any:
@@ -121,9 +121,9 @@ class RDFLibQuadsBaseAdapter(RDFLibAdapter):
         self,
         options: ParserOptions,
         dataset_factory: Callable[[], Dataset],
-        is_grouped_parsing: bool,
+        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(options=options, is_grouped_parsing=is_grouped_parsing)
+        super().__init__(options=options, parsing_mode=parsing_mode)
         self.dataset = dataset_factory()
         self.dataset_factory = dataset_factory
 
@@ -178,12 +178,12 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
         self,
         options: ParserOptions,
         dataset_factory: Callable[[], Dataset],
-        is_grouped_parsing: bool,
+        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
         super().__init__(
             options=options,
             dataset_factory=dataset_factory,
-            is_grouped_parsing=is_grouped_parsing,
+            parsing_mode=parsing_mode,
         )
         self._graph_id = None
 
@@ -214,7 +214,7 @@ def parse_flat_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     graph_factory: Callable[[], Graph],
-    is_grouped_parsing: bool,
+    parsing_mode: ParsingMode = ParsingMode.FLAT,
 ) -> Generator[Graph]:
     """
     Parse flat triple stream.
@@ -223,13 +223,14 @@ def parse_flat_triples_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         graph_factory (Callable): Lambda to construct a graph
+        parsing_mode (ParsingMode): FLAT/GROUPED
 
     Yields:
         Generator[Graph]: RDFLib Graph(s)
 
     """
     adapter = RDFLibTriplesAdapter(
-        options, graph_factory=graph_factory, is_grouped_parsing=is_grouped_parsing
+        options, graph_factory=graph_factory, parsing_mode=parsing_mode
     )
     decoder = Decoder(adapter=adapter)
     for frame in frames:
@@ -237,7 +238,7 @@ def parse_flat_triples_stream(
         if g is not None:
             yield g
 
-    if not is_grouped_parsing:
+    if parsing_mode is ParsingMode.FLAT:
         yield adapter.graph
 
 
@@ -245,7 +246,7 @@ def parse_flat_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     dataset_factory: Callable[[], Dataset],
-    is_grouped_parsing: bool,
+    parsing_mode: ParsingMode = ParsingMode.FLAT,
 ) -> Generator[Dataset]:
     """
     Parse flat quads stream.
@@ -254,7 +255,7 @@ def parse_flat_quads_stream(
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
         dataset_factory (Callable): Lambda to construct a dataset
-        is_grouped_parsing: parameter specifying whether this is flat or grouped parsing.
+        parsing_mode: parameter specifying whether this is flat or grouped parsing.
 
     Yields:
         Generator[Dataset]: RDFLib dataset(s)
@@ -268,7 +269,7 @@ def parse_flat_quads_stream(
     adapter = adapter_class(
         options=options,
         dataset_factory=dataset_factory,
-        is_grouped_parsing=is_grouped_parsing,
+        parsing_mode=parsing_mode,
     )
     decoder = Decoder(adapter=adapter)
     for frame in frames:
@@ -276,7 +277,7 @@ def parse_flat_quads_stream(
         if ds is not None:
             yield ds
 
-    if not is_grouped_parsing:
+    if parsing_mode is ParsingMode.FLAT:
         yield adapter.dataset
 
 
@@ -310,7 +311,7 @@ def parse_jelly_grouped(
             frames=frames,
             options=options,
             graph_factory=graph_factory,
-            is_grouped_parsing=True,
+            parsing_mode=ParsingMode.GROUPED,
         )
         return
 
@@ -322,7 +323,7 @@ def parse_jelly_grouped(
             frames=frames,
             options=options,
             dataset_factory=dataset_factory,
-            is_grouped_parsing=True,
+            parsing_mode=ParsingMode.GROUPED,
         )
         return
 
@@ -361,7 +362,7 @@ def parse_jelly_flat(
                 frames=frames,
                 options=options,
                 graph_factory=graph_factory,
-                is_grouped_parsing=False,
+                parsing_mode=ParsingMode.FLAT,
             )
         )
 
@@ -374,7 +375,7 @@ def parse_jelly_flat(
                 frames=frames,
                 options=options,
                 dataset_factory=dataset_factory,
-                is_grouped_parsing=False,
+                parsing_mode=ParsingMode.FLAT,
             )
         )
     physical_type_name = jelly.PhysicalStreamType.Name(
