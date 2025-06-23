@@ -210,7 +210,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
         self._graph_id = None
 
 
-def parse_flat_triples_stream(
+def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     graph_factory: Callable[[], Graph],
@@ -243,7 +243,7 @@ def parse_flat_triples_stream(
         yield adapter.graph
 
 
-def parse_flat_quads_stream(
+def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     dataset_factory: Callable[[], Dataset],
@@ -309,7 +309,7 @@ def parse_jelly_grouped(
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        yield from parse_flat_triples_stream(
+        yield from parse_triples_stream(
             frames=frames,
             options=options,
             graph_factory=graph_factory,
@@ -321,7 +321,7 @@ def parse_jelly_grouped(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        yield from parse_flat_quads_stream(
+        yield from parse_quads_stream(
             frames=frames,
             options=options,
             dataset_factory=dataset_factory,
@@ -360,7 +360,7 @@ def parse_jelly_flat(
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         return next(
-            parse_flat_triples_stream(
+            parse_triples_stream(
                 frames=frames,
                 options=options,
                 graph_factory=graph_factory,
@@ -373,7 +373,7 @@ def parse_jelly_flat(
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
         return next(
-            parse_flat_quads_stream(
+            parse_quads_stream(
                 frames=frames,
                 options=options,
                 dataset_factory=dataset_factory,

@@ -12,6 +12,16 @@ from pyjelly.parse.lookup import LookupDecoder
 
 
 class ParsingMode(Enum):
+    """
+    Specifies how jelly frames should be treated.
+
+    Modes:
+    FLAT
+        Yield all frames as one Graph or Dataset.
+    GROUPED
+        Yield one Graph/Dataset per frame (grouped parsing).
+    """
+
     FLAT = auto()
     GROUPED = auto()
 
