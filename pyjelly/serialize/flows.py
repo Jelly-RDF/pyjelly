@@ -41,6 +41,16 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
         return None
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
+        """
+        Create stream frame from flow content.
+
+        Notes:
+            Clears flow content after creating the frame.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame
+
+        """
         if not self:
             return None
         frame = jelly.RdfStreamFrame(rows=self)
@@ -93,6 +103,13 @@ class BoundedFrameFlow(FrameFlow):
 
     @override
     def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
+        """
+        Emit frame from flow if full.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame
+
+        """
         if len(self) >= self.frame_size:
             return self.to_stream_frame()
         return None
@@ -110,6 +127,14 @@ class GraphsFrameFlow(FrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
+        """
+        Emit current flow content (one graph) as jelly frame.
+
+        Returns:
+            jelly.RdfStreamFrame | None: jelly frame or none if
+                flow is empty.
+
+        """
         return self.to_stream_frame()
 
 
@@ -117,9 +142,18 @@ class DatasetsFrameFlow(FrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
 
     def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
+        """
+        Emit current flow content (dataset) as jelly frame.
+
+        Returns:
+            jelly.RdfStreamFrame | None: jelly frame or none if
+                flow is empty.
+
+        """
         return self.to_stream_frame()
 
 
+# TODO(Nastya): redo to match decoder
 FLOW_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
     jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
@@ -129,6 +163,19 @@ FLOW_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
 
 
 def flow_for_type(logical_type: jelly.LogicalStreamType) -> type[FrameFlow]:
+    """
+    Return flow based on logical type requested.
+
+    Args:
+        logical_type (jelly.LogicalStreamType): logical type requested.
+
+    Raises:
+        NotImplementedError: if logical type not supported.
+
+    Returns:
+        type[FrameFlow]: FrameFlow for respective logical type.
+
+    """
     try:
         return FLOW_DISPATCH[logical_type]
     except KeyError:

@@ -60,6 +60,13 @@ class Stream:
         )
 
     def infer_flow(self) -> FrameFlow:
+        """
+        Return flow based on the stream options provided.
+
+        Returns:
+            FrameFlow: initialised FrameFlow object.
+
+        """
         flow: FrameFlow
         if self.options.params.delimited:
             if self.options.logical_type != jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
@@ -79,11 +86,13 @@ class Stream:
         return flow
 
     def enroll(self) -> None:
+        """Initialize start of the stream."""
         if not self.enrolled:
             self.stream_options()
             self.enrolled = True
 
     def stream_options(self) -> None:
+        """Encode and append stream options row to the current flow."""
         self.flow.append(
             encode_options(
                 stream_types=self.stream_types,
@@ -93,6 +102,14 @@ class Stream:
         )
 
     def namespace_declaration(self, name: str, iri: str) -> None:
+        """
+        Add namespace declaration to jelly stream.
+
+        Args:
+            name (str): namespace prefix label
+            iri (str): namespace iri
+
+        """
         rows = encode_namespace_declaration(
             name=name,
             value=iri,
@@ -117,6 +134,19 @@ class Stream:
 
 
 def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
+    """
+    Give a Stream based on physical type specified.
+
+    Args:
+        physical_type (jelly.PhysicalStreamType): jelly stream physical type.
+
+    Raises:
+        NotImplementedError: if no stream for requested physical type is available.
+
+    Returns:
+        type[Stream]: jelly stream
+
+    """
     try:
         stream_cls = STREAM_DISPATCH[physical_type]
     except KeyError:
@@ -133,6 +163,21 @@ class TripleStream(Stream):
     default_delimited_flow_class: ClassVar = FlatTriplesFrameFlow
 
     def triple(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
+        """
+        Process one triple to Protobuf messages.
+
+        Note:
+            Adds new rows to the current flow and returns StreamFrame if
+            frame size conditions are met.
+
+        Args:
+            terms (Iterable[object]): RDF terms to encode.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
         new_rows = encode_triple(
             terms,
             term_encoder=self.encoder,
@@ -147,6 +192,17 @@ class QuadStream(Stream):
     default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
 
     def quad(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
+        """
+        Process one quad to Protobuf messages.
+
+        Args:
+            terms (Iterable[object]): terms to encode.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
         new_rows = encode_quad(
             terms,
             term_encoder=self.encoder,
@@ -165,6 +221,17 @@ class GraphStream(TripleStream):
         graph_id: object,
         graph: Iterable[Iterable[object]],
     ) -> Generator[jelly.RdfStreamFrame]:
+        """
+        Process one graph into a sequence of jelly frames.
+
+        Args:
+            graph_id (object): graph id (BN, Literal, iri, default)
+            graph (Iterable[Iterable[object]]): iterable of triples (graph's content)
+
+        Yields:
+            Generator[jelly.RdfStreamFrame]: jelly frames.
+
+        """
         [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
         kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
         kws: dict[Any, Any] = {kw_name: graph_node}
@@ -172,7 +239,7 @@ class GraphStream(TripleStream):
         graph_rows.append(start_row)
         self.flow.extend(graph_rows)
         for triple in graph:
-            if frame := self.triple(triple):
+            if frame := self.triple(triple):  # has frame slicing inside
                 yield frame
         end_row = jelly.RdfStreamRow(graph_end=jelly.RdfGraphEnd())
         self.flow.append(end_row)
