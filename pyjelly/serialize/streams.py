@@ -74,6 +74,7 @@ class Stream:
             else:
                 flow_class = self.default_delimited_flow_class
 
+            # TODO (Nastya): this if requires attention
             if self.options.logical_type in (
                 jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
                 jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,

@@ -84,7 +84,7 @@ class ManualFrameFlow(FrameFlow):
 @dataclass
 class BoundedFrameFlow(FrameFlow):
     """
-    Produces frames automatically when a fixed number of rows is reached.
+    Produce frames automatically when a fixed number of rows is reached.
 
     Used for delimited encoding (default mode).
     """
