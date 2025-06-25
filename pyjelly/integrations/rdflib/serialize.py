@@ -200,8 +200,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         Return an appropriate stream implementation for the given options.
 
-        TODO (Nastya): re-evaluate logical stream types here
-
         >>> graph_ser = RDFLibJellySerializer(Graph())
         >>> ds_ser = RDFLibJellySerializer(Dataset())
 
