@@ -11,6 +11,16 @@ from pyjelly.serialize.lookup import LookupEncoder
 
 
 def split_iri(iri_string: str) -> tuple[str, str]:
+    """
+    Split iri into prefix and name.
+
+    Args:
+        iri_string (str): full iri string.
+
+    Returns:
+        tuple[str, str]: iri's prefix and name.
+
+    """
     name = iri_string
     prefix = ""
     for sep in "#", "/":
@@ -47,6 +57,16 @@ class TermEncoder:
         self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
 
     def encode_iri(self, iri_string: str) -> RowsAnd[jelly.RdfIri]:
+        """
+        Encode iri.
+
+        Args:
+            iri_string (str): full iri in string format.
+
+        Returns:
+            RowsAnd[jelly.RdfIri]: extra rows and protobuf RdfIri message.
+
+        """
         prefix, name = split_iri(iri_string)
         if self.prefixes.lookup.max_size:
             prefix_entry_index = self.prefixes.encode_entry_index(prefix)
@@ -70,9 +90,27 @@ class TermEncoder:
         return term_rows, jelly.RdfIri(prefix_id=prefix_index, name_id=name_index)
 
     def encode_default_graph(self) -> RowsAnd[jelly.RdfDefaultGraph]:
+        """
+        Encode default graph.
+
+        Returns:
+            RowsAnd[jelly.RdfDefaultGraph]: empty extra rows and
+                default graph message.
+
+        """
         return (), jelly.RdfDefaultGraph()
 
     def encode_bnode(self, bnode: str) -> RowsAnd[str]:
+        """
+        Encode blank node (BN).
+
+        Args:
+            bnode (str): BN internal identifier in string format.
+
+        Returns:
+            RowsAnd[str]: empty extra rows and original BN string.
+
+        """
         return (), bnode
 
     def encode_literal(
@@ -82,6 +120,24 @@ class TermEncoder:
         language: str | None = None,
         datatype: str | None = None,
     ) -> RowsAnd[jelly.RdfLiteral]:
+        """
+        Encode literal.
+
+        Args:
+            lex (str): lexical form/literal value
+            language (str | None, optional): langtag. Defaults to None.
+            datatype (str | None, optional): data type if
+            it is a typed literal. Defaults to None.
+
+        Raises:
+            JellyConformanceError: if datatype specified while
+                datatable is not used.
+
+        Returns:
+            RowsAnd[jelly.RdfLiteral]: extra rows (i.e., datatype entries)
+                and RdfLiteral message.
+
+        """
         datatype_id = None
         term_rows: tuple[()] | tuple[jelly.RdfStreamRow] = ()
 
@@ -129,6 +185,19 @@ def encode_statement(
     term_encoder: TermEncoder,
     repeated_terms: dict[Slot, object],
 ) -> tuple[list[jelly.RdfStreamRow], dict[str, Any]]:
+    """
+    Encode a statement.
+
+    Args:
+        terms (Iterable[object]): original terms to encode
+        term_encoder (TermEncoder): encoder with lookup tables
+        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+
+    Returns:
+        tuple[list[jelly.RdfStreamRow], dict[str, Any]]:
+            extra rows to append and jelly terms.
+
+    """
     statement: dict[str, object] = {}
     rows: list[jelly.RdfStreamRow] = []
     for slot, term in zip(Slot, terms):
@@ -147,6 +216,18 @@ def encode_triple(
     term_encoder: TermEncoder,
     repeated_terms: dict[Slot, object],
 ) -> list[jelly.RdfStreamRow]:
+    """
+    Encode one triple.
+
+    Args:
+        terms (Iterable[object]): original terms to encode
+        term_encoder (TermEncoder): current encoder with lookup tables
+        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+
+    Returns:
+        list[jelly.RdfStreamRow]: list of rows to add to the current flow.
+
+    """
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(triple=jelly.RdfTriple(**statement))
     rows.append(row)
@@ -158,6 +239,18 @@ def encode_quad(
     term_encoder: TermEncoder,
     repeated_terms: dict[Slot, object],
 ) -> list[jelly.RdfStreamRow]:
+    """
+    Encode one quad.
+
+    Args:
+        terms (Iterable[object]): original terms to encode
+        term_encoder (TermEncoder): current encoder with lookup tables
+        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+
+    Returns:
+        list[jelly.RdfStreamRow]: list of messages to append to current flow.
+
+    """
     rows, statement = encode_statement(terms, term_encoder, repeated_terms)
     row = jelly.RdfStreamRow(quad=jelly.RdfQuad(**statement))
     rows.append(row)
@@ -169,6 +262,18 @@ def encode_namespace_declaration(
     value: str,
     term_encoder: TermEncoder,
 ) -> list[jelly.RdfStreamRow]:
+    """
+    Encode namespace declaration.
+
+    Args:
+        name (str): namespace prefix label
+        value (str): namespace iri
+        term_encoder (TermEncoder): current encoder
+
+    Returns:
+        list[jelly.RdfStreamRow]: list of messages to append to current flow.
+
+    """
     [*rows], iri = term_encoder.encode_iri(value)
     declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)
     row = jelly.RdfStreamRow(namespace=declaration)
@@ -181,6 +286,18 @@ def encode_options(
     stream_types: options.StreamTypes,
     params: options.StreamParameters,
 ) -> jelly.RdfStreamRow:
+    """
+    Encode stream options to ProtoBuf message.
+
+    Args:
+        lookup_preset (options.LookupPreset): lookup tables options
+        stream_types (options.StreamTypes): physical and logical types
+        params (options.StreamParameters): other params.
+
+    Returns:
+        jelly.RdfStreamRow: encoded stream options row
+
+    """
     return jelly.RdfStreamRow(
         options=jelly.RdfStreamOptions(
             stream_name=params.stream_name,

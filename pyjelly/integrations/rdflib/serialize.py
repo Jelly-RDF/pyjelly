@@ -23,6 +23,17 @@ from pyjelly.serialize.streams import (
 
 class RDFLibTermEncoder(TermEncoder):
     def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+        """
+        Encode term based on its RDFLib object.
+
+        Args:
+            term (object): term to encode
+            slot (Slot): its place in statement.
+
+        Returns:
+            RowsAndTerm: encoded extra rows and a jelly term to encode
+
+        """
         if slot is Slot.graph and term == DATASET_DEFAULT_GRAPH_ID:
             return self.encode_default_graph()
 
@@ -60,6 +71,21 @@ def triples_stream_frames(
     stream: TripleStream,
     data: Graph | Dataset,
 ) -> Generator[jelly.RdfStreamFrame]:
+    """
+    Serialize a Graph/Dataset into jelly frames.
+
+    Args:
+        stream (TripleStream): stream that specifies triples processing
+        data (Graph | Dataset): Graph/Dataset to serialize.
+
+    Notes:
+        if Dataset is given, its graphs are unpacked and iterated over
+        if flow is GraphsFrameFlow, emits a frame per graph.
+
+    Yields:
+        Generator[jelly.RdfStreamFrame]: jelly frames.
+
+    """
     stream.enroll()
     if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
@@ -68,6 +94,7 @@ def triples_stream_frames(
         for terms in graph:
             if frame := stream.triple(terms):
                 yield frame
+        # this part turns each graph to a frame for graphs logical type
         if frame := stream.flow.frame_from_graph():
             yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -79,6 +106,20 @@ def quads_stream_frames(
     stream: QuadStream,
     data: Dataset,
 ) -> Generator[jelly.RdfStreamFrame]:
+    """
+    Serialize a Dataset into jelly frames.
+
+    Notes:
+        Emits one frame per dataset if flow is of DatasetsFrameFlow.
+
+    Args:
+        stream (QuadStream): stream that specifies quads processing
+        data (Dataset): Dataset to serialize.
+
+    Yields:
+        Generator[jelly.RdfStreamFrame]: jelly frames
+
+    """
     assert isinstance(data, Dataset)
     stream.enroll()
     if stream.options.params.namespace_declarations:
@@ -97,6 +138,21 @@ def graphs_stream_frames(
     stream: GraphStream,
     data: Dataset,
 ) -> Generator[jelly.RdfStreamFrame]:
+    """
+    Serialize a Dataset into jelly frames as a stream of graphs.
+
+    Notes:
+        If flow of DatasetsFrameFlow type, the whole dataset
+        will be encoded into one frame.
+
+    Args:
+        stream (GraphStream): stream that specifies graphs processing
+        data (Dataset): Dataset to serialize.
+
+    Yields:
+        Generator[jelly.RdfStreamFrame]: jelly frames
+
+    """
     assert isinstance(data, Dataset)
     stream.enroll()
     if stream.options.params.namespace_declarations:
@@ -171,6 +227,18 @@ class RDFLibJellySerializer(RDFLibSerializer):
         options: SerializerOptions | None = None,
         **unused: Any,
     ) -> None:
+        """
+        Serialize self.store content to Jelly format.
+
+        Args:
+            out (IO[bytes]): output buffered writer
+            stream (Stream | None, optional): Jelly stream object. Defaults to None.
+            options (SerializerOptions | None, optional): Serializer options
+                if defined beforehand, e.g., read from a separate file.
+                Defaults to None.
+            **unused(Any): unused args for RDFLib serialize
+
+        """
         if options is None:
             options = self.guess_options()
         if stream is None:
