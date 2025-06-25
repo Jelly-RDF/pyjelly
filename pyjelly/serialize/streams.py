@@ -120,6 +120,20 @@ class Stream:
 
     @classmethod
     def for_rdflib(cls, options: SerializerOptions | None = None) -> Stream:
+        """
+        Initialize stream with RDFLib encoder.
+
+        Args:
+            options (SerializerOptions | None, optional): Stream options.
+                Defaults to None.
+
+        Raises:
+            TypeError: if Stream is passed, and not a Stream for specific physical type.
+
+        Returns:
+            Stream: initialized stream with RDFLib encoder.
+
+        """
         if cls is Stream:
             msg = "Stream is an abstract base class, use a subclass instead"
             raise TypeError(msg)
