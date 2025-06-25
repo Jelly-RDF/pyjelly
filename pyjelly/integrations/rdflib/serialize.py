@@ -200,6 +200,8 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         Return an appropriate stream implementation for the given options.
 
+        TODO (Nastya): re-evaluate logical stream types here
+
         >>> graph_ser = RDFLibJellySerializer(Graph())
         >>> ds_ser = RDFLibJellySerializer(Dataset())
 
@@ -207,7 +209,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
         <class 'pyjelly.serialize.streams.TripleStream'>
         >>> type(ds_ser.guess_stream(ds_ser.guess_options()))
         <class 'pyjelly.serialize.streams.QuadStream'>
-        TODO: re-evaluate logical stream types here
         """
         stream_cls: type[Stream]
         if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
