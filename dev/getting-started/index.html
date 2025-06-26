@@ -390,6 +390,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#streaming-graph-parser" class="md-nav__link">
+    <span class="md-ellipsis">
+      Streaming graph parser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#file-extension-support" class="md-nav__link">
     <span class="md-ellipsis">
       File extension support
@@ -670,6 +679,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#streaming-graph-parser" class="md-nav__link">
+    <span class="md-ellipsis">
+      Streaming graph parser
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#file-extension-support" class="md-nav__link">
     <span class="md-ellipsis">
       File extension support
@@ -737,13 +755,40 @@
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">o</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>RDFLib will reconstruct the graph from the serialized Jelly stream.</p>
+<h3 id="streaming-graph-parser">Streaming graph parser</h3>
+<p>To process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">Graph</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># libraries to load example jelly stream data</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">cast</span><span class="p">,</span> <span class="n">IO</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_jelly_grouped</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;https://w3id.org/riverbench/datasets/dbpedia-live/dev/files/jelly_10K.jelly.gz&quot;</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="c1"># load, uncompress .gz file, and pass to jelly parser</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="k">with</span> <span class="p">(</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">,</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">cast</span><span class="p">(</span><span class="n">IO</span><span class="p">[</span><span class="nb">bytes</span><span class="p">],</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">resp</span><span class="p">))</span> <span class="k">as</span> <span class="n">jelly_stream</span><span class="p">,</span>
+</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">):</span>
+</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    <span class="n">graphs</span> <span class="o">=</span> <span class="n">parse_jelly_grouped</span><span class="p">(</span>
+</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>        <span class="n">jelly_stream</span><span class="p">,</span>
+</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>        <span class="n">graph_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">Graph</span><span class="p">(),</span>
+</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>        <span class="n">dataset_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">(),</span>
+</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>    <span class="p">)</span>
+</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">graph</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">graphs</span><span class="p">):</span>
+</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Graph </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> in the stream has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span><span class="si">}</span><span class="s2"> triples&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Because <code>parse_jelly_grouped</code> returns a generator, each iteration receives <strong>one</strong> graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.</p>
 <h3 id="file-extension-support">File extension support</h3>
 <p>You can generally omit the <code>format="jelly"</code> parameter if the file ends in <code>.jelly</code> – RDFLib will auto-detect the format:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">g</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;foaf.jelly&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">g</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;foaf.jelly&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -771,7 +816,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 12, 2025 21:36:35">June 12, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="June 26, 2025 11:03:39">June 26, 2025</span>
   </span>
 
     
