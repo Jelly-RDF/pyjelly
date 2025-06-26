@@ -33,6 +33,14 @@ To load RDF data from a `.jelly` file:
 
 RDFLib will reconstruct the graph from the serialized Jelly stream.
 
+### Streaming graph parser
+
+To process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph:
+
+{{ code_example('rdflib/04_parse_grouped.py') }}
+
+Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.
+
 ### File extension support
 
 You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
