@@ -37,7 +37,7 @@ RDFLib will reconstruct the graph from the serialized Jelly stream.
 
 To process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph:
 
-{{ code_example('rdflib/03_parse_grouped.py') }}
+{{ code_example('rdflib/04_parse_grouped.py') }}
 
 Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.
 
@@ -45,7 +45,7 @@ Because `parse_jelly_grouped` returns a generator, each iteration receives **one
 
 You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
 
-{{ code_example('rdflib/04_parse_autodetect.py') }}
+{{ code_example('rdflib/03_parse_autodetect.py') }}
 
 !!! warning 
 

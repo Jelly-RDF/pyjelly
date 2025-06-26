@@ -19,5 +19,5 @@ with (
         graph_factory=lambda: Graph(),
         dataset_factory=lambda: Dataset(),
     )
-    for graph in graphs:
-        print(f"Number of triples in graph: {len(graph)}")
+    for i, graph in enumerate(graphs):
+        print(f"Graph {i} in the stream has {len(graph)} triples")
