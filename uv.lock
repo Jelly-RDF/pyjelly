@@ -1348,7 +1348,7 @@ types = [
 
 [package.metadata]
 requires-dist = [
-    { name = "protobuf", specifier = ">=5.29.3" },
+    { name = "protobuf", specifier = ">=5.29.3,<6.30.0" },
     { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -1375,7 +1375,7 @@ profiling = [
     { name = "memray", specifier = ">=1.16.0" },
     { name = "scalene", specifier = ">=1.5.51" },
 ]
-protoc = [{ name = "grpcio-tools", marker = "implementation_name != 'pypy'", specifier = ">=1.71.0" }]
+protoc = [{ name = "grpcio-tools", marker = "implementation_name != 'pypy'", specifier = ">=1.71.0,<1.71.2" }]
 test = [
     { name = "detect-test-pollution", specifier = ">=1.2.0" },
     { name = "hypothesis", specifier = ">=6.131.0" },

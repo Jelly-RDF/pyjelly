@@ -32,7 +32,7 @@ classifiers = [
 keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
 dependencies = [
-    "protobuf>=5.29.3",
+    "protobuf>=5.29.3,<6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
 
@@ -57,7 +57,7 @@ jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 [dependency-groups]
 dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
 # grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
-protoc = ["grpcio-tools>=1.71.0; implementation_name != 'pypy'"]
+protoc = ["grpcio-tools>=1.71.0, <1.71.2; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
 test = [
     "detect-test-pollution>=1.2.0",
