@@ -162,11 +162,11 @@ def parse_triples_stream(
     )
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        g = decoder.decode_frame(frame)
-        if g is not None:
-            yield g
+        if parsing_mode is ParsingMode.FLAT:
+            for _ in decoder.iter_rows(frame):
+                yield from adapter.statement_sink
         else:
-            yield from adapter.statement_sink
+            yield decoder.decode_frame(frame)
     return
 
 
@@ -204,11 +204,11 @@ def parse_quads_stream(
     )
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        ds = decoder.decode_frame(frame)
-        if ds is not None:
-            yield ds
+        if parsing_mode is ParsingMode.FLAT:
+            for _ in decoder.iter_rows(frame):
+                yield from adapter.statement_sink
         else:
-            yield from adapter.statement_sink
+            yield decoder.decode_frame(frame)
     return
 
 
