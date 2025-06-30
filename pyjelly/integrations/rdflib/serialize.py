@@ -1,13 +1,13 @@
 # ruff: noqa: I001
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from functools import singledispatch
-from typing import Any, IO
+from typing import Any, IO, Optional
 from typing_extensions import override
 
 import rdflib
-from rdflib import Graph
+from rdflib import Graph, Literal, Namespace
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
@@ -20,7 +20,11 @@ from pyjelly.serialize.streams import (
     SerializerOptions,
     Stream,
     TripleStream,
-)  # ruff: enable
+)
+from pyjelly.options import StreamParameters
+from pyjelly.integrations.rdflib.parse import Triple, Quad
+
+# ruff: enable
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -303,3 +307,53 @@ def grouped_stream_to_file(
     """
     for frame in grouped_stream_to_frames(stream, **kwargs):
         write_delimited(frame, output_file)
+
+
+def flat_stream_to_frames(
+    statements: Generator[Triple | Quad],
+    options: Optional[SerializerOptions] = None,
+) -> Generator[jelly.RdfStreamFrame]:
+    """
+    Transform Triple or Quad events into Jelly flat mode frames.
+
+    Args:
+        statements (Generator[Triple | Quad]): statements to serialize.
+        options (SerializerOptions | None, optional): stream options. If omitted, guessed from first statement.
+
+    Yields:
+        Generator[jelly.RdfStreamFrame]: produced jelly frames.
+    """
+    stream = None
+    for stmt in statements:
+        if stream is None:
+            if options is None:
+                options = guess_options(stmt)  # type: ignore[arg-type]
+            stream = guess_stream(options, stmt)  # type: ignore[arg-type]
+
+        sink = Graph()
+        if isinstance(stmt, Triple):
+            sink.add((stmt.s, stmt.p, stmt.o))
+        elif isinstance(stmt, Quad):
+            sink.add((stmt.s, stmt.p, stmt.o, stmt.g))  # type: ignore[arg-type]
+        yield from stream_frames(stream, sink)
+
+    if stream and (end := stream.flow.to_stream_frame()):
+        yield end
+
+
+def flat_stream_to_file(
+    statements: Generator[Triple | Quad],
+    output_file: IO[bytes],
+    options: SerializerOptions | None = None,
+) -> None:
+    """
+    Write Triple or Quad events to a binary file in Jelly flat format.
+
+    Args:
+        statements (Generator[Triple | Quad]): events/statements to serialize.
+        output_file (IO[bytes]): open binary file handle.
+        options (SerializerOptions | None, optional): stream options to use. If omitted, inferred from the first statement.
+    """
+    for frame in flat_stream_to_frames(statements, options):
+        write_delimited(frame, output_file)
+    output_file.flush()
