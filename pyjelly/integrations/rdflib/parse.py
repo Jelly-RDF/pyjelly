@@ -14,13 +14,24 @@ from rdflib.parser import Parser as RDFLibParser
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.options import StreamTypes
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions, ParsingMode
+from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
 GraphName = Union[rdflib.URIRef, rdflib.BNode, str]
 
 
 class Triple(tuple[Node, Node, Node]):
+    """
+    Describe RDFLib triple.
+
+    Args:
+        tuple (Node, Node, Node): s/p/o tuple of RDFLib Nodes.
+
+    Returns:
+        Triple: triple as tuple.
+
+    """
+
     __slots__ = ()
 
     def __new__(cls, s: Node, p: Node, o: Node) -> Self:
@@ -45,8 +56,7 @@ class Quad(tuple[Node, Node, Node, GraphName]):
 
     Args:
         tuple (Node, Node, Node, GraphName):
-            a tuple of RDFLib nodes and a GraphName,
-            if any
+            s/p/o/g as a tuple of RDFLib nodes and a GraphName,
 
     Returns:
         Quad: quad as tuple.
@@ -79,6 +89,18 @@ Statement = Union[Triple, Quad]
 
 
 class Prefix(tuple[str, rdflib.URIRef]):
+    """
+    Describe RDF Prefix(i.e, namespace declaration).
+
+    Args:
+        tuple (str, rdflib.URIRef): expects prefix as a string,
+            and full namespace URI as Rdflib.URIRef.
+
+    Returns:
+        Prefix: prefix as tuple(prefix, iri).
+
+    """
+
     __slots__ = ()
 
     def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
@@ -98,7 +120,7 @@ class RDFLibAdapter(Adapter):
     RDFLib adapter class, is extended by triples and quads implementations.
 
     Args:
-        Adapter (_type_): abstract adapter class
+        Adapter (): abstract adapter class
 
     """
 
@@ -164,10 +186,8 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     def __init__(
         self,
         options: ParserOptions,
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(options=options, parsing_mode=parsing_mode)
-        self.parsing_mode = parsing_mode
+        super().__init__(options=options)
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
@@ -175,12 +195,8 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
 
 
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(
-        self,
-        options: ParserOptions,
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
-    ) -> None:
-        super().__init__(options=options, parsing_mode=parsing_mode)
+    def __init__(self, options: ParserOptions) -> None:
+        super().__init__(options=options)
 
 
 class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
@@ -188,7 +204,7 @@ class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
     Extended RDFLib adapter for the QUADS physical type.
 
     Args:
-        RDFLibQuadsBaseAdapter (_type_): base quads adapter
+        RDFLibQuadsBaseAdapter (RDFLibAdapter): base quads adapter
             (shared with graphs physical type)
 
     """
@@ -205,7 +221,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     Notes: introduces graph start/end, checks if graph exists.
 
     Args:
-        RDFLibQuadsBaseAdapter (_type_): base adapter for quads management.
+        RDFLibQuadsBaseAdapter (RDFLibAdapter): base adapter for quads management.
 
     Raises:
         JellyConformanceError: if no graph_start was encountered
@@ -252,8 +268,9 @@ def parse_triples_stream(
         options (ParserOptions): stream options
 
     Yields:
-        Generator[Iterable[Statement | Prefix]]:
-            Generator of statements per frame.
+        Generator[Iterable[Triple | Prefix]]:
+            Generator of iterables of Triple or Prefix objects,
+            one iterable per frame.
 
     """
     adapter = RDFLibTriplesAdapter(options)
@@ -275,8 +292,9 @@ def parse_quads_stream(
         options (ParserOptions): stream options
 
     Yields:
-        Generator[Iterable[Statement | Prefix]]:
-            Generator of statements per frame.
+        Generator[Iterable[Quad | Prefix]]:
+            Generator of iterables of Quad or Prefix objects,
+            one iterable per frame.
 
     """
     adapter_class: type[RDFLibQuadsBaseAdapter]
@@ -413,16 +431,14 @@ def parse_jelly_flat(
         NotImplementedError: if physical type is not supported
 
     Yields:
-        Generator[Iterable[Statement | Prefix]]: Generator of stream events
+        Generator[Statement | Prefix]: Generator of stream events
 
     """
     if not frames or not options:
         options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        for triples in parse_triples_stream(
-            frames=frames, options=options
-        ):
+        for triples in parse_triples_stream(frames=frames, options=options):
             yield from triples
         return
     if options.stream_types.physical_type in (
