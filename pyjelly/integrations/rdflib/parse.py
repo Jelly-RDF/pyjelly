@@ -243,8 +243,8 @@ def parse_quads_stream(
 
 def parse_jelly_grouped(
     inp: IO[bytes],
-    graph_factory: Callable[[], StatementSink],
-    dataset_factory: Callable[[], StatementSink],
+    graph_factory: Callable[[], StatementSink | Any],
+    dataset_factory: Callable[[], StatementSink | Any],
 ) -> Generator[Any] | Generator[StatementSink]:
     """
     Take jelly file and return generators based on the detected logical type.
@@ -253,8 +253,10 @@ def parse_jelly_grouped(
 
     Args:
         inp (IO[bytes]): input jelly buffered binary stream
-        graph_factory (Callable): lambda to construct a Graph
-        dataset_factory (Callable): lambda to construct a Dataset
+        graph_factory (Callable): lambda to construct a Graph,
+            must implement StatementSink interface
+        dataset_factory (Callable): lambda to construct a Dataset,
+            must implement StatementSink interface
 
     Raises:
         NotImplementedError: is raised if a logical type is not implemented
@@ -276,6 +278,13 @@ def parse_jelly_grouped(
         sink_factory = dataset_factory
         parsing_function = parse_quads_stream
     if sink_factory:
+        test_sink = sink_factory()
+        if not isinstance(test_sink, StatementSink):
+            msg = (
+                "factory must return StatementSink-compatible object, "
+                f"got {type(test_sink).__name__}"
+            )
+            raise TypeError(msg)
         for element in parsing_function(
             frames=frames,
             options=options,
