@@ -40,6 +40,19 @@ class Triple(tuple[Node, Node, Node]):
 
 
 class Quad(tuple[Node, Node, Node, GraphName]):
+    """
+    Describe RDFLib quad.
+
+    Args:
+        tuple (Node, Node, Node, GraphName):
+            a tuple of RDFLib nodes and a GraphName,
+            if any
+
+    Returns:
+        Quad: quad as tuple.
+
+    """
+
     __slots__ = ()
 
     def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
@@ -334,6 +347,7 @@ def parse_jelly_grouped(
                 else:
                     sink.add(graph_item)
             yield sink
+        return
     elif options.stream_types.physical_type in (
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
@@ -404,7 +418,7 @@ def parse_jelly_flat(
     inp: IO[bytes] | InputSource,
     frames: Iterable[jelly.RdfStreamFrame] | None = None,
     options: ParserOptions | None = None,
-) -> Generator[Iterable[Statement | Prefix], None, None]:
+) -> Generator[Iterable[Statement | Prefix]]:
     """
     Parse jelly file with FLAT physical type into a Generator of stream events.
 
