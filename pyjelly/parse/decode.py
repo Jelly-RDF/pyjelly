@@ -184,18 +184,6 @@ class Decoder:
             ):
                 yield decoded_row
 
-    def decode_frame(self, frame: jelly.RdfStreamFrame) -> Any:
-        """
-        Decode a frame to custom object based on adapter implementation.
-
-        Args:
-            frame (jelly.RdfStreamFrame): jelly frame
-        Returns:
-            Any: custom obj based on adapter logic
-
-        """
-        yield self.iter_rows(frame)
-
     def decode_row(self, row: Any) -> Any | None:
         """
         Decode a row based on its type.

@@ -217,12 +217,8 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     def __init__(
         self,
         options: ParserOptions,
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(
-            options=options,
-            parsing_mode=parsing_mode,
-        )
+        super().__init__(options=options)
         self._graph_id = None
 
     @property
@@ -247,7 +243,6 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
-    parsing_mode: ParsingMode = ParsingMode.FLAT,
 ) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
@@ -255,28 +250,22 @@ def parse_triples_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
-        parsing_mode (ParsingMode): specifies whether this is
-            a flat or grouped parsing.
 
     Yields:
         Generator[Iterable[Statement | Prefix]]:
             Generator of statements per frame.
 
     """
-    adapter = RDFLibTriplesAdapter(options, parsing_mode=parsing_mode)
+    adapter = RDFLibTriplesAdapter(options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        if parsing_mode is ParsingMode.FLAT:
-            yield from decoder.iter_rows(frame)
-        else:
-            yield from decoder.decode_frame(frame)
+        yield decoder.iter_rows(frame)
     return
 
 
 def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
-    parsing_mode: ParsingMode = ParsingMode.FLAT,
 ) -> Generator[Iterable[Quad | Prefix]]:
     """
     Parse flat quads stream.
@@ -284,8 +273,6 @@ def parse_quads_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
-        parsing_mode (ParsingMode): specifies whether this is
-            a flat or grouped parsing.
 
     Yields:
         Generator[Iterable[Statement | Prefix]]:
@@ -297,16 +284,10 @@ def parse_quads_stream(
         adapter_class = RDFLibQuadsAdapter
     else:
         adapter_class = RDFLibGraphsAdapter
-    adapter = adapter_class(
-        options=options,
-        parsing_mode=parsing_mode,
-    )
+    adapter = adapter_class(options=options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        if parsing_mode is ParsingMode.FLAT:
-            yield from decoder.iter_rows(frame)
-        else:
-            yield from decoder.decode_frame(frame)
+        yield decoder.iter_rows(frame)
     return
 
 
@@ -338,7 +319,6 @@ def parse_jelly_grouped(
         for graph in parse_triples_stream(
             frames=frames,
             options=options,
-            parsing_mode=ParsingMode.GROUPED,
         ):
             sink = graph_factory()
             for graph_item in graph:
@@ -355,7 +335,6 @@ def parse_jelly_grouped(
         for dataset in parse_quads_stream(
             frames=frames,
             options=options,
-            parsing_mode=ParsingMode.GROUPED,
         ):
             sink = dataset_factory()
             for item in dataset:
@@ -400,7 +379,8 @@ def parse_jelly_to_graph(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        sink = dataset_factory()
+        quad_sink = dataset_factory()
+        sink = quad_sink
 
     for item in parse_jelly_flat(inp=inp, frames=frames, options=options):
         if isinstance(item, Prefix):
@@ -409,22 +389,21 @@ def parse_jelly_to_graph(
             sink.add(item)
         if isinstance(item, Quad):
             s, p, o, graph_name = item
-            context = sink.get_context(graph_name)
-            sink.add((s, p, o, context))
+            context = quad_sink.get_context(graph_name)
+            quad_sink.add((s, p, o, context))
     return sink
 
 
 def parse_jelly_flat(
-    inp: IO[bytes] | InputSource,
+    inp: IO[bytes],
     frames: Iterable[jelly.RdfStreamFrame] | None = None,
     options: ParserOptions | None = None,
-) -> Generator[Iterable[Statement | Prefix]]:
+) -> Generator[Statement | Prefix]:
     """
     Parse jelly file with FLAT physical type into a Generator of stream events.
 
     Args:
-        inp (IO[bytes] | InputSource): input jelly buffered binary stream
-            or raw InputSource if called as a standalone.
+        inp (IO[bytes]): input jelly buffered binary stream.
         frames (Iterable[jelly.RdfStreamFrame | None):
             jelly frames if read before.
         options (ParserOptions | None): stream options
@@ -438,26 +417,23 @@ def parse_jelly_flat(
 
     """
     if not frames or not options:
-        if hasattr(inp, "getByteStream"):
-            stream: IO[bytes] = inp.getByteStream()
-        else:
-            stream = inp
-        options, frames = get_options_and_frames(stream)
+        options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        yield from parse_triples_stream(
-            frames=frames, options=options, parsing_mode=ParsingMode.FLAT
-        )
+        for triples in parse_triples_stream(
+            frames=frames, options=options
+        ):
+            yield from triples
         return
     if options.stream_types.physical_type in (
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        yield from parse_quads_stream(
+        for quads in parse_quads_stream(
             frames=frames,
             options=options,
-            parsing_mode=ParsingMode.FLAT,
-        )
+        ):
+            yield from quads
         return
     physical_type_name = jelly.PhysicalStreamType.Name(
         options.stream_types.physical_type
