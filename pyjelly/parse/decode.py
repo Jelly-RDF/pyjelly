@@ -11,24 +11,6 @@ from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
 
-class Prefix(NamedTuple):
-    prefix: str
-    iri: Any
-
-
-class Triple(NamedTuple):
-    s: Any
-    p: Any
-    o: Any
-
-
-class Quad(NamedTuple):
-    s: Any
-    p: Any
-    o: Any
-    g: Any
-
-
 class ParsingMode(Enum):
     """
     Specifies how jelly frames should be treated.
