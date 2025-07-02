@@ -41,6 +41,14 @@ To process a Jelly stream frame-by-frame, loading each as a separate RDFLib grap
 
 Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.
 
+### Streaming event parser
+
+To process a Jelly stream as a stream of RDFLib triples:
+
+{{ code_example('rdflib/05_parse_flat.py') }}
+
+Here, `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
+
 ### File extension support
 
 You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:

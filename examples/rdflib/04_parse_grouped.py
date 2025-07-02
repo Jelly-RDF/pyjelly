@@ -7,7 +7,7 @@ from typing import cast, IO
 
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 
-url = "https://w3id.org/riverbench/datasets/dbpedia-live/dev/files/jelly_10K.jelly.gz"
+url = "https://w3id.org/riverbench/datasets/lod-katrina/dev/files/jelly_10K.jelly.gz"
 
 # load, uncompress .gz file, and pass to jelly parser
 with (
