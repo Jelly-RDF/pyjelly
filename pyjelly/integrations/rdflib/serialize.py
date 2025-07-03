@@ -62,7 +62,8 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 
 @singledispatch
 def stream_frames(
-    stream: Stream, data: Graph  # noqa: ARG001
+    stream: Stream,
+    data: Graph,  # noqa: ARG001
 ) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
