@@ -153,7 +153,6 @@ class DatasetsFrameFlow(FrameFlow):
         return self.to_stream_frame()
 
 
-# TODO(Nastya): issue #184
 FLOW_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
     jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
@@ -166,18 +165,23 @@ def flow_for_type(logical_type: jelly.LogicalStreamType) -> type[FrameFlow]:
     """
     Return flow based on logical type requested.
 
+    Note: uses base logical type for subtypes (i.e., SUBJECT_GRAPHS uses
+        the same flow as its base type GRAPHS).
+
     Args:
         logical_type (jelly.LogicalStreamType): logical type requested.
 
     Raises:
-        NotImplementedError: if logical type not supported.
+        NotImplementedError: if (base) logical stream type is not supported.
 
     Returns:
         type[FrameFlow]: FrameFlow for respective logical type.
 
     """
     try:
-        return FLOW_DISPATCH[logical_type]
+        base_logical_type_value = logical_type % 10
+        base_name = jelly.LogicalStreamType.Name(base_logical_type_value)
+        return FLOW_DISPATCH[getattr(jelly.LogicalStreamType, base_name)]
     except KeyError:
         msg = (
             "unsupported logical stream type: "
