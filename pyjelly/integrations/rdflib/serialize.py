@@ -61,7 +61,9 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 
 
 @singledispatch
-def stream_frames(stream: Stream, data: Graph) -> Generator[jelly.RdfStreamFrame]:  # noqa: ARG001
+def stream_frames(
+    stream: Stream, data: Graph  # noqa: ARG001
+) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
 
@@ -200,6 +202,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         Return an appropriate stream implementation for the given options.
 
+        Notes: if base(!) logical type is GRAPHS and Dataset is given,
+            initializes TripleStream
+
         >>> graph_ser = RDFLibJellySerializer(Graph())
         >>> ds_ser = RDFLibJellySerializer(Dataset())
 
@@ -209,9 +214,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         <class 'pyjelly.serialize.streams.QuadStream'>
         """
         stream_cls: type[Stream]
-        if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
-            self.store, Dataset
-        ):
+        if (
+            options.logical_type % 10
+        ) != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(self.store, Dataset):
             stream_cls = QuadStream
         else:
             stream_cls = TripleStream

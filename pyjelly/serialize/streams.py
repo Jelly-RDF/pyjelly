@@ -78,9 +78,12 @@ class Stream:
                 jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
                 jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
             ):
-                flow = flow_class(frame_size=self.options.frame_size)  # type: ignore[call-overload]
+                flow = flow_class(
+                    logical_type=self.options.logical_type,
+                    frame_size=self.options.frame_size,
+                )
             else:
-                flow = flow_class()
+                flow = flow_class(logical_type=self.options.logical_type)
         else:
             flow = ManualFrameFlow(logical_type=self.options.logical_type)
         return flow
