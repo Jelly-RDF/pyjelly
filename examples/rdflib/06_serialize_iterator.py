@@ -32,7 +32,7 @@ with (
     )
     # serialize the graph files into the output file, frame per graph
     for graph in graphs:
-        if frames := next(triples_stream_frames(stream, graph)):
+        if frames := next(triples_stream_frames(stream, graph)): # type: ignore[arg-type]
             write_delimited(frames, out)
 
 print("Done.")
