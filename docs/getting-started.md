@@ -50,3 +50,9 @@ You can generally omit the `format="jelly"` parameter if the file ends in `.jell
 !!! warning 
 
     Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in the `serialize()` or `parse()` call before.
+
+### Writing streamed data through iterator
+
+If you have a generator object containing grouped data/graphs through a stream or your own processes, you can write it into the `.jelly` format, like in the example: 
+
+{{ code_example('rdflib/06_parse_iterator.py')}}
