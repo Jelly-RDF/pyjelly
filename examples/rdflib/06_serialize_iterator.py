@@ -3,6 +3,7 @@ import urllib.request
 from pyjelly import jelly
 from pyjelly.options import StreamParameters
 from rdflib import Graph
+from pyjelly.integrations.rdflib.serialize import triples_stream_frames
 from pyjelly.serialize.streams import SerializerOptions, TripleStream
 from pyjelly.serialize.ioutils import write_delimited
 
@@ -29,17 +30,9 @@ with (
         for member in tar
         if member.name.endswith(".ttl") and (f := tar.extractfile(member)) is not None
     )
-    # parse the graph files into the output file, frame per graph
+    # serialize the graph files into the output file, frame per graph
     for graph in graphs:
-        for triple in graph:
-            stream.triple(triple)  # type: ignore[attr-defined]
-
-        # one frame for graph
-        if frame := stream.flow.to_stream_frame():
-            write_delimited(frame, out)
-
-    # flush the last remaining frame to the output file
-    if flush_frame := stream.flow.to_stream_frame():
-        write_delimited(flush_frame, out)
+        if frames := next(triples_stream_frames(stream, graph)):
+            write_delimited(frames, out)
 
 print("Done.")
