@@ -55,12 +55,15 @@ You can generally omit the `format="jelly"` parameter if the file ends in `.jell
 
 {{ code_example('rdflib/03_parse_autodetect.py') }}
 
+### Writing streamed data through iterator
+
+If you have a generator object containing data/graphs (ex. loaded through a stream), you can easily write it into the `.jelly` format, like in the example given in: 
+
+{{ code_example('rdflib/06_parse_iterator.py')}}
+
+In general, loading graphs through a stream allows for easier splits given by some logic (ex. you can manually group each graph by date), which may be useful for future tasks,
+while also preserving internal structure of each graph.
+
 !!! warning 
 
     Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in the `serialize()` or `parse()` call before.
-
-### Writing streamed data through iterator
-
-If you have a generator object containing grouped data/graphs through a stream or your own processes, you can write it into the `.jelly` format, like in the example: 
-
-{{ code_example('rdflib/06_parse_iterator.py')}}
