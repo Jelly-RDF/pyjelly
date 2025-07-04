@@ -49,20 +49,20 @@ To process a Jelly stream as a stream of RDFLib triples:
 
 Here, `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
 
-### File extension support
-
-You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
-
-{{ code_example('rdflib/03_parse_autodetect.py') }}
-
 ### Writing streamed data through iterator
 
 If you have a generator object containing data/graphs (ex. loaded through a stream), you can easily write it into the `.jelly` format, like in the example given in: 
 
 {{ code_example('rdflib/06_serialize_iterator.py')}}
 
-In general, loading graphs through a stream allows for easier splits given by some logic (ex. you can manually group each graph by date), which may be useful for future tasks,
+In general, loading graphs through a stream allows for easier splits given by some logic (e.g., you can manually group each graph by date), which may be useful for future tasks,
 while also preserving internal structure of each graph.
+
+### File extension support
+
+You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
+
+{{ code_example('rdflib/03_parse_autodetect.py') }}
 
 !!! warning 
 
