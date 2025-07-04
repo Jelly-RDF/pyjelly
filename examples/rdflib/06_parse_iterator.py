@@ -23,7 +23,7 @@ with (
     g = Graph()
     # writing graph data onto a given path
     for _, graph in enumerate(graphs):
-        for triple in graph:  
+        for triple in graph:
             g.add(triple)
     g.serialize(destination=OUTPUT, format="jelly")
 
