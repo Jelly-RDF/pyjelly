@@ -12,11 +12,10 @@ OUTPUT = "streamed_output.jelly"
 # prepare a graph stream object
 stream = TripleStream.for_rdflib(
     options=SerializerOptions(
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-        params=StreamParameters(delimited=False),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+        params=StreamParameters(),
     )
 )
-stream.enroll()  # emit the options frame
 
 print(f"Writing Jelly frames to {OUTPUT!r}…")
 with (
@@ -24,7 +23,6 @@ with (
     tarfile.open(fileobj=resp, mode="r:gz") as tar,
     open(OUTPUT, "wb") as out,
 ):
-
     # build graphs from a .ttl stream file
     graphs = (
         (g := Graph(), g.parse(source=f, format="turtle"), g)[2]
@@ -34,7 +32,7 @@ with (
     # parse the graph files into the output file, frame per graph
     for graph in graphs:
         for triple in graph:
-            stream.triple(triple)
+            stream.triple(triple)  # type: ignore[attr-defined]
 
         # one frame for graph
         if frame := stream.flow.to_stream_frame():
