@@ -31,8 +31,10 @@ with (
         if member.name.endswith(".ttl") and (f := tar.extractfile(member)) is not None
     )
     # serialize the graph files into the output file, frame per graph
+    # fmt: off
     for graph in graphs:
         if frames := next(triples_stream_frames(stream, graph)): # type: ignore[arg-type]
             write_delimited(frames, out)
+    # fmt: on
 
 print("Done.")
