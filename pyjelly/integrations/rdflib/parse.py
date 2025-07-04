@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from typing import IO, Any, Callable
-from typing_extensions import Never, override
+from itertools import chain
+from typing import IO, Any, Callable, Union
+from typing_extensions import Never, Self, override
 
 import rdflib
+from rdflib import Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
@@ -12,8 +14,105 @@ from rdflib.parser import Parser as RDFLibParser
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.options import StreamTypes
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions, ParsingMode
+from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
+
+GraphName = Union[rdflib.URIRef, rdflib.BNode, str]
+
+
+class Triple(tuple[Node, Node, Node]):
+    """
+    Describe RDFLib triple.
+
+    Args:
+        tuple (Node, Node, Node): s/p/o tuple of RDFLib Nodes.
+
+    Returns:
+        Triple: triple as tuple.
+
+    """
+
+    __slots__ = ()
+
+    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
+        return tuple.__new__(cls, (s, p, o))
+
+    @property
+    def s(self) -> Node:
+        return self[0]
+
+    @property
+    def p(self) -> Node:
+        return self[1]
+
+    @property
+    def o(self) -> Node:
+        return self[2]
+
+
+class Quad(tuple[Node, Node, Node, GraphName]):
+    """
+    Describe RDFLib quad.
+
+    Args:
+        tuple (Node, Node, Node, GraphName):
+            s/p/o/g as a tuple of RDFLib nodes and a GraphName,
+
+    Returns:
+        Quad: quad as tuple.
+
+    """
+
+    __slots__ = ()
+
+    def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
+        return tuple.__new__(cls, (s, p, o, g))
+
+    @property
+    def s(self) -> Node:
+        return self[0]
+
+    @property
+    def p(self) -> Node:
+        return self[1]
+
+    @property
+    def o(self) -> Node:
+        return self[2]
+
+    @property
+    def g(self) -> GraphName:
+        return self[3]
+
+
+Statement = Union[Triple, Quad]
+
+
+class Prefix(tuple[str, rdflib.URIRef]):
+    """
+    Describe RDF Prefix(i.e, namespace declaration).
+
+    Args:
+        tuple (str, rdflib.URIRef): expects prefix as a string,
+            and full namespace URI as Rdflib.URIRef.
+
+    Returns:
+        Prefix: prefix as tuple(prefix, iri).
+
+    """
+
+    __slots__ = ()
+
+    def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
+        return tuple.__new__(cls, (prefix, iri))
+
+    @property
+    def prefix(self) -> str:
+        return self[0]
+
+    @property
+    def iri(self) -> rdflib.URIRef:
+        return self[1]
 
 
 class RDFLibAdapter(Adapter):
@@ -21,7 +120,7 @@ class RDFLibAdapter(Adapter):
     RDFLib adapter class, is extended by triples and quads implementations.
 
     Args:
-        Adapter (_type_): abstract adapter class
+        Adapter (): abstract adapter class
 
     """
 
@@ -46,12 +145,14 @@ class RDFLibAdapter(Adapter):
     ) -> rdflib.Literal:
         return rdflib.Literal(lex, lang=language, datatype=datatype)
 
+    @override
+    def namespace_declaration(self, name: str, iri: str) -> Prefix:
+        return Prefix(name, self.iri(iri))
+
 
 def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
     """
     Raise error if functionality is missing in adapter.
-
-    TODO: currently not used anywhere due to logical types being removed
 
     Args:
         feature (str): function which is not implemented
@@ -79,93 +180,48 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     """
     Triples adapter RDFLib implementation.
 
-    Notes: has internal graph object which tracks
-        triples and namespaces and can get flushed between frames.
+    Notes: returns triple/namespace declaration as soon as receives them.
     """
 
     def __init__(
         self,
         options: ParserOptions,
-        graph_factory: Callable[[], Graph],
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(options=options, parsing_mode=parsing_mode)
-        self.graph = graph_factory()
-        self.graph_factory = graph_factory
-        self.parsing_mode = parsing_mode
+        super().__init__(options=options)
 
     @override
-    def triple(self, terms: Iterable[Any]) -> Any:
-        self.graph.add(tuple(terms))
-
-    @override
-    def namespace_declaration(self, name: str, iri: str) -> None:
-        self.graph.bind(name, self.iri(iri))
-
-    def frame(self) -> Graph:
-        """
-        Finalize one frame in triples stream.
-
-        Returns:
-           Graph: frame content as a separate Graph
-                and starts a new Graph
-
-        """
-        this_graph = self.graph
-        self.graph = self.graph_factory()
-        return this_graph
+    def triple(self, terms: Iterable[Any]) -> Triple:
+        return Triple(*terms)
 
 
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(
-        self,
-        options: ParserOptions,
-        dataset_factory: Callable[[], Dataset],
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
-    ) -> None:
-        super().__init__(options=options, parsing_mode=parsing_mode)
-        self.dataset = dataset_factory()
-        self.dataset_factory = dataset_factory
-
-    @override
-    def frame(self) -> Dataset:
-        current_dataset = self.dataset
-        self.dataset = self.dataset_factory()
-        return current_dataset
+    def __init__(self, options: ParserOptions) -> None:
+        super().__init__(options=options)
 
 
 class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
     """
     Extended RDFLib adapter for the QUADS physical type.
 
-    Notes:
-        Adds triples and namespaces directly to
-        dataset, so RDFLib handles the rest.
-
     Args:
-        RDFLibQuadsBaseAdapter (_type_): base quads adapter
+        RDFLibQuadsBaseAdapter (RDFLibAdapter): base quads adapter
             (shared with graphs physical type)
 
     """
 
     @override
-    def namespace_declaration(self, name: str, iri: str) -> None:
-        self.dataset.bind(name, self.iri(iri))
-
-    @override
-    def quad(self, terms: Iterable[Any]) -> Any:
-        self.dataset.add(tuple(terms))
+    def quad(self, terms: Iterable[Any]) -> Quad:
+        return Quad(*terms)
 
 
 class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     """
     Extension of RDFLibQuadsBaseAdapter for the GRAPHS physical type.
 
-    Notes: introduces graph start/end, checks if graph exists,
-        dataset store management.
+    Notes: introduces graph start/end, checks if graph exists.
 
     Args:
-        RDFLibQuadsBaseAdapter (_type_): base adapter for quads management.
+        RDFLibQuadsBaseAdapter (RDFLibAdapter): base adapter for quads management.
 
     Raises:
         JellyConformanceError: if no graph_start was encountered
@@ -177,14 +233,8 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     def __init__(
         self,
         options: ParserOptions,
-        dataset_factory: Callable[[], Dataset],
-        parsing_mode: ParsingMode = ParsingMode.FLAT,
     ) -> None:
-        super().__init__(
-            options=options,
-            dataset_factory=dataset_factory,
-            parsing_mode=parsing_mode,
-        )
+        super().__init__(options=options)
         self._graph_id = None
 
     @property
@@ -198,12 +248,8 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
         self._graph_id = graph_id
 
     @override
-    def namespace_declaration(self, name: str, iri: str) -> None:
-        self.dataset.bind(name, self.iri(iri))
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> None:
-        self.dataset.add((*terms, self._graph_id))
+    def triple(self, terms: Iterable[Any]) -> Quad:
+        return Quad(*chain(terms, [self._graph_id]))
 
     @override
     def graph_end(self) -> None:
@@ -213,54 +259,42 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
-    graph_factory: Callable[[], Graph],
-    parsing_mode: ParsingMode = ParsingMode.FLAT,
-) -> Generator[Graph]:
+) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
 
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
-        graph_factory (Callable): Lambda to construct a graph
-        parsing_mode (ParsingMode): specifies whether this is
-            a flat or grouped parsing.
 
     Yields:
-        Generator[Graph]: RDFLib Graph(s)
+        Generator[Iterable[Triple | Prefix]]:
+            Generator of iterables of Triple or Prefix objects,
+            one iterable per frame.
 
     """
-    adapter = RDFLibTriplesAdapter(
-        options, graph_factory=graph_factory, parsing_mode=parsing_mode
-    )
+    adapter = RDFLibTriplesAdapter(options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        g = decoder.decode_frame(frame)
-        if g is not None:
-            yield g
-
-    if parsing_mode is ParsingMode.FLAT:
-        yield adapter.graph
+        yield decoder.iter_rows(frame)
+    return
 
 
 def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
-    dataset_factory: Callable[[], Dataset],
-    parsing_mode: ParsingMode = ParsingMode.FLAT,
-) -> Generator[Dataset]:
+) -> Generator[Iterable[Quad | Prefix]]:
     """
     Parse flat quads stream.
 
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
-        dataset_factory (Callable): Lambda to construct a dataset
-        parsing_mode (ParsingMode): specifies whether this is
-            a flat or grouped parsing.
 
     Yields:
-        Generator[Dataset]: RDFLib dataset(s)
+        Generator[Iterable[Quad | Prefix]]:
+            Generator of iterables of Quad or Prefix objects,
+            one iterable per frame.
 
     """
     adapter_class: type[RDFLibQuadsBaseAdapter]
@@ -268,26 +302,18 @@ def parse_quads_stream(
         adapter_class = RDFLibQuadsAdapter
     else:
         adapter_class = RDFLibGraphsAdapter
-    adapter = adapter_class(
-        options=options,
-        dataset_factory=dataset_factory,
-        parsing_mode=parsing_mode,
-    )
+    adapter = adapter_class(options=options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        ds = decoder.decode_frame(frame)
-        if ds is not None:
-            yield ds
-
-    if parsing_mode is ParsingMode.FLAT:
-        yield adapter.dataset
+        yield decoder.iter_rows(frame)
+    return
 
 
 def parse_jelly_grouped(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph],
     dataset_factory: Callable[[], Dataset],
-) -> Generator[Any] | Generator[Graph] | Generator[Dataset]:
+) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected logical type.
 
@@ -302,31 +328,41 @@ def parse_jelly_grouped(
         NotImplementedError: is raised if a logical type is not implemented
 
     Yields:
-        Generator[Any] | Generator[Dataset] | Generator[Graph]:
+        Generator[Graph] | Generator[Dataset]:
             returns generators for graphs/datasets based on the type of input
 
     """
     options, frames = get_options_and_frames(inp)
-
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        yield from parse_triples_stream(
+        for graph in parse_triples_stream(
             frames=frames,
             options=options,
-            graph_factory=graph_factory,
-            parsing_mode=ParsingMode.GROUPED,
-        )
+        ):
+            sink = graph_factory()
+            for graph_item in graph:
+                if isinstance(graph_item, Prefix):
+                    sink.bind(graph_item.prefix, graph_item.iri)
+                else:
+                    sink.add(graph_item)
+            yield sink
         return
-
-    if options.stream_types.physical_type in (
+    elif options.stream_types.physical_type in (
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        yield from parse_quads_stream(
+        for dataset in parse_quads_stream(
             frames=frames,
             options=options,
-            dataset_factory=dataset_factory,
-            parsing_mode=ParsingMode.GROUPED,
-        )
+        ):
+            sink = dataset_factory()
+            for item in dataset:
+                if isinstance(item, Prefix):
+                    sink.bind(item.prefix, item.iri)
+                else:
+                    s, p, o, graph_name = item
+                    context = sink.get_context(graph_name)
+                    sink.add((s, p, o, context))
+            yield sink
         return
 
     physical_type_name = jelly.PhysicalStreamType.Name(
@@ -336,50 +372,85 @@ def parse_jelly_grouped(
     raise NotImplementedError(msg)
 
 
-def parse_jelly_flat(
+def parse_jelly_to_graph(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph],
     dataset_factory: Callable[[], Dataset],
-) -> Any | Dataset | Graph:
+) -> Graph | Dataset:
     """
-    Parse jelly file with FLAT physical type into one Graph/Dataset.
+    Add statements from Generator to provided Graph/Dataset.
 
     Args:
-        inp (IO[bytes]): input jelly buffered binary stream
-        graph_factory (Callable): lambda to construct a Graph
-        dataset_factory (Callable): lambda to construct a Dataset
-
-    Raises:
-        NotImplementedError: if physical type is not supported
+        inp (IO[bytes]): input jelly stream.
+        graph_factory (Callable[[], Graph]): factory to create Graph.
+        dataset_factory (Callable[[], Dataset]): factory to create Dataset.
 
     Returns:
-        RDFLib Graph or Dataset
+        Dataset | Graph: Dataset or Graph with statements.
 
     """
     options, frames = get_options_and_frames(inp)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        return next(
-            parse_triples_stream(
-                frames=frames,
-                options=options,
-                graph_factory=graph_factory,
-                parsing_mode=ParsingMode.FLAT,
-            )
-        )
-
+        sink = graph_factory()
     if options.stream_types.physical_type in (
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        return next(
-            parse_quads_stream(
-                frames=frames,
-                options=options,
-                dataset_factory=dataset_factory,
-                parsing_mode=ParsingMode.FLAT,
-            )
-        )
+        quad_sink = dataset_factory()
+        sink = quad_sink
+
+    for item in parse_jelly_flat(inp=inp, frames=frames, options=options):
+        if isinstance(item, Prefix):
+            sink.bind(item.prefix, item.iri)
+        if isinstance(item, Triple):
+            sink.add(item)
+        if isinstance(item, Quad):
+            s, p, o, graph_name = item
+            context = quad_sink.get_context(graph_name)
+            quad_sink.add((s, p, o, context))
+    return sink
+
+
+def parse_jelly_flat(
+    inp: IO[bytes],
+    frames: Iterable[jelly.RdfStreamFrame] | None = None,
+    options: ParserOptions | None = None,
+) -> Generator[Statement | Prefix]:
+    """
+    Parse jelly file with FLAT physical type into a Generator of stream events.
+
+    Args:
+        inp (IO[bytes]): input jelly buffered binary stream.
+        frames (Iterable[jelly.RdfStreamFrame | None):
+            jelly frames if read before.
+        options (ParserOptions | None): stream options
+            if read before.
+
+    Raises:
+        NotImplementedError: if physical type is not supported
+
+    Yields:
+        Generator[Statement | Prefix]: Generator of stream events
+
+    """
+    if not frames or not options:
+        options, frames = get_options_and_frames(inp)
+
+    if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
+        for triples in parse_triples_stream(frames=frames, options=options):
+            yield from triples
+        return
+    if options.stream_types.physical_type in (
+        jelly.PHYSICAL_STREAM_TYPE_QUADS,
+        jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+    ):
+        for quads in parse_quads_stream(
+            frames=frames,
+            options=options,
+        ):
+            yield from quads
+        return
     physical_type_name = jelly.PhysicalStreamType.Name(
         options.stream_types.physical_type
     )
@@ -404,7 +475,7 @@ class RDFLibJellyParser(RDFLibParser):
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
-        parse_jelly_flat(
+        parse_jelly_to_graph(
             inp,
             graph_factory=lambda: Graph(store=sink.store, identifier=sink.identifier),
             dataset_factory=lambda: Dataset(store=sink.store),

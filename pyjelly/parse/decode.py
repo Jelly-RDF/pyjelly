@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from enum import Enum, auto
 from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
@@ -166,23 +166,23 @@ class Decoder:
     def options(self) -> ParserOptions:
         return self.adapter.options
 
-    def decode_frame(self, frame: jelly.RdfStreamFrame) -> Any:
+    def iter_rows(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
         """
-        Decode a frame to custom object based on adapter implementation.
+        Iterate through rows in the frame.
 
         Args:
             frame (jelly.RdfStreamFrame): jelly frame
-
-        Returns:
-            Any: custom obj based on adapter logic
+        Yields:
+            Iterator[Any]: decoded rows
 
         """
         for row_owner in frame.rows:
             row = getattr(row_owner, row_owner.WhichOneof("row"))
-            self.decode_row(row)
-        if self.adapter.parsing_mode is ParsingMode.GROUPED:
-            return self.adapter.frame()
-        return None
+            decoded_row = self.decode_row(row)
+            if isinstance(
+                row, (jelly.RdfTriple, jelly.RdfQuad, jelly.RdfNamespaceDeclaration)
+            ):
+                yield decoded_row
 
     def decode_row(self, row: Any) -> Any | None:
         """
