@@ -322,9 +322,11 @@ def parse_jelly_grouped(
     Args:
         inp (IO[bytes]): input jelly buffered binary stream
         graph_factory (Callable): lambda to construct a Graph.
-            By default creates empty in-memory Graph, but you can pass something else here.
+            By default creates an empty in-memory Graph,
+            but you can pass something else here.
         dataset_factory (Callable): lambda to construct a Dataset.
-            By default creates empty in-memory Dataset, but you can pass something else here.
+            By default creates an empty in-memory Dataset,
+            but you can pass something else here.
 
     Raises:
         NotImplementedError: is raised if a logical type is not implemented
@@ -385,9 +387,11 @@ def parse_jelly_to_graph(
     Args:
         inp (IO[bytes]): input jelly stream.
         graph_factory (Callable[[], Graph]): factory to create Graph.
-            By default creates empty in-memory Graph, but you can pass something else here.
+            By default creates an empty in-memory Graph,
+            but you can pass something else here.
         dataset_factory (Callable[[], Dataset]): factory to create Dataset.
-            By default creates empty in-memory Dataset, but you can pass something else here.
+            By default creates an empty in-memory Dataset,
+            but you can pass something else here.
 
     Returns:
         Dataset | Graph: Dataset or Graph with statements.
