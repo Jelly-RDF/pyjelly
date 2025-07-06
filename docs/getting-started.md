@@ -41,7 +41,7 @@ In this example, we use a [dataset of weather measurements](https://w3id.org/riv
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
-Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.
+Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.
 
 ### Streaming event parser
 
@@ -51,7 +51,7 @@ In this more complex example, we look through a fragment of Denmark's OpenStreet
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
+`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
 ### File extension support
 
