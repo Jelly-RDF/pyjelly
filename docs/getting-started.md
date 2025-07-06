@@ -17,7 +17,7 @@ pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux
 
 Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
 
-### Serialization
+### Serializing a graph
 
 To serialize a graph to the Jelly format:
 
@@ -25,7 +25,7 @@ To serialize a graph to the Jelly format:
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
 
-### Parsing
+### Parsing a graph
 
 To load RDF data from a `.jelly` file:
 
@@ -33,7 +33,7 @@ To load RDF data from a `.jelly` file:
 
 RDFLib will reconstruct the graph from the serialized Jelly stream.
 
-### Streaming graph parser
+### Parsing a stream of graphs
 
 You can process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph.
 
@@ -43,7 +43,7 @@ In this example, we use a [dataset of weather measurements](https://w3id.org/riv
 
 Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.
 
-### Streaming event parser
+### Parsing a stream of triples
 
 You can also process a Jelly stream as a flat stream of triples.
 
