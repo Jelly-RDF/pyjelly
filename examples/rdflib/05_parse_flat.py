@@ -6,12 +6,12 @@ from rdflib import URIRef
 
 # Dataset: OpenStreetMap data for Denmark (first 10k objects)
 # Documentation: https://w3id.org/riverbench/datasets/osm2rdf-denmark/dev
-url = "https://w3id.org/riverbench/datasets/osm2rdf-denmark/dev/files/jelly_10K.jelly.gz"
+url = (
+    "https://w3id.org/riverbench/datasets/osm2rdf-denmark/dev/files/jelly_10K.jelly.gz"
+)
 
 # We are looking for city names in the dataset
-predicate_to_look_for = URIRef(
-    "https://www.openstreetmap.org/wiki/Key:addr:city"
-)
+predicate_to_look_for = URIRef("https://www.openstreetmap.org/wiki/Key:addr:city")
 city_names = set()
 
 with (
