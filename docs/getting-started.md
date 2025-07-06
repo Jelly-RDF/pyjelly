@@ -31,11 +31,11 @@ To load RDF data from a `.jelly` file:
 
 {{ code_example('rdflib/02_parse.py') }}
 
-RDFLib will reconstruct the graph from the serialized Jelly stream.
+RDFLib will reconstruct the graph from the Jelly file.
 
 ### Parsing a stream of graphs
 
-You can process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph.
+You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
 
 In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev), which is an RDF graph stream. We count the number of triples in each graph:
 
