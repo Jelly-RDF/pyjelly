@@ -35,7 +35,9 @@ RDFLib will reconstruct the graph from the serialized Jelly stream.
 
 ### Streaming graph parser
 
-To process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph:
+You can process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph.
+
+In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev), which is an RDF graph stream. We count the number of triples in each graph:
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
@@ -43,11 +45,13 @@ Because `parse_jelly_grouped` returns a generator, each iteration receives **one
 
 ### Streaming event parser
 
-To process a Jelly stream as a stream of RDFLib triples:
+You can also process a Jelly stream as a flat stream of triples.
+
+In this more complex example, we look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-Here, `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
+`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
 
 ### File extension support
 
