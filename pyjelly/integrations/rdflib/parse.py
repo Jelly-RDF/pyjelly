@@ -311,8 +311,8 @@ def parse_quads_stream(
 
 def parse_jelly_grouped(
     inp: IO[bytes],
-    graph_factory: Callable[[], Graph] = lambda: Graph() = lambda: Graph(),
-    dataset_factory: Callable[[], Dataset] = lambda: Dataset() = lambda: Dataset(),
+    graph_factory: Callable[[], Graph] = lambda: Graph(),
+    dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
 ) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected logical type.
@@ -378,8 +378,8 @@ def parse_jelly_grouped(
 
 def parse_jelly_to_graph(
     inp: IO[bytes],
-    graph_factory: Callable[[], Graph] = lambda: Graph() = lambda: Graph(),
-    dataset_factory: Callable[[], Dataset] = lambda: Dataset() = lambda: Dataset(),
+    graph_factory: Callable[[], Graph] = lambda: Graph(),
+    dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
 ) -> Graph | Dataset:
     """
     Add statements from Generator to provided Graph/Dataset.
