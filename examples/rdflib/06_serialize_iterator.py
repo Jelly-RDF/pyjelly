@@ -18,23 +18,31 @@ stream = TripleStream.for_rdflib(
     )
 )
 
+# open resources through tarball
+resp = urllib.request.urlopen(URL)
+tar = tarfile.open(fileobj=resp, mode="r:gz")
+out = open(OUTPUT, "wb")
+
+# iterate through each dataset in the stream
 print(f"Writing Jelly frames to {OUTPUT!r}…")
-with (
-    urllib.request.urlopen(URL) as resp,
-    tarfile.open(fileobj=resp, mode="r:gz") as tar,
-    open(OUTPUT, "wb") as out,
-):
-    # build graphs from a .ttl stream file
-    graphs = (
-        (g := Graph(), g.parse(source=f, format="turtle"), g)[2]
-        for member in tar
-        if member.name.endswith(".ttl") and (f := tar.extractfile(member)) is not None
-    )
+for member in tar:
+    if not member.name.endswith(".ttl"):
+        continue
+    f = tar.extractfile(member)
+    if not f:
+        continue
+
+    # parse into an rdflib.Graph
+    graph = Graph()
+    graph.parse(source=f, format="turtle")
+
     # serialize the graph files into the output file, frame per graph
-    # fmt: off
-    for graph in graphs:
-        if frames := next(triples_stream_frames(stream, graph)): # type: ignore[arg-type]
-            write_delimited(frames, out)
-    # fmt: on
+    if frames := next(triples_stream_frames(stream, graph)):
+        write_delimited(frames, out)
 
 print("Done.")
+
+# close files
+out.close()
+tar.close()
+resp.close()
