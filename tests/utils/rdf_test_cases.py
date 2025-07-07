@@ -35,9 +35,7 @@ def jelly_cli(*args: object, hint: str | None = None) -> bytes:
     assert JELLY_CLI
     shell_args = [JELLY_CLI, *map(str, args)]
     try:
-        return subprocess.check_output(
-            shell_args, stderr=subprocess.STDOUT
-        )  # noqa: S603 internal use
+        return subprocess.check_output(shell_args, stderr=subprocess.STDOUT)  # noqa: S603 internal use
     except subprocess.CalledProcessError as error:
         command = shlex.join(shell_args)
         note = f"Command: {command}"
