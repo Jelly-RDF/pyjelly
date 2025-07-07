@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterator
+from itertools import groupby
 from typing import Any
 from typing_extensions import TypeAlias
 
@@ -54,7 +55,13 @@ class OrderedMemory(Store):
 
     def contexts(self, triple: Triple | None = None) -> Generator[Graph]:
         if triple is None:
-            yield from self._seen_contexts.values()
+            for ctx, statements in groupby(self._quads, key=lambda x: x[1]):
+                if ctx is not None:
+                    new_store = self.__class__()
+                    graph = Graph(store=new_store, identifier=ctx.identifier)
+                    for statement, _ in statements:
+                        graph.add(statement)
+                    yield graph
         else:
             seen_ids = set()
             for t, ctx in self._quads:
