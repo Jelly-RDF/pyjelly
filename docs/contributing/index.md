@@ -56,7 +56,8 @@ The CI will check if your code passes all checks. You can run these checks local
 
 - Tests: `uv run pytest`
 - Type safety: `uv run mypy .`
-- Code style: `uv run ruff check --fix`
+- Linter: `uv run ruff check --fix`
+- Formatter: `uv run ruff format`
 
 This helps us follow best practices and keep the codebase in shape.
 
