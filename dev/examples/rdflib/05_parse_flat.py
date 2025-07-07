@@ -1,24 +1,29 @@
 import gzip
 import urllib.request
-from typing import cast, IO
 
 from pyjelly.integrations.rdflib.parse import parse_jelly_flat, Triple
-from rdflib import Graph, URIRef
+from rdflib import URIRef
 
-predicate_to_look_for = URIRef(
-    "http://knoesis.wright.edu/ssw/ont/sensor-observation.owl#floatValue"
+# Dataset: OpenStreetMap data for Denmark (first 10k objects)
+# Documentation: https://w3id.org/riverbench/datasets/osm2rdf-denmark/dev
+url = (
+    "https://w3id.org/riverbench/datasets/osm2rdf-denmark/dev/files/jelly_10K.jelly.gz"
 )
-graph_measurements = Graph()
 
-url = "https://w3id.org/riverbench/datasets/lod-katrina/dev/files/jelly_10K.jelly.gz"
+# We are looking for city names in the dataset
+predicate_to_look_for = URIRef("https://www.openstreetmap.org/wiki/Key:addr:city")
+city_names = set()
+
 with (
-    urllib.request.urlopen(url) as resp,
-    cast(IO[bytes], gzip.GzipFile(fileobj=resp)) as jelly_stream,
+    urllib.request.urlopen(url) as response,
+    gzip.open(response) as jelly_stream,
 ):
-    events = parse_jelly_flat(jelly_stream)
-    for event in events:
-        if isinstance(event, Triple):  # filter the stream event of interest
-            s, p, o = event
-            if p == predicate_to_look_for:
-                graph_measurements.add(event)
-print(f"Measurements in graph: {len(graph_measurements)}")
+    for event in parse_jelly_flat(jelly_stream):
+        if isinstance(event, Triple):  # we are only interested in triples
+            if event.p == predicate_to_look_for:
+                city_names.add(event.o)
+
+print(f"Found {len(city_names)} unique city names in the dataset.")
+print("10 random city names:")
+for city in list(city_names)[:10]:
+    print(f"- {city}")
