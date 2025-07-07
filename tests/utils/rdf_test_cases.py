@@ -12,17 +12,10 @@ import pytest
 # TODO(Piotr): Remove this list once the failing test cases are fixed.
 # See https://github.com/Jelly-RDF/pyjelly/issues/145
 failing_test_cases = [
-    "from_jelly_graphs_pos_002",
-    "from_jelly_quads_pos_004",
-    "from_jelly_quads_pos_005",
-    "from_jelly_quads_pos_007",
     "from_jelly_triples_pos_014",
     "from_jelly_triples_pos_015",
     "from_jelly_triples_pos_017",
     "from_jelly_triples_pos_018",
-    "to_jelly_graphs_pos_001",
-    "to_jelly_graphs_pos_002",
-    "to_jelly_graphs_pos_003",
     "to_jelly_graphs_pos_004",
     "to_jelly_graphs_pos_005",
     "to_jelly_graphs_pos_006",
@@ -53,7 +46,9 @@ def jelly_cli(*args: object, hint: str | None = None) -> bytes:
     assert JELLY_CLI
     shell_args = [JELLY_CLI, *map(str, args)]
     try:
-        return subprocess.check_output(shell_args, stderr=subprocess.STDOUT)  # noqa: S603 internal use
+        return subprocess.check_output(
+            shell_args, stderr=subprocess.STDOUT
+        )  # noqa: S603 internal use
     except subprocess.CalledProcessError as error:
         command = shlex.join(shell_args)
         note = f"Command: {command}"
