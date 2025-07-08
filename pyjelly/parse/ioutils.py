@@ -55,8 +55,7 @@ def delimited_jelly_hint(header: bytes) -> bool:
 
 def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
     while frame := parse_length_prefixed(jelly.RdfStreamFrame, inp):
-        if frame.rows:
-            yield frame
+        yield frame
 
 
 def get_options_and_frames(
@@ -82,14 +81,21 @@ def get_options_and_frames(
     inp.seek(-len(bytes_read), os.SEEK_CUR)
 
     if is_delimited:
+        first_frame = None
+        skipped_frames = []
         frames = frame_iterator(inp)
-        first_frame = next(frames, None)
+        for frame in frames:
+            if not frame.rows:
+                skipped_frames.append(frame)
+            else:
+                first_frame = frame
+                break
         if first_frame is None:
             msg = "No non-empty frames found in the stream"
             raise JellyConformanceError(msg)
 
         options = options_from_frame(first_frame, delimited=True)
-        return options, chain((first_frame,), frames)
+        return options, chain(skipped_frames, (first_frame,), frames)
 
     frame = parse(jelly.RdfStreamFrame, inp.read())
 
