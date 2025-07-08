@@ -1,18 +1,17 @@
 # ruff: noqa: I001
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Generator
 from functools import singledispatch
 from typing import Any, IO, Optional
 from typing_extensions import override
 
 import rdflib
-from rdflib import Graph, Literal, Namespace
+from rdflib import Graph
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
-from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
@@ -21,7 +20,8 @@ from pyjelly.serialize.streams import (
     SerializerOptions,
     Stream,
     TripleStream,
-) # ruff: enable
+)  # ruff: enable
+
 
 class RDFLibTermEncoder(TermEncoder):
     def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
