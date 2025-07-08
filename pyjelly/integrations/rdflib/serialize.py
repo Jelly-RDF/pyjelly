@@ -1,22 +1,20 @@
+# ruff: noqa: I001
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from functools import singledispatch
-from typing import IO, Any
+from pathlib import Path
+import random
+from typing import Any, Callable, IO
 from typing_extensions import override
 
 import rdflib
-from rdflib.graph import (
-    DATASET_DEFAULT_GRAPH_ID,
-    Dataset,
-    Graph,
-    QuotedGraph,
-    Namespace,
-    Literal,
-)
+from rdflib import Graph, Literal, Namespace
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
+from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
@@ -25,13 +23,7 @@ from pyjelly.serialize.streams import (
     SerializerOptions,
     Stream,
     TripleStream,
-)
-
-from typing import Callable, Optional, Iterable
-
-import random
-from pyjelly.options import StreamParameters
-
+) # ruff: enable
 
 class RDFLibTermEncoder(TermEncoder):
     def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
@@ -267,21 +259,21 @@ class RDFLibJellySerializer(RDFLibSerializer):
 
 
 def serialise_stream_grouped(
-    stream_frames_func,
-    graph_iter=None,
-    logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
-    params=None,
-):
+     stream_frames_func: Callable[[Stream, Graph], Iterable[jelly.RdfStreamFrame]],
+     graph_iter: Iterable[Graph] | None = None,
+     logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+     params: StreamParameters | None = None,
+ ) -> Generator[jelly.RdfStreamFrame, None, None]:
     if params is None:
         params = StreamParameters()
     if graph_iter is None:
         ex = Namespace("http://example.org/")
 
-        def _gen():
+        def _gen() -> Generator[Graph, None, None]:
             for _ in range(100):
                 g = Graph()
-                g.add((ex.sensor, ex.temperature, Literal(random.random())))
-                g.add((ex.sensor, ex.humidity, Literal(random.random())))
+                g.add((ex.sensor, ex.temperature, Literal(random.random())))  # noqa: S311
+                g.add((ex.sensor, ex.humidity,    Literal(random.random())))  # noqa: S311
                 yield g
 
         graph_iter = _gen()
@@ -292,12 +284,13 @@ def serialise_stream_grouped(
         yield from stream_frames_func(stream, graph)
 
 
-def save_frames_to_jelly(
+def serialize_save(
     frame_func: Callable[..., Iterable[jelly.RdfStreamFrame]],
     output_path: str,
-    *args,
-    **kwargs,
+    *args: Any,
+    **kwargs: Any,
 ) -> None:
-    with open(output_path, "wb") as out:
+    out_path = Path(output_path)
+    with out_path.open("wb") as out:
         for frame in frame_func(*args, **kwargs):
             write_delimited(frame, out)
