@@ -4,16 +4,33 @@ Hi! This guide explains how to get started with developing pyjelly and contribut
 
 ## Quick start
 
-1. Clone the project with `git clone git@github.com:Jelly-RDF/pyjelly.git`.
+Clone the project: 
 
-2. We use `uv` for package management. If you don't already have it, [install uv](https://github.com/astral-sh/uv).
-    * On Linux this is: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+```shell
+git clone --recursive git@github.com:Jelly-RDF/pyjelly.git
+```
 
-3. Run `uv sync` to install the project.
-    * If you use an IDE, make sure that it uses the Python interpreter from the environment that will be created in the `.venv` directory.
-    * If you get an error about the uv version being incorrect, run `uv self update`
+We use `uv` for package management. If you don't already have it, [install uv](https://github.com/astral-sh/uv).
 
-4. [Activate the environment](https://docs.python.org/3/library/venv.html#how-venvs-work) or use [`uv run` to run commands and code](https://docs.astral.sh/uv/guides/projects/). 
+On Linux this is: 
+
+```shell
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Install the project:
+
+```shell
+uv sync
+```
+
+!!! note 
+    
+    If you use an IDE, make sure that it uses the Python interpreter from the environment that will be created in the `.venv` directory.
+
+    If you get an error about the uv version being incorrect, run `uv self update`
+
+[Activate the environment](https://docs.python.org/3/library/venv.html#how-venvs-work) or use [`uv run` to run commands and code](https://docs.astral.sh/uv/guides/projects/). 
 
 ## Giving feedback
 
@@ -27,16 +44,22 @@ If you are proposing a feature:
 
 ## Contributing code
 
-1. Every major pull request should be connected to an issue. If you see a problem, first create an issue.
-    * For minor issues (typos, small fixes) make sure you describe your problem well in the PR.
-2. When opening a pull request:
-    * Use a descriptive title.
-    * Reference the related issue in the description.
-3. Please make sure your code passes all the checks:
-    * Tests (`pytest`)
-    * Type safety (`mypy`)
-    * Formatting and linting (`ruff` or via `pre-commit`)
-    This helps us follow best practices and keep the codebase in shape.
+If you've found a major issue (not just a typo) or have a feature request, please [open an issue](https://github.com/Jelly-RDF/pyjelly/issues/new/choose) first. This helps us keep track of what needs to be done and allows others to contribute as well.
+
+**When opening a pull request:**
+
+- Use a descriptive title.
+- Clearly describe what the pull request does and why it is needed.
+- Reference the related issue in the description.
+
+The CI will check if your code passes all checks. You can run these checks locally:
+
+- Tests: `uv run pytest`
+- Type safety: `uv run mypy .`
+- Linter: `uv run ruff check --fix`
+- Formatter: `uv run ruff format`
+
+This helps us follow best practices and keep the codebase in shape.
 
 ## Contributing documentation
 

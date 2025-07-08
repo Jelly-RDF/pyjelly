@@ -14,13 +14,13 @@
 
 ## Getting started
 
-To get started with pyjelly, you can install it via pip:
+Install pyjelly from **[PyPI](https://pypi.org/project/pyjelly/)**:
 
 ```bash
 pip install pyjelly[rdflib]
 ```
 
-To write an RDF graph to a Jelly file, you can use the following code:
+To write an RDF graph to a Jelly file:
 
 ```python
 from rdflib import Graph
@@ -30,7 +30,7 @@ g.parse("http://xmlns.com/foaf/spec/index.rdf")
 g.serialize(destination="foaf.jelly", format="jelly")
 ```
 
-To read a Jelly file and convert it to an rdflib Graph, you can use:
+To read a Jelly file and convert it to an rdflib `Graph`:
 
 ```python
 from rdflib import Graph
@@ -39,19 +39,19 @@ g = Graph()
 g.parse("foaf.jelly", format="jelly")
 ```
 
-**See more examples, [API reference](https://w3id.org/jelly/pyjelly/dev/api), and more in the [documentation](https://w3id.org/jelly/pyjelly).**
+**See [our documentation](https://w3id.org/jelly/pyjelly) for [further examples](https://w3id.org/jelly/pyjelly/dev/getting-started/), a full [API reference](https://w3id.org/jelly/pyjelly/dev/api), and more.**
 
 ## Contributing and support
 
 This project is being actively developed – you can stay tuned by [watching this repository](https://docs.github.com/en/account-and-profile/managing-subscriptions-and-notifications-on-github/setting-up-notifications/about-notifications#subscription-options).
 
-You can also join the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)** to ask questions about pyjelly and to be up-to-date with the development activities.
+Join the **[Jelly Discord chat](https://discord.gg/A8sN5XwVa5)** to ask questions about pyjelly and to be up-to-date with the development activities.
 
 ### Commercial support
 
 **[NeverBlink](https://neverblink.eu)** provides commercial support services for Jelly, including implementing custom features, system integrations, implementations for new frameworks, benchmarking, and more.
 
-## Contributing
+### Contributing
 
 If you'd like to contribute, check out our [contributing guidelines](CONTRIBUTING.md).
 

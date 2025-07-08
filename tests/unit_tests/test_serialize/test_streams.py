@@ -7,9 +7,13 @@ from pyjelly.errors import JellyAssertionError
 from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import TermEncoder
 from pyjelly.serialize.flows import (
+    DatasetsFrameFlow,
     FlatQuadsFrameFlow,
     FlatTriplesFrameFlow,
+    FrameFlow,
+    GraphsFrameFlow,
     ManualFrameFlow,
+    flow_for_type,
 )
 from pyjelly.serialize.streams import (
     GraphStream,
@@ -33,6 +37,27 @@ def test_flat_quads_inference_delimited(
     stream = stream_class(encoder=TermEncoder(), options=None)
     assert isinstance(stream.flow, FlatQuadsFrameFlow)
     assert stream.flow.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+
+
+@pytest.mark.parametrize(
+    (
+        "logical_type",
+        "flow_type",
+    ),
+    [
+        (jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES, FlatTriplesFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS, FlatQuadsFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_GRAPHS, GraphsFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_DATASETS, DatasetsFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_SUBJECT_GRAPHS, GraphsFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_NAMED_GRAPHS, DatasetsFrameFlow),
+        (jelly.LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS, DatasetsFrameFlow),
+    ],
+)
+def test_flow_base_logical_type(
+    logical_type: jelly.LogicalStreamType, flow_type: type[FrameFlow]
+) -> None:
+    assert flow_for_type(logical_type) is flow_type
 
 
 @pytest.mark.parametrize(

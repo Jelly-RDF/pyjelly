@@ -17,7 +17,7 @@ pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux
 
 Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
 
-### Serialization
+### Serializing a graph
 
 To serialize a graph to the Jelly format:
 
@@ -25,29 +25,33 @@ To serialize a graph to the Jelly format:
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
 
-### Parsing
+### Parsing a graph
 
 To load RDF data from a `.jelly` file:
 
 {{ code_example('rdflib/02_parse.py') }}
 
-RDFLib will reconstruct the graph from the serialized Jelly stream.
+RDFLib will reconstruct the graph from the Jelly file.
 
-### Streaming graph parser
+### Parsing a stream of graphs
 
-To process a Jelly stream frame-by-frame, loading each as a separate RDFLib graph:
+You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
+
+In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev), which is an RDF graph stream. We count the number of triples in each graph:
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
-Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. Thus, large datasets and live streams can be processed efficiently.
+Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.
 
-### Streaming event parser
+### Parsing a stream of triples
 
-To process a Jelly stream as a stream of RDFLib triples:
+You can also process a Jelly stream as a flat stream of triples.
+
+In this more complex example, we look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-Here, `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
+`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
 ### Serializing a stream of graphs
 

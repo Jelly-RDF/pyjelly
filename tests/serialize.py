@@ -7,8 +7,10 @@ from pathlib import Path
 
 import rdflib
 
+from pyjelly.integrations.rdflib.serialize import stream_frames
 from pyjelly.parse.decode import ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
+from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import SerializerOptions, stream_for_type
 from tests.utils.ordered_memory import OrderedMemory
 
@@ -21,14 +23,6 @@ def write_dataset(
     if not isinstance(options, ParserOptions):
         options = get_options_from(options)
     assert options
-    dataset = rdflib.Dataset(store=OrderedMemory())
-    for filename in map(str, filenames):
-        if filename.endswith(".nq"):
-            dataset.parse(location=filename)
-        else:
-            graph = rdflib.Graph(identifier=filename, store=OrderedMemory())
-            graph.parse(location=filename)
-            dataset.add_graph(graph)
     stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
         SerializerOptions(
             logical_type=options.stream_types.logical_type,
@@ -37,7 +31,16 @@ def write_dataset(
         )
     )
     with Path(out_filename).open("wb") as file:
-        dataset.serialize(destination=file, format="jelly", stream=stream)
+        sink: rdflib.Dataset | rdflib.Graph
+        for filename in map(str, filenames):
+            if filename.endswith(".nq"):
+                sink = rdflib.Dataset(store=OrderedMemory())
+                sink.parse(location=filename)
+            else:
+                sink = rdflib.Graph(identifier=filename, store=OrderedMemory())
+                sink.parse(location=filename)
+            if frames := next(stream_frames(stream, sink)):
+                write_delimited(frames, file)
 
 
 def write_graph(

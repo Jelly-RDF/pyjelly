@@ -89,7 +89,12 @@ default-groups = ["dev", "extras", "test", "types"]
 [tool.mypy]
 strict = true
 explicit_package_bases = true
-exclude = ["build/", "docs/", ".*_pb2(_grpc)?\\.pyi?"]
+exclude = [
+    "build/", 
+    "docs/", 
+    ".*_pb2(_grpc)?\\.pyi?", 
+    "examples/"
+]
 
 [[tool.mypy.overrides]]
 module = "google.protobuf.proto"
