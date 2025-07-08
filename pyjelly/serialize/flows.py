@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import UserList
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import Any, ClassVar
 from typing_extensions import override
 
 from pyjelly import jelly
@@ -16,10 +16,23 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
     Abstract base class for producing Jelly frames from RDF stream rows.
 
     Collects stream rows and assembles them into RdfStreamFrame objects when ready.
+
+    Allows for passing LogicalStreamType, required for
+        logical subtypes and non-delimited streams.
     """
 
     logical_type: jelly.LogicalStreamType
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
+
+    def __init__(
+        self,
+        initlist: Iterable[jelly.RdfStreamRow] | None = None,
+        *,
+        logical_type: jelly.LogicalStreamType | None = None,
+        **__kwargs: Any,
+    ) -> None:
+        super().__init__(initlist)
+        self.logical_type = logical_type or self.__class__.logical_type
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
@@ -71,15 +84,6 @@ class ManualFrameFlow(FrameFlow):
 
     logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
 
-    def __init__(
-        self,
-        initlist: Iterable[jelly.RdfStreamRow] | None = None,
-        *,
-        logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED,
-    ) -> None:
-        super().__init__(initlist)
-        self.logical_type = logical_type
-
 
 @dataclass
 class BoundedFrameFlow(FrameFlow):
@@ -92,13 +96,15 @@ class BoundedFrameFlow(FrameFlow):
     logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
     frame_size: int
 
+    @override
     def __init__(
         self,
         initlist: Iterable[jelly.RdfStreamRow] | None = None,
+        logical_type: jelly.LogicalStreamType | None = None,
         *,
         frame_size: int | None = None,
     ) -> None:
-        super().__init__(initlist)
+        super().__init__(initlist, logical_type=logical_type)
         self.frame_size = frame_size or DEFAULT_FRAME_SIZE
 
     @override
@@ -153,7 +159,6 @@ class DatasetsFrameFlow(FrameFlow):
         return self.to_stream_frame()
 
 
-# TODO(Nastya): issue #184
 FLOW_DISPATCH: dict[jelly.LogicalStreamType, type[FrameFlow]] = {
     jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES: FlatTriplesFrameFlow,
     jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS: FlatQuadsFrameFlow,
@@ -166,18 +171,23 @@ def flow_for_type(logical_type: jelly.LogicalStreamType) -> type[FrameFlow]:
     """
     Return flow based on logical type requested.
 
+    Note: uses base logical type for subtypes (i.e., SUBJECT_GRAPHS uses
+        the same flow as its base type GRAPHS).
+
     Args:
         logical_type (jelly.LogicalStreamType): logical type requested.
 
     Raises:
-        NotImplementedError: if logical type not supported.
+        NotImplementedError: if (base) logical stream type is not supported.
 
     Returns:
         type[FrameFlow]: FrameFlow for respective logical type.
 
     """
     try:
-        return FLOW_DISPATCH[logical_type]
+        base_logical_type_value = logical_type % 10
+        base_name = jelly.LogicalStreamType.Name(base_logical_type_value)
+        return FLOW_DISPATCH[getattr(jelly.LogicalStreamType, base_name)]
     except KeyError:
         msg = (
             "unsupported logical stream type: "

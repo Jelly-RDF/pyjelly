@@ -90,7 +90,7 @@ def define_env(env):
     @env.macro
     def git_link(file: str):
         tag = git_tag()
-        return f"https://github.com/Jelly-RDF/jelly-python/blob/{tag}/{file}"
+        return f"https://github.com/Jelly-RDF/pyjelly/blob/{tag}/{file}"
 
     @env.macro
     def proto_version():
