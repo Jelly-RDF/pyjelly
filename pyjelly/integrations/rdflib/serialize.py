@@ -197,9 +197,9 @@ def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
     >>> graph_ser = RDFLibJellySerializer(Graph())
     >>> ds_ser = RDFLibJellySerializer(Dataset())
 
-    >>> type(guess_stream(guess_options(graph_ser.store), graph_ser.store)
+    >>> type(guess_stream(guess_options(graph_ser.store), graph_ser.store))
     <class 'pyjelly.serialize.streams.TripleStream'>
-    >>> type(guess_stream(guess_options(ds_ser.store), ds_ser.store)
+    >>> type(guess_stream(guess_options(ds_ser.store), ds_ser.store))
     <class 'pyjelly.serialize.streams.QuadStream'>
     """
     stream_cls: type[Stream]
