@@ -77,7 +77,7 @@ If you have a generator object containing graphs, you can easily serialize it in
 
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
-This approach allows for transmitting logically grouped data, preserving their original division.
+This method allows for transmitting logically grouped data, preserving their original division.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### File extension support
