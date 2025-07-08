@@ -53,6 +53,15 @@ In this more complex example, we look through a fragment of Denmark's OpenStreet
 
 `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
+### Serializing a stream of graphs
+
+If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: 
+
+{{ code_example('rdflib/06_serialize_grouped.py')}}
+
+This method allows for transmitting logically grouped data, preserving their original division.
+For more precise control over frame serialization you can use [lower-level API](api.md)
+
 ### File extension support
 
 You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
