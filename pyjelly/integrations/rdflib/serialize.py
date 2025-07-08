@@ -7,8 +7,14 @@ from typing import Any, IO, Optional
 from typing_extensions import override
 
 import rdflib
-from rdflib import Graph, Literal, Namespace
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
+from rdflib.graph import (
+    DATASET_DEFAULT_GRAPH_ID,
+    Dataset,
+    Graph,
+    QuotedGraph,
+    Namespace,
+    Literal,
+)
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
@@ -21,10 +27,11 @@ from pyjelly.serialize.streams import (
     Stream,
     TripleStream,
 )
-from pyjelly.options import StreamParameters
-from pyjelly.integrations.rdflib.parse import Triple, Quad
 
-# ruff: enable
+from typing import Callable, Optional, Iterable
+
+import random
+from pyjelly.options import StreamParameters
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -67,6 +74,10 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 
 
 @singledispatch
+def stream_frames(
+    stream: Stream,
+    data: Graph,  # noqa: ARG001
+) -> Generator[jelly.RdfStreamFrame]:
 def stream_frames(
     stream: Stream,
     data: Graph,  # noqa: ARG001

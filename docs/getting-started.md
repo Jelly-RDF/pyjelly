@@ -71,7 +71,7 @@ If you have a generator object containing statements, you can easily serialize i
 This flat mode transmits each statement in order and then adds a final marker, keeping the simplicity and order of the data.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
-### Writing streamed data through iterator
+### Serializing a stream of graphs
 
 If you have a generator object containing data/graphs (ex. loaded through a stream), you can easily write it into the `.jelly` format, like in the example given in: 
 
