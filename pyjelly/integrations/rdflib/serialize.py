@@ -6,7 +6,14 @@ from typing import IO, Any
 from typing_extensions import override
 
 import rdflib
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph, QuotedGraph
+from rdflib.graph import (
+    DATASET_DEFAULT_GRAPH_ID,
+    Dataset,
+    Graph,
+    QuotedGraph,
+    Namespace,
+    Literal,
+)
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
@@ -19,6 +26,11 @@ from pyjelly.serialize.streams import (
     Stream,
     TripleStream,
 )
+
+from typing import Callable, Optional, Iterable
+
+import random
+from pyjelly.options import StreamParameters
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -61,7 +73,10 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 
 
 @singledispatch
-def stream_frames(stream: Stream, data: Graph) -> Generator[jelly.RdfStreamFrame]:  # noqa: ARG001
+def stream_frames(
+    stream: Stream,
+    data: Graph,  # noqa: ARG001
+) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
 
@@ -200,6 +215,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         Return an appropriate stream implementation for the given options.
 
+        Notes: if base(!) logical type is GRAPHS and Dataset is given,
+            initializes TripleStream
+
         >>> graph_ser = RDFLibJellySerializer(Graph())
         >>> ds_ser = RDFLibJellySerializer(Dataset())
 
@@ -209,9 +227,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         <class 'pyjelly.serialize.streams.QuadStream'>
         """
         stream_cls: type[Stream]
-        if options.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
-            self.store, Dataset
-        ):
+        if (
+            options.logical_type % 10
+        ) != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(self.store, Dataset):
             stream_cls = QuadStream
         else:
             stream_cls = TripleStream
@@ -246,3 +264,40 @@ class RDFLibJellySerializer(RDFLibSerializer):
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
+
+
+def serialise_stream_grouped(
+    stream_frames_func,
+    graph_iter=None,
+    logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+    params=None,
+):
+    if params is None:
+        params = StreamParameters()
+    if graph_iter is None:
+        ex = Namespace("http://example.org/")
+
+        def _gen():
+            for _ in range(100):
+                g = Graph()
+                g.add((ex.sensor, ex.temperature, Literal(random.random())))
+                g.add((ex.sensor, ex.humidity, Literal(random.random())))
+                yield g
+
+        graph_iter = _gen()
+    stream = TripleStream.for_rdflib(
+        options=SerializerOptions(logical_type=logical_type, params=params)
+    )
+    for graph in graph_iter:
+        yield from stream_frames_func(stream, graph)
+
+
+def save_frames_to_jelly(
+    frame_func: Callable[..., Iterable[jelly.RdfStreamFrame]],
+    output_path: str,
+    *args,
+    **kwargs,
+) -> None:
+    with open(output_path, "wb") as out:
+        for frame in frame_func(*args, **kwargs):
+            write_delimited(frame, out)

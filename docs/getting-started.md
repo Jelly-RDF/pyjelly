@@ -49,7 +49,7 @@ To process a Jelly stream as a stream of RDFLib triples:
 
 Here, `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed), allowing for efficient triple-level processing and building custom aggregations from the stream.
 
-### Writing streamed data through iterator
+### Serializing a stream of graphs
 
 If you have a generator object containing data/graphs (ex. loaded through a stream), you can easily write it into the `.jelly` format, like in the example given in: 
 
