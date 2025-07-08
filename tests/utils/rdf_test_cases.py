@@ -12,10 +12,6 @@ import pytest
 # TODO(Piotr): Remove this list once the failing test cases are fixed.
 # See https://github.com/Jelly-RDF/pyjelly/issues/145
 failing_test_cases = [
-    "from_jelly_triples_pos_014",
-    "from_jelly_triples_pos_015",
-    "from_jelly_triples_pos_017",
-    "from_jelly_triples_pos_018",
     "to_jelly_triples_pos_014",
 ]
 
