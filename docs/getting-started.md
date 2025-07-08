@@ -62,6 +62,15 @@ If you have a generator object containing graphs, you can easily serialize it in
 This method allows for transmitting logically grouped data, preserving their original division.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
+### Serializing a stream of statements
+
+If you have a generator object containing statements, you can easily serialize it into the Jelly format, like in the following example: 
+
+{{ code_example('rdflib/07_serialize_flat.py')}}
+
+This flat mode transmits each statement in order and then adds a final marker, keeping the simplicity and order of the data.
+For more precise control over frame serialization you can use [lower-level API](api.md)
+
 ### File extension support
 
 You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
