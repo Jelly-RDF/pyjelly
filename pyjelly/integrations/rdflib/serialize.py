@@ -1,17 +1,18 @@
 # ruff: noqa: I001
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from functools import singledispatch
 from typing import Any, IO, Optional
 from typing_extensions import override
 
 import rdflib
-from rdflib import Graph
+from rdflib import Graph, Literal, Namespace
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
+from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
@@ -231,6 +232,46 @@ class RDFLibJellySerializer(RDFLibSerializer):
             raise NotImplementedError(msg)
         super().__init__(store)
 
+    def guess_options(self) -> SerializerOptions:
+        """
+        Guess the serializer options based on the store type.
+
+        >>> RDFLibJellySerializer(Graph()).guess_options().logical_type
+        1
+        >>> RDFLibJellySerializer(Dataset()).guess_options().logical_type
+        2
+        """
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+            if isinstance(self.store, Dataset)
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
+        return SerializerOptions(logical_type=logical_type)
+
+    def guess_stream(self, options: SerializerOptions) -> Stream:
+        """
+        Return an appropriate stream implementation for the given options.
+
+        Notes: if base(!) logical type is GRAPHS and Dataset is given,
+            initializes TripleStream
+
+        >>> graph_ser = RDFLibJellySerializer(Graph())
+        >>> ds_ser = RDFLibJellySerializer(Dataset())
+
+        >>> type(graph_ser.guess_stream(graph_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.TripleStream'>
+        >>> type(ds_ser.guess_stream(ds_ser.guess_options()))
+        <class 'pyjelly.serialize.streams.QuadStream'>
+        """
+        stream_cls: type[Stream]
+        if (
+            options.logical_type % 10
+        ) != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(self.store, Dataset):
+            stream_cls = QuadStream
+        else:
+            stream_cls = TripleStream
+        return stream_cls.for_rdflib(options=options)
+
     @override
     def serialize(  # type: ignore[override]
         self,
@@ -254,45 +295,44 @@ class RDFLibJellySerializer(RDFLibSerializer):
 
         """
         if options is None:
-            options = guess_options(self.store)
+            options = self.guess_options()
         if stream is None:
-            stream = guess_stream(options, self.store)
+            stream = self.guess_stream(options)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
 
 
-def grouped_stream_to_frames(
-    sink_generator: Generator[Graph] | Generator[Dataset],
-    options: SerializerOptions | None = None,
-) -> Generator[jelly.RdfStreamFrame]:
-    """
-    Transform Graphs/Datasets into Jelly frames, one frame per Graph/Dataset.
+def serialise_stream_grouped(
+    stream_frames_func: Callable[[Stream, Graph], Iterable[jelly.RdfStreamFrame]],
+    graph_iter: Iterable[Graph] | None = None,
+    logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+    params: StreamParameters | None = None,
+) -> Generator[jelly.RdfStreamFrame, None, None]:
+    if params is None:
+        params = StreamParameters()
+    if graph_iter is None:
+        ex = Namespace("http://example.org/")
 
-    Note: options are guessed if not provided.
+        def _gen() -> Generator[Graph, None, None]:
+            for _ in range(100):
+                g = Graph()
+                g.add((ex.sensor, ex.temperature, Literal(random.random())))  # noqa: S311
+                g.add((ex.sensor, ex.humidity, Literal(random.random())))  # noqa: S311
+                yield g
 
-    Args:
-        sink_generator (Generator[Graph] | Generator[Dataset]): Generator of
-            Graphs/Dataset to transform.
-        options (SerializerOptions | None, optional): stream options to use.
-            Options are guessed based on the sink store type. Defaults to None.
-
-    Yields:
-        Generator[jelly.RdfStreamFrame]: produced Jelly frames
-
-    """
-    stream = None
-    for sink in sink_generator:
-        if not stream:
-            if options is None:
-                options = guess_options(sink)
-            stream = guess_stream(options, sink)
-        yield from stream_frames(stream, sink)
+        graph_iter = _gen()
+    stream = TripleStream.for_rdflib(
+        options=SerializerOptions(logical_type=logical_type, params=params)
+    )
+    for graph in graph_iter:
+        yield from stream_frames(stream, graph)
 
 
-def grouped_stream_to_file(
-    stream: Generator[Graph] | Generator[Dataset],
-    output_file: IO[bytes],
+def serialize_save(
+    frame_func: Callable[..., Iterable[jelly.RdfStreamFrame]],
+    output_path: str,
+    *args: Any,
     **kwargs: Any,
 ) -> None:
     """
