@@ -7,17 +7,24 @@ from typing_extensions import Self, override
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
-from pyjelly.integrations.generic.generic_sink import GenericStatementSink, Quad, Triple
+from pyjelly.integrations.generic.generic_sink import (
+    IRI,
+    BlankNode,
+    GenericStatementSink,
+    Literal,
+    Quad,
+    Triple,
+)
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
 Statement = Union[Triple, Quad]
 
 
-class Prefix(tuple[str, str]):
+class Prefix(tuple[str, IRI]):
     __slots__ = ()
 
-    def __new__(cls, prefix: str, iri: str) -> Self:
+    def __new__(cls, prefix: str, iri: IRI) -> Self:
         return tuple.__new__(cls, (prefix, iri))
 
     @property
@@ -25,7 +32,7 @@ class Prefix(tuple[str, str]):
         return self[0]
 
     @property
-    def iri(self) -> str:
+    def iri(self) -> IRI:
         return self[1]
 
 
@@ -39,12 +46,12 @@ class GenericStatementSinkAdapter(Adapter):
     """
 
     @override
-    def iri(self, iri: str) -> str:
-        return iri
+    def iri(self, iri: str) -> IRI:
+        return IRI(iri)
 
     @override
-    def bnode(self, bnode: str) -> str:
-        return "_:" + bnode
+    def bnode(self, bnode: str) -> BlankNode:
+        return BlankNode(bnode)
 
     @override
     def default_graph(self) -> str:
@@ -56,13 +63,8 @@ class GenericStatementSinkAdapter(Adapter):
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
-    ) -> str:
-        suffix = ""
-        if language:
-            suffix = f"@{language}"
-        elif datatype:
-            suffix = f"^^<{datatype}>"
-        return f'"{lex}"{suffix}'
+    ) -> Literal:
+        return Literal(lex, language, datatype)
 
     @override
     def namespace_declaration(self, name: str, iri: str) -> Prefix:

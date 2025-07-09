@@ -7,8 +7,41 @@ from pathlib import Path
 from typing import Union
 from typing_extensions import Self
 
-Node = Union[str, "Triple"]
 check_if_iri = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+
+
+class BlankNode:
+    def __init__(self, identifier: str) -> None:
+        self._identifier: str = identifier
+
+    def __repr__(self) -> str:
+        return f"_:{self._identifier}"
+
+
+class IRI:
+    def __init__(self, iri: str) -> None:
+        self._iri: str = iri
+
+    def __repr__(self) -> str:
+        return f"<{self._iri}>"
+
+
+class Literal:
+    def __init__(self, lex: str, langtag: str | None, datatype: str | None) -> None:
+        self._lex: str = lex
+        self._langtag: str | None = langtag
+        self._datatype: str | None = datatype
+
+    def __repr__(self) -> str:
+        suffix = ""
+        if self._langtag:
+            suffix = f"@{self._langtag}"
+        elif self._datatype:
+            suffix = f"^^<{self._datatype}>"
+        return f'"{self._lex}"{suffix}'
+
+
+Node = Union[BlankNode, IRI, Literal, "Triple", str]
 
 
 class Triple(tuple[Node, Node, Node]):
@@ -58,12 +91,12 @@ class GenericStatementSink:
 
     def __init__(self) -> None:
         self._store: deque[tuple[Node, ...]] = deque()
-        self._namespaces: dict[Node, Node] = {}
+        self._namespaces: dict[str, IRI] = {}
 
     def add(self, statement: Iterable[Node]) -> None:
         self._store.append(tuple(statement))
 
-    def bind(self, prefix: str, namespace: str) -> None:
+    def bind(self, prefix: str, namespace: IRI) -> None:
         self._namespaces.update({prefix: namespace})
 
     def __iter__(self) -> Generator[tuple[Node, ...]]:
@@ -78,14 +111,10 @@ class GenericStatementSink:
         return len(self._store[0]) == triples_arity
 
     def _nt_token(self, node: Node) -> str:
-        if isinstance(node, str) and node.startswith("_:"):
-            return node
         if isinstance(node, Triple):
             quoted_triple = [self._nt_token(t) for t in node]
             return "<< " + " ".join(quoted_triple) + " >>"
-        if isinstance(node, str) and bool(check_if_iri.match(node)):
-            return f"<{node}>"
-        return node
+        return str(node)
 
     def serialize(self, output_filename: Path, encoding: str) -> None:
         with output_filename.open("w", encoding=encoding) as output_file:
