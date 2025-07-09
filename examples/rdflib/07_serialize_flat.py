@@ -1,5 +1,4 @@
 from pyjelly.integrations.rdflib.serialize import flat_stream_to_file
-from pyjelly.integrations.rdflib.parse import Triple
 from rdflib import Literal, Namespace
 import random
 
@@ -8,7 +7,7 @@ import random
 def generate_sample_triples():
     ex = Namespace("http://example.org/")
     for _ in range(10):
-        yield Triple(ex.sensor, ex.temperature, Literal(random.random()))
+        yield (ex.sensor, ex.temperature, Literal(random.random()))
 
 
 output_file_name = "flat_output.jelly"
