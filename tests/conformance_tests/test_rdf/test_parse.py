@@ -8,6 +8,9 @@ from rdflib import Dataset, Graph, Literal, Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
+from pyjelly.integrations.generic.parse import (
+    parse_jelly_grouped as generic_parse_jelly_grouped,
+)
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
@@ -15,6 +18,7 @@ from tests.meta import (
 )
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
+    GeneralizedTestCasesDir,
     PhysicalTypeTestCasesDir,
     id_from_path,
     jelly_validate,
@@ -68,6 +72,34 @@ def test_parses(path: Path) -> None:
             graph.serialize(
                 destination=output_filename, encoding="utf-8", format=extension
             )
+            jelly_validate(
+                input_filename,
+                "--compare-ordered",
+                "--compare-frame-indices",
+                frame_no,
+                "--compare-to-rdf-file",
+                output_filename,
+                hint=f"Test ID: {test_id}, output file: {output_filename}",
+            )
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.QUADS,
+    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.GRAPHS,
+    glob="pos_*",
+)
+def test_generalized_parses(path: Path) -> None:
+    input_filename = path / "in.jelly"
+    test_id = id_from_path(path)
+    output_dir = TEST_OUTPUTS_DIR / test_id
+    output_dir.mkdir(exist_ok=True)
+    with input_filename.open("rb") as input_file:
+        for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
+            extension = f"n{'triples' if graph.is_triples_sink else 'quads'}"
+            output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
+            graph.serialize(output_filename=output_filename, encoding="utf-8")
             jelly_validate(
                 input_filename,
                 "--compare-ordered",
