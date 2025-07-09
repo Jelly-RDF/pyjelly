@@ -1,8 +1,10 @@
 # ruff: noqa: I001
+# ruff: noqa: I001
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from functools import singledispatch
+from typing import Any, IO, Optional
 from typing import Any, IO, Optional
 from typing_extensions import override
 from itertools import chain
@@ -214,6 +216,48 @@ def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
     return stream_cls.for_rdflib(options=options)
 
 
+def guess_options(sink: Graph | Dataset) -> SerializerOptions:
+    """
+    Guess the serializer options based on the store type.
+
+    >>> guess_options(Graph()).logical_type
+    1
+    >>> guess_options(Dataset()).logical_type
+    2
+    """
+    logical_type = (
+        jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+        if isinstance(sink, Dataset)
+        else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    )
+    return SerializerOptions(logical_type=logical_type)
+
+
+def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
+    """
+    Return an appropriate stream implementation for the given options.
+
+    Notes: if base(!) logical type is GRAPHS and Dataset is given,
+        initializes TripleStream
+
+    >>> graph_ser = RDFLibJellySerializer(Graph())
+    >>> ds_ser = RDFLibJellySerializer(Dataset())
+
+    >>> type(guess_stream(guess_options(graph_ser.store), graph_ser.store))
+    <class 'pyjelly.serialize.streams.TripleStream'>
+    >>> type(guess_stream(guess_options(ds_ser.store), ds_ser.store))
+    <class 'pyjelly.serialize.streams.QuadStream'>
+    """
+    stream_cls: type[Stream]
+    if (options.logical_type % 10) != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
+        sink, Dataset
+    ):
+        stream_cls = QuadStream
+    else:
+        stream_cls = TripleStream
+    return stream_cls.for_rdflib(options=options)
+
+
 class RDFLibJellySerializer(RDFLibSerializer):
     """
     RDFLib serializer for writing graphs in Jelly RDF stream format.
@@ -253,7 +297,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         if options is None:
             options = guess_options(self.store)
+            options = guess_options(self.store)
         if stream is None:
+            stream = guess_stream(options, self.store)
             stream = guess_stream(options, self.store)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
