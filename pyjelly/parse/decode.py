@@ -405,4 +405,5 @@ class Decoder:
         str: decode_bnode,
         jelly.RdfLiteral: decode_literal,
         jelly.RdfDefaultGraph: decode_default_graph,
+        jelly.RdfTriple: decode_triple,
     }
