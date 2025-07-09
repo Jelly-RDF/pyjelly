@@ -11,7 +11,6 @@ import rdflib
 from rdflib import Graph, Node, Dataset
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
-from pyjelly.options import StreamParameters
 
 from pyjelly import jelly
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
@@ -23,7 +22,6 @@ from pyjelly.serialize.streams import (
     Stream,
     TripleStream,
 )
-from pyjelly.integrations.rdflib.parse import Triple, Quad
 
 # ruff: enable
 
@@ -70,7 +68,7 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 @singledispatch
 def stream_frames(
     stream: Stream,
-    data: Graph,  # noqa: ARG001
+    data: Graph | chain[tuple[Node, Node, Node]] | chain[tuple[Node, Node, Node, Node]],  # noqa: ARG001
 ) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
@@ -79,7 +77,7 @@ def stream_frames(
 @stream_frames.register(TripleStream)
 def triples_stream_frames(
     stream: TripleStream,
-    data: Graph | Dataset | tuple[Node, Node, Node],
+    data: Graph | Dataset | Generator[tuple[Node, Node, Node]],
 ) -> Generator[jelly.RdfStreamFrame]:
     """
     Serialize a Graph/Dataset into jelly frames.
@@ -96,15 +94,10 @@ def triples_stream_frames(
         Generator[jelly.RdfStreamFrame]: jelly frames.
 
     """
-    if isinstance(data, tuple):
-        if frame := stream.triple(data):
-            yield frame
-        if stream.stream_types.flat and (f := stream.flow.to_stream_frame()):
-            yield f
-        return
-
-    if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
+    stream.enroll()
+    if isinstance(data, Graph):
+        if stream.options.params.namespace_declarations:
+            namespace_declarations(data, stream)
     graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
     for graph in graphs:
         for terms in graph:
@@ -135,7 +128,6 @@ def quads_stream_frames(
         Generator[jelly.RdfStreamFrame]: jelly frames
 
     """
-    assert isinstance(data, Dataset)
     stream.enroll()
     if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
@@ -336,15 +328,13 @@ def flat_stream_to_frames(
     if first is None:
         return
 
-    stream = None
     sink = Dataset() if len(first) == 4 else Graph()
-    if not stream:
-        if options is None:
-            options = guess_options(sink)
-        stream = guess_stream(options, sink)
+    if options is None:
+        options = guess_options(sink)
+    stream = guess_stream(options, sink)
 
-    for statement in chain((first,), iterator):
-        yield from stream_frames(stream, statement)  # type: ignore[arg-type]
+    yield from stream_frames(stream, chain((first,), iterator))  # type: ignore
+
 
 def flat_stream_to_file(
     statements: Generator[tuple[Node, Node, Node] | tuple[Node, Node, Node, Node]],
