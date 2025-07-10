@@ -1,4 +1,4 @@
-# ruff: noqa: I001
+# ruff: noqa: I001, E501, PLR2004, UP007
 from __future__ import annotations
 from typing import cast
 from collections.abc import Generator
@@ -8,7 +8,7 @@ from typing import Any, IO, Optional
 from typing_extensions import override
 
 import rdflib
-from rdflib import Graph, Node, Dataset
+from rdflib import Graph, Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
@@ -21,9 +21,7 @@ from pyjelly.serialize.streams import (
     SerializerOptions,
     Stream,
     TripleStream,
-)
-
-# ruff: enable
+)  # ruff: enable
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -95,9 +93,9 @@ def triples_stream_frames(
 
     """
     stream.enroll()
-    if isinstance(data, Graph):
-        if stream.options.params.namespace_declarations:
-            namespace_declarations(data, stream)
+    if isinstance(data, Graph) and stream.options.params.namespace_declarations:
+        namespace_declarations(data, stream)
+
     graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
     for graph in graphs:
         for terms in graph:
@@ -326,14 +324,14 @@ def flat_stream_to_frames(
     Serialize a stream of raw triples or quads into Jelly frames.
 
     Args:
-        statements (Generator[tuple[Node, Node, Node] | tuple[Node, Node, Node, Node]]):
+        statements (Generator[tuple[Node, Node, Node] | Generator[tuple[Node, Node, Node, Node]):
             s/p/o or s/p/o/g tuples to serialize.
         options (SerializerOptions | None, optional): if omitted, guessed based on the first tuple.
 
     Yields:
         Generator[jelly.RdfStreamFrame]: generated frames.
-    """
 
+    """
     T = TypeVar("T")
 
     def prepend(first: T, rest: Generator[T, None, None]) -> Generator[T, None, None]:
@@ -363,9 +361,10 @@ def flat_stream_to_file(
     Write Triple or Quad events to a binary file in Jelly flat format.
 
     Args:
-        statements (Iterable[Triple | Quad]): events to serialize.
+        statements (Generator[tuple[Node, Node, Node] | Generator[tuple[Node, Node, Node, Node]]): events to serialize.
         output_file (IO[bytes]): open binary file handle.
         options (SerializerOptions | None, optional): stream options. If omitted, inferred from first statement.
+
     """
     for frame in flat_stream_to_frames(statements, options):
         write_delimited(frame, output_file)
