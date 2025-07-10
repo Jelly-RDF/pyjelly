@@ -315,7 +315,7 @@ def parse_jelly_grouped(
     dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
 ) -> Generator[Graph] | Generator[Dataset]:
     """
-    Take jelly file and return generators based on the detected logical type.
+    Take jelly file and return generators based on the detected physical type.
 
     Yields one graph/dataset per frame.
 
@@ -329,7 +329,7 @@ def parse_jelly_grouped(
             but you can pass something else here.
 
     Raises:
-        NotImplementedError: is raised if a logical type is not implemented
+        NotImplementedError: is raised if a physical type is not implemented
 
     Yields:
         Generator[Graph] | Generator[Dataset]:
@@ -426,7 +426,7 @@ def parse_jelly_flat(
     options: ParserOptions | None = None,
 ) -> Generator[Statement | Prefix]:
     """
-    Parse jelly file with FLAT physical type into a Generator of stream events.
+    Parse jelly file with FLAT logical type into a Generator of stream events.
 
     Args:
         inp (IO[bytes]): input jelly buffered binary stream.

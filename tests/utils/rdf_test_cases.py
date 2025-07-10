@@ -66,6 +66,15 @@ class GeneralizedTestCasesDir(str, Enum):
         return self.value
 
 
+class RDFStarGeneralizedTestCasesDir(str, Enum):
+    TRIPLES = "triples_rdf_star_generalized"
+    QUADS = "quads_rdf_star_generalized"
+    GRAPHS = "graphs_rdf_star_generalized"
+
+    def __str__(self) -> str:
+        return self.value
+
+
 class RDFStarTestCasesDir(str, Enum):
     TRIPLES = "triples_rdf_star"
     QUADS = "quads_rdf_star"

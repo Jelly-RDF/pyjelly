@@ -134,6 +134,11 @@ class Adapter(metaclass=ABCMeta):
             stream_types=self.options.stream_types,
         )
 
+    def quoted_triple(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
+        _adapter_missing(
+            "decoding quoted triple", stream_types=self.options.stream_types
+        )
+
     def frame(self) -> Any:
         return None
 
@@ -383,6 +388,20 @@ class Decoder:
         terms = self.decode_statement(triple, ("subject", "predicate", "object"))
         return self.adapter.triple(terms)
 
+    def decode_quoted_triple(self, triple: jelly.RdfTriple) -> Any:
+        oneofs: Sequence[str] = ("subject", "predicate", "object")
+        terms = []
+        for oneof in oneofs:
+            field = triple.WhichOneof(oneof)
+            if field:
+                jelly_term = getattr(triple, field)
+                decoded_term = self.decode_term(jelly_term)
+            else:
+                msg = "repeated terms are not allowed in quoted triples"
+                raise ValueError(msg)
+            terms.append(decoded_term)
+        return self.adapter.quoted_triple(terms)
+
     def decode_quad(self, quad: jelly.RdfQuad) -> Any:
         terms = self.decode_statement(quad, ("subject", "predicate", "object", "graph"))
         return self.adapter.quad(terms)
@@ -405,5 +424,5 @@ class Decoder:
         str: decode_bnode,
         jelly.RdfLiteral: decode_literal,
         jelly.RdfDefaultGraph: decode_default_graph,
-        jelly.RdfTriple: decode_triple,
+        jelly.RdfTriple: decode_quoted_triple,
     }
