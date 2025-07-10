@@ -20,6 +20,8 @@ from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
     GeneralizedTestCasesDir,
     PhysicalTypeTestCasesDir,
+    RDFStarGeneralizedTestCasesDir,
+    RDFStarTestCasesDir,
     id_from_path,
     jelly_validate,
     needs_jelly_cli,
@@ -91,6 +93,33 @@ def test_parses(path: Path) -> None:
     glob="pos_*",
 )
 def test_generalized_parses(path: Path) -> None:
+    run_generic_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.QUADS,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.GRAPHS,
+    glob="pos_*",
+)
+def test_rdf_star_parses(path: Path) -> None:
+    run_generic_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
+    glob="pos_*",
+)
+def test_rdf_star_generalized_parses(path: Path) -> None:
+    run_generic_test(path)
+
+
+@needs_jelly_cli
+def run_generic_test(path: Path) -> None:
     input_filename = path / "in.jelly"
     test_id = id_from_path(path)
     output_dir = TEST_OUTPUTS_DIR / test_id
@@ -126,3 +155,39 @@ def test_parsing_fails(path: Path) -> None:
     dataset = Dataset(store=OrderedMemory())
     with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011, B017, TD002
         dataset.parse(location=input_filename, format="jelly")
+
+
+@needs_jelly_cli
+def run_generic_fail_test(path: Path) -> None:
+    input_filename = path / "in.jelly"
+    test_id = id_from_path(path)
+    output_dir = TEST_OUTPUTS_DIR / test_id
+    output_dir.mkdir(exist_ok=True)
+
+    with (
+        pytest.raises(Exception),  # TODO: more specific  # noqa: PT011, B017, TD002
+        input_filename.open("rb") as input_file,
+    ):
+        list(generic_parse_jelly_grouped(input_file))
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.GRAPHS,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.QUADS,
+    glob="neg_*",
+)
+def test_parsing_rdf_star_fails(path: Path) -> None:
+    run_generic_fail_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
+    glob="neg_*",
+)
+def test_parsing_rdf_star_generalized_fails(path: Path) -> None:
+    run_generic_fail_test(path)

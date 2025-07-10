@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Generator, Iterable
 from itertools import chain
 from typing import IO, Any, Callable, Union
-from typing_extensions import Self, override
+from typing_extensions import override
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
@@ -12,6 +12,7 @@ from pyjelly.integrations.generic.generic_sink import (
     BlankNode,
     GenericStatementSink,
     Literal,
+    Prefix,
     Quad,
     Triple,
 )
@@ -21,24 +22,13 @@ from pyjelly.parse.ioutils import get_options_and_frames
 Statement = Union[Triple, Quad]
 
 
-class Prefix(tuple[str, IRI]):
-    __slots__ = ()
-
-    def __new__(cls, prefix: str, iri: IRI) -> Self:
-        return tuple.__new__(cls, (prefix, iri))
-
-    @property
-    def prefix(self) -> str:
-        return self[0]
-
-    @property
-    def iri(self) -> IRI:
-        return self[1]
-
-
 class GenericStatementSinkAdapter(Adapter):
     """
     Implement Adapter for generic statements.
+
+    Notes:
+        Returns custom RDF terms expected by GenericStatementSink,
+        handles namespace declarations, and quoted triples.
 
     Args:
         Adapter (_type_): base Adapter class
@@ -70,8 +60,21 @@ class GenericStatementSinkAdapter(Adapter):
     def namespace_declaration(self, name: str, iri: str) -> Prefix:
         return Prefix(name, self.iri(iri))
 
+    @override
+    def quoted_triple(self, terms: Iterable[Any]) -> Triple:
+        return Triple(*terms)
+
 
 class GenericTriplesAdapter(GenericStatementSinkAdapter):
+    """
+    Triples adapted implementation for GenericStatementSink.
+
+    Args:
+        GenericStatementSinkAdapter (_type_): base GenericStatementSink
+            adapter implementation that handles terms and namespaces.
+
+    """
+
     def __init__(
         self,
         options: ParserOptions,
@@ -83,22 +86,42 @@ class GenericTriplesAdapter(GenericStatementSinkAdapter):
         return Triple(*terms)
 
 
-class RDFLibQuadsBaseAdapter(GenericStatementSinkAdapter):
+class GenericQuadsBaseAdapter(GenericStatementSinkAdapter):
     def __init__(self, options: ParserOptions) -> None:
         super().__init__(options=options)
 
 
-class GenericQuadsAdapter(RDFLibQuadsBaseAdapter):
+class GenericQuadsAdapter(GenericQuadsBaseAdapter):
+    """
+    Extends GenericQuadsBaseAdapter for QUADS physical type.
+
+    Args:
+        GenericQuadsBaseAdapter (_type_): quads adapter that handles
+            base quads processing.
+
+    """
+
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
         return Quad(*terms)
 
-    @override
-    def triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
 
+class GenericGraphsAdapter(GenericQuadsBaseAdapter):
+    """
+    Extends GenericQuadsBaseAdapter for GRAPHS physical type.
 
-class GenericGraphsAdapter(RDFLibQuadsBaseAdapter):
+    Notes:
+        introduces graph start/end, checks if graph exists.
+
+    Args:
+        GenericQuadsBaseAdapter (_type_): quads adapter that handles
+            base quads processing.
+
+    Raises:
+        JellyConformanceError: raised if graph start message was not received.
+
+    """
+
     _graph_id: str | None
 
     def __init__(
@@ -168,7 +191,7 @@ def parse_quads_stream(
             one iterable per frame.
 
     """
-    adapter_class: type[RDFLibQuadsBaseAdapter]
+    adapter_class: type[GenericQuadsBaseAdapter]
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS:
         adapter_class = GenericQuadsAdapter
     else:
@@ -184,6 +207,24 @@ def parse_jelly_grouped(
     inp: IO[bytes],
     sink_factory: Callable[[], GenericStatementSink] = lambda: GenericStatementSink(),
 ) -> Generator[GenericStatementSink]:
+    """
+    Take a jelly file and return generators of generic statements sinks.
+
+    Yields one generic statements sink per frame.
+
+    Args:
+        inp (IO[bytes]): input jelly buffered binary stream
+        sink_factory (Callable): lambda to construct a statement sink.
+            By default creates an empty in-memory GenericStatementSink.
+
+    Raises:
+        NotImplementedError: is raised if a physical type is not implemented
+
+    Yields:
+        Generator[GenericStatementSink]:
+            returns generators for GenericStatementSink, regardless of stream type.
+
+    """
     options, frames = get_options_and_frames(inp)
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for graph in parse_triples_stream(
@@ -226,6 +267,21 @@ def parse_jelly_to_graph(
     inp: IO[bytes],
     sink_factory: Callable[[], GenericStatementSink] = lambda: GenericStatementSink(),
 ) -> GenericStatementSink:
+    """
+    Add statements from Generator to GenericStatementSink.
+
+    Args:
+        inp (IO[bytes]): input jelly stream.
+        sink_factory (Callable[[], GenericStatementSink]): factory to create
+            statement sink.
+            By default creates an empty in-memory GenericStatementSink.
+            Has no division for datasets/graphs,
+            utilizes the same underlying data structures.
+
+    Returns:
+        GenericStatementSink: GenericStatementSink with statements.
+
+    """
     options, frames = get_options_and_frames(inp)
     sink = sink_factory()
 
@@ -242,6 +298,23 @@ def parse_jelly_flat(
     frames: Iterable[jelly.RdfStreamFrame] | None = None,
     options: ParserOptions | None = None,
 ) -> Generator[Statement | Prefix]:
+    """
+    Parse jelly file with FLAT logical type into a Generator of stream events.
+
+    Args:
+        inp (IO[bytes]): input jelly buffered binary stream.
+        frames (Iterable[jelly.RdfStreamFrame | None):
+            jelly frames if read before.
+        options (ParserOptions | None): stream options
+            if read before.
+
+    Raises:
+        NotImplementedError: if physical type is not supported
+
+    Yields:
+        Generator[Statement | Prefix]: Generator of stream events
+
+    """
     if not frames or not options:
         options, frames = get_options_and_frames(inp)
 
