@@ -57,6 +57,33 @@ class PhysicalTypeTestCasesDir(str, Enum):
         return self.value
 
 
+class GeneralizedTestCasesDir(str, Enum):
+    TRIPLES = "triples_rdf_1_1_generalized"
+    QUADS = "quads_rdf_1_1_generalized"
+    GRAPHS = "graphs_rdf_1_1_generalized"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class RDFStarGeneralizedTestCasesDir(str, Enum):
+    TRIPLES = "triples_rdf_star_generalized"
+    QUADS = "quads_rdf_star_generalized"
+    GRAPHS = "graphs_rdf_star_generalized"
+
+    def __str__(self) -> str:
+        return self.value
+
+
+class RDFStarTestCasesDir(str, Enum):
+    TRIPLES = "triples_rdf_star"
+    QUADS = "quads_rdf_star"
+    GRAPHS = "graphs_rdf_star"
+
+    def __str__(self) -> str:
+        return self.value
+
+
 def walk_directories(
     *dirs: str | Path,
     glob: str | None = None,
