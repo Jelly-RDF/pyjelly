@@ -3,7 +3,7 @@ from rdflib import Literal, Namespace
 import random
 
 
-# example generator with triplet statements
+# example generator with triples statements
 def generate_sample_triples():
     ex = Namespace("http://example.org/")
     for _ in range(10):

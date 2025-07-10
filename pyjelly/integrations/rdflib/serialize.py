@@ -1,13 +1,11 @@
 # ruff: noqa: I001
-# ruff: noqa: I001
 from __future__ import annotations
-
-from collections.abc import Generator, Iterable
+from typing import cast
+from collections.abc import Generator
+from typing import TypeVar
 from functools import singledispatch
 from typing import Any, IO, Optional
-from typing import Any, IO, Optional
 from typing_extensions import override
-from itertools import chain
 
 import rdflib
 from rdflib import Graph, Node, Dataset
@@ -70,7 +68,7 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 @singledispatch
 def stream_frames(
     stream: Stream,
-    data: Graph | chain[tuple[Node, Node, Node]] | chain[tuple[Node, Node, Node, Node]],  # noqa: ARG001
+    data: Graph | Generator[tuple[Node, ...], None, None],  # noqa: ARG001
 ) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
@@ -111,10 +109,10 @@ def triples_stream_frames(
         yield frame
 
 
-@stream_frames.register
+@stream_frames.register(QuadStream)
 def quads_stream_frames(
     stream: QuadStream,
-    data: Dataset,
+    data: Dataset | Generator[tuple[Node, Node, Node, Node]],
 ) -> Generator[jelly.RdfStreamFrame]:
     """
     Serialize a Dataset into jelly frames.
@@ -132,8 +130,17 @@ def quads_stream_frames(
     """
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
-    for terms in data.quads():
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
+
+    iterator: Generator[tuple[Node, Node, Node, Node], None, None]
+    if isinstance(data, Dataset):
+        iterator = cast(
+            Generator[tuple[Node, Node, Node, Node], None, None], data.quads()
+        )
+    else:
+        iterator = data
+
+    for terms in iterator:
         if frame := stream.quad(terms):
             yield frame
     if frame := stream.flow.frame_from_dataset():
@@ -255,7 +262,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
         """
         if options is None:
             options = guess_options(self.store)
-            options = guess_options(self.store)
         if stream is None:
             stream = guess_stream(options, self.store)
             stream = guess_stream(options, self.store)
@@ -312,11 +318,12 @@ def grouped_stream_to_file(
 
 
 def flat_stream_to_frames(
-    statements: Generator[tuple[Node, Node, Node] | tuple[Node, Node, Node, Node]],
+    statements: Generator[tuple[Node, Node, Node]]
+    | Generator[tuple[Node, Node, Node, Node]],
     options: Optional[SerializerOptions] = None,
 ) -> Generator[jelly.RdfStreamFrame]:
     """
-    Serialize a stream of raw triple or quads into Jelly flat mode frames.
+    Serialize a stream of raw triples or quads into Jelly frames.
 
     Args:
         statements (Generator[tuple[Node, Node, Node] | tuple[Node, Node, Node, Node]]):
@@ -326,6 +333,12 @@ def flat_stream_to_frames(
     Yields:
         Generator[jelly.RdfStreamFrame]: generated frames.
     """
+
+    T = TypeVar("T")
+
+    def prepend(first: T, rest: Generator[T, None, None]) -> Generator[T, None, None]:
+        yield first
+        yield from rest
 
     iterator = iter(statements)
     first = next(iterator, None)
@@ -337,11 +350,12 @@ def flat_stream_to_frames(
         options = guess_options(sink)
     stream = guess_stream(options, sink)
 
-    yield from stream_frames(stream, chain((first,), iterator))  # type: ignore
+    yield from stream_frames(stream, prepend(first, iterator))
 
 
 def flat_stream_to_file(
-    statements: Generator[tuple[Node, Node, Node] | tuple[Node, Node, Node, Node]],
+    statements: Generator[tuple[Node, Node, Node]]
+    | Generator[tuple[Node, Node, Node, Node]],
     output_file: IO[bytes],
     options: Optional[SerializerOptions] = None,
 ) -> None:
