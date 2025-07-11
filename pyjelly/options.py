@@ -16,7 +16,7 @@ MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
 MAX_LOOKUP_SIZE: Final[int] = 4096
 MAX_VERSION: Final[int] = 2
-MIN_VERSION: Final[int] = 0
+MIN_VERSION: Final[int] = 1
 
 DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
 DEFAULT_PREFIX_LOOKUP_SIZE: Final[int] = 150
