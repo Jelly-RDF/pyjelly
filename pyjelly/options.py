@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import mimetypes
 from contextlib import suppress
-from dataclasses import dataclass, field
-from typing import Final, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Final
 from typing_extensions import Self
 
 from pyjelly import jelly
@@ -15,7 +15,8 @@ from pyjelly.errors import (
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
 MAX_LOOKUP_SIZE: Final[int] = 4096
-# MAX_VERSION: Final[int] = 2
+MAX_VERSION: Final[int] = 2
+MIN_VERSION: Final[int] = 0
 
 DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
 DEFAULT_PREFIX_LOOKUP_SIZE: Final[int] = 150
@@ -44,22 +45,6 @@ def register_mimetypes(extension: str = ".jelly") -> None:
     """
     for mimetype in MIMETYPES:
         mimetypes.add_type(mimetype, extension)
-
-
-@dataclass(order=True, frozen=True)
-class Version:
-    parts: Tuple[int, int, int] = field(compare=True)
-
-    def __str__(self) -> str:
-        return f"{self.parts[0]}.{self.parts[1]}.{self.parts[2]}"
-
-    @classmethod
-    def parse(cls, s: str) -> "Version":
-        major, minor, patch = map(int, s.split("."))
-        return cls((major, minor, patch))
-
-
-MAX_VERSION: Final[Version] = Version.parse("1.1.3")
 
 
 @dataclass(frozen=True)
@@ -108,32 +93,21 @@ class StreamTypes:
 class StreamParameters:
     generalized_statements: bool = False
     rdf_star: bool = False
-    # version: int = MAX_VERSION
+    version: int = MAX_VERSION
     delimited: bool = True
     namespace_declarations: bool = False
     stream_name: str = ""
 
-    min_version: Optional[Version] = None
-    version: Version = field(init=False)
-
-    _FEATURE_VERSIONS: dict[str, str] = field(
-        default_factory=lambda: {
-            "RdfNamespaceDeclaration": "1.1.0",
-            "RdfStreamFrame.metadata": "1.1.1",
-        },
-        init=False,
-        repr=False,
-    )
-
     def __post_init__(self) -> None:
-        mapped = [Version.parse(v) for v in self._FEATURE_VERSIONS.values()]
-        required = max(mapped) if mapped else Version.parse("1.0.0")
-        chosen = self.min_version if self.min_version is not None else required
-        if chosen < Version.parse("1.0.0") or chosen > MAX_VERSION:
-            raise JellyConformanceError(
-                f"min version must be between 1.0.0 and {MAX_VERSION}"
-            )
-        object.__setattr__(self, "version", chosen)
+        default_version = 2 if self.namespace_declarations else MIN_VERSION
+        if MIN_VERSION is not None:
+            if not (0 <= MIN_VERSION <= MAX_VERSION):
+                msg = f"min version must be between 0 and {MAX_VERSION}"
+                raise JellyConformanceError(msg)
+            selected = MIN_VERSION
+        else:
+            selected = default_version
+        object.__setattr__(self, "version", selected)
 
 
 TRIPLES_ONLY_LOGICAL_TYPES = {
