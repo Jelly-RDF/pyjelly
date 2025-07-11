@@ -24,7 +24,7 @@ from pyjelly.serialize.streams import (
     TripleStream,
 )  # ruff: enable
 
-QUAD_MULTIPLICITY = 4
+QUAD_ARITY = 4
 
 
 class RDFLibTermEncoder(TermEncoder):
@@ -69,7 +69,7 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 @singledispatch
 def stream_frames(
     stream: Stream,
-    data: Graph | Generator[Quad | Triple, None, None],  # noqa: ARG001
+    data: Graph | Generator[Quad | Triple],  # noqa: ARG001
 ) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
@@ -124,7 +124,7 @@ def quads_stream_frames(
 
     Args:
         stream (QuadStream): stream that specifies quads processing
-        data (Dataset): Dataset to serialize.
+        data (Dataset | Generator[Quad]): Dataset to serialize.
 
     Yields:
         Generator[jelly.RdfStreamFrame]: jelly frames
@@ -149,10 +149,10 @@ def quads_stream_frames(
         yield frame
 
 
-@stream_frames.register
+@stream_frames.register(GraphStream)
 def graphs_stream_frames(
     stream: GraphStream,
-    data: Dataset,
+    data: Dataset | Generator[Quad],
 ) -> Generator[jelly.RdfStreamFrame]:
     """
     Serialize a Dataset into jelly frames as a stream of graphs.
@@ -163,18 +163,28 @@ def graphs_stream_frames(
 
     Args:
         stream (GraphStream): stream that specifies graphs processing
-        data (Dataset): Dataset to serialize.
+        data (Dataset | Generator[Quad]): Dataset to serialize.
 
     Yields:
         Generator[jelly.RdfStreamFrame]: jelly frames
 
     """
-    assert isinstance(data, Dataset)
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
-    for graph in data.graphs():
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
+
+    if isinstance(data, Dataset):
+        graphs = data.graphs()
+    else:
+        ds = Dataset()
+        for quad in data:
+            ctx = ds.get_context(quad.g)
+            ctx.add((quad.s, quad.p, quad.o))
+        graphs = ds.graphs()
+
+    for graph in graphs:
         yield from stream.graph(graph_id=graph.identifier, graph=graph)
+
     if frame := stream.flow.frame_from_dataset():
         yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -264,7 +274,6 @@ class RDFLibJellySerializer(RDFLibSerializer):
             options = guess_options(self.store)
         if stream is None:
             stream = guess_stream(options, self.store)
-            stream = guess_stream(options, self.store)
         write = write_delimited if stream.options.params.delimited else write_single
         for stream_frame in stream_frames(stream, self.store):
             write(stream_frame, out)
@@ -309,7 +318,7 @@ def grouped_stream_to_file(
     Args:
         stream (Generator[Graph] | Generator[Dataset]): Generator of
             Graphs/Dataset to transform.
-        output_file (IO[bytes]): opened output file.
+        output_file (IO[bytes]): output buffered writer.
         **kwargs (Any): options to pass to stream.
 
     """
@@ -325,7 +334,8 @@ def flat_stream_to_frames(
     Serialize a stream of raw triples or quads into Jelly frames.
 
     Args:
-        statements (Generator[Triple | Quad]): s/p/o or s/p/o/g tuples to serialize.
+        statements (Generator[Triple | Quad]):
+          s/p/o triples or s/p/o/g quads to serialize.
         options (SerializerOptions | None, optional):
             if omitted, guessed based on the first tuple.
 
@@ -333,18 +343,17 @@ def flat_stream_to_frames(
         Generator[jelly.RdfStreamFrame]: generated frames.
 
     """
-    iterator = iter(statements)
-    first = next(iterator, None)
+    first = next(statements, None)
     if first is None:
         return
 
-    sink = Dataset() if len(first) == QUAD_MULTIPLICITY else Graph()
+    sink = Dataset() if len(first) == QUAD_ARITY else Graph()
     if options is None:
         options = guess_options(sink)
     stream = guess_stream(options, sink)
 
-    combined: Generator[Triple | Quad, None, None] | Graph = (
-        item for item in chain([first], iterator)
+    combined: Generator[Triple | Quad] | Graph = (
+        item for item in chain([first], statements)
     )
 
     yield from stream_frames(stream, combined)
@@ -359,8 +368,8 @@ def flat_stream_to_file(
     Write Triple or Quad events to a binary file in Jelly flat format.
 
     Args:
-        statements (Generator[Triple | Quad]): events to serialize.
-        output_file (IO[bytes]): open binary file handle.
+        statements (Generator[Triple | Quad]): statements to serialize.
+        output_file (IO[bytes]): output buffered writer.
         options (SerializerOptions | None, optional): stream options.
 
     """
