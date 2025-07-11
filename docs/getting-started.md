@@ -68,7 +68,7 @@ If you have a generator object containing statements, you can easily serialize i
 
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
-The flat method transmits the data as a continuous sequence of individual statements (i.e. triplets or quads), keeping the simplicity and order of the data.
+The flat method transmits the data as a continuous sequence of individual statements (i.e. triples or quads), keeping the simplicity and order of the data.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of graphs
