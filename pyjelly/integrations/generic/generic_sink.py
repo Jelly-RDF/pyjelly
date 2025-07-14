@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import re
+import warnings
 from collections import deque
 from collections.abc import Generator, Iterable
+from io import TextIOWrapper
 from pathlib import Path
 from typing import NamedTuple, Union
+
+DEFAULT_GRAPH_IDENTIFIER = ""
 
 
 class BlankNode:
@@ -53,6 +58,9 @@ class Literal:
 Node = Union[BlankNode, IRI, Literal, "Triple", str]
 
 
+TRIPLE_ARITY = 3
+
+
 class Triple(NamedTuple):
     """Class for RDF triples."""
 
@@ -82,7 +90,7 @@ class GenericStatementSink:
 
     def __init__(self) -> None:
         """
-        Initialize statements storage and namespaces dictionary.
+        Initialize statements storage, namespaces dictionary, and parser/serializer.
 
         Notes:
             _store preserves the order of statements.
@@ -90,6 +98,7 @@ class GenericStatementSink:
         """
         self._store: deque[tuple[Node, ...]] = deque()
         self._namespaces: dict[str, IRI] = {}
+        self._parser: GenericSinkParser = GenericSinkParser()
 
     def add(self, statement: Iterable[Node]) -> None:
         self._store.append(tuple(statement))
@@ -113,8 +122,7 @@ class GenericStatementSink:
             bool: true, if length of statement is 3.
 
         """
-        triples_arity = 3
-        return len(self._store[0]) == triples_arity
+        return len(self._store[0]) == TRIPLE_ARITY
 
     def _serialize_node(self, node: Node) -> str:
         """
@@ -146,3 +154,114 @@ class GenericStatementSink:
                 output_file.write(
                     " ".join(self._serialize_node(t) for t in statement) + " .\n"
                 )
+
+    def parse(self, input_filename: Path) -> None:
+        warnings.warn(
+            "this is a minimal parser from NT/NQ format, proceed with caution",
+            category=UserWarning,
+            stacklevel=2,
+        )
+
+        statement_structure = (
+            Quad if str(input_filename).split(".")[-1] in ("nq") else Triple
+        )
+        with input_filename.open("r") as input_file:
+            for event in self._parser.parse(input_file, statement_structure):
+                if isinstance(event, Prefix):
+                    self.bind(*event)
+                else:
+                    self.add(event)
+
+
+class GenericSinkParser:
+    _uri_re = re.compile(r"<([^>\s]+)>")
+    _bn_re = re.compile(r"_:(\S+)")
+    _literal_re = re.compile(r"""("[^"]*")(?:@(\S+)|\^\^(\S+))?""")
+    _quoted_triple_re = re.compile(r"<<.*?>>")
+    _token_quoted_triple_re = re.compile(r"<<\s*(.*?)\s*>>")
+    _prefix_re = re.compile(r"@prefix\s+(\w+):\s*<([^>]+)>\s*\.")
+    _split_tokens = re.compile(
+        r"""
+        <<.*?>>         |
+        "[^"]*"(?:@\S+|\^\^\S+)?  |
+        <[^>]+>         |
+        _:\S+           |
+        \S+
+        """,
+        re.VERBOSE,
+    )
+
+    def process_term(
+        self, term: str, slot: str
+    ) -> IRI | BlankNode | Literal | Triple | str:
+        match_bn = self._bn_re.match(term)
+        if match_bn:
+            return BlankNode(match_bn.groups()[0])
+        match_iri = self._uri_re.match(term)
+        if match_iri:
+            return IRI(match_iri.groups()[0])
+        match_literal = self._literal_re.match(term)
+        if match_literal:
+            literal_parts = match_literal.groups()
+            if literal_parts[0]:  # has lex part of the literal
+                return Literal(*literal_parts)
+        match_quoted_triple = self._quoted_triple_re.match(term)
+        if match_quoted_triple:
+            quoted_triple = self._token_quoted_triple_re.search(term)
+            if quoted_triple:
+                triple_tokens = self._split_tokens.findall(quoted_triple.groups()[0])
+                return Triple(
+                    *(
+                        self.process_term(group, slot)
+                        for slot, group in zip(Triple._fields, triple_tokens)
+                    )
+                )
+            msg = "invalid quoted triple encountered"
+
+        if term == "" and slot == "g":
+            return DEFAULT_GRAPH_IDENTIFIER
+
+        msg = "failed to parse input file"
+        raise TypeError(msg)
+
+    def parse_statement(
+        self, statement: str, statement_structure: type[Triple | Quad]
+    ) -> Triple | Quad:
+        terms = [
+            m.group(0)
+            for m in self._split_tokens.finditer(statement)
+            if m.group(0).strip()
+        ]
+        terms.pop(-1)  # remove .
+        if len(terms) == TRIPLE_ARITY and statement_structure == Quad:
+            terms.append("")
+        generic_terms = (
+            self.process_term(term.strip(), slot)
+            for slot, term in zip(statement_structure._fields, terms)
+        )
+        return statement_structure(*generic_terms)
+
+    def parse_namespace(self, namespace: str) -> Prefix:
+        matched_namespace_declaration = self._prefix_re.match(namespace)
+        if matched_namespace_declaration:
+            matched_parts = matched_namespace_declaration.groups()
+            return Prefix(matched_parts[0], IRI(matched_parts[1]))
+        msg = "failed to parse namespace declaration"
+        raise TypeError(msg)
+
+    def parse_line(
+        self, line: str, statement_structure: type[Triple | Quad]
+    ) -> Triple | Quad | Prefix:
+        if line.startswith("@prefix"):
+            return self.parse_namespace(line)
+        return self.parse_statement(line, statement_structure)
+
+    def parse(
+        self, input_file: TextIOWrapper, statement_structure: type[Triple | Quad]
+    ) -> Generator[Triple | Quad | Prefix]:
+        for line in input_file:
+            line_trimmed = line.strip()
+            comment_index = line_trimmed.find("#")
+            if comment_index == 0 or len(line_trimmed) == 0:
+                continue
+            yield self.parse_line(line_trimmed, statement_structure)
