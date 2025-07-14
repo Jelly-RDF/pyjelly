@@ -3,8 +3,7 @@ from __future__ import annotations
 from collections import deque
 from collections.abc import Generator, Iterable
 from pathlib import Path
-from typing import Union
-from typing_extensions import Self
+from typing import NamedTuple, Union
 
 
 class BlankNode:
@@ -54,87 +53,28 @@ class Literal:
 Node = Union[BlankNode, IRI, Literal, "Triple", str]
 
 
-class Triple(tuple[Node, Node, Node]):
-    """
-    Class for RDF triples.
+class Triple(NamedTuple):
+    """Class for RDF triples."""
 
-    Args:
-        tuple (Node): tuple of three elements (s/p/o),
-        being of one of the types of Node.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
-        return tuple.__new__(cls, (s, p, o))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
+    s: Node
+    p: Node
+    o: Node
 
 
-class Quad(tuple[Node, Node, Node, Node]):
-    """
-    Class for RDF quads.
+class Quad(NamedTuple):
+    """Class for RDF quads."""
 
-    Args:
-        tuple (Node): tuple of four elements (s/p/o/g),
-        being of one of the types of Node.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node, g: Node) -> Self:
-        return tuple.__new__(cls, (s, p, o, g))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-    @property
-    def g(self) -> Node:
-        return self[3]
+    s: Node
+    p: Node
+    o: Node
+    g: Node
 
 
-class Prefix(tuple[str, IRI]):
-    """
-    Class for generic namespace declaration.
+class Prefix(NamedTuple):
+    """Class for generic namespace declaration."""
 
-    Args:
-        tuple (str, IRI): namespace prefix and URI.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, prefix: str, iri: IRI) -> Self:
-        return tuple.__new__(cls, (prefix, iri))
-
-    @property
-    def prefix(self) -> str:
-        return self[0]
-
-    @property
-    def iri(self) -> IRI:
-        return self[1]
+    prefix: str
+    iri: IRI
 
 
 class GenericStatementSink:
