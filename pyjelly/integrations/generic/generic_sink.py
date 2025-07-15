@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections import deque
-from collections.abc import Generator, Iterable
+from collections.abc import Generator
 from io import TextIOWrapper
 from pathlib import Path
 from typing import NamedTuple, Union
@@ -90,18 +90,22 @@ class Prefix(NamedTuple):
 class GenericStatementSink:
     _store: deque[Triple | Quad]
 
-    def __init__(self, identifier: str | None = None) -> None:
+    def __init__(self, identifier: str = DEFAULT_GRAPH_IDENTIFIER) -> None:
         """
-        Initialize statements storage, namespaces dictionary, and parser/serializer.
+        Initialize statements storage, namespaces dictionary, and parser.
 
         Notes:
             _store preserves the order of statements.
+
+        Args:
+            identifier (str, optional): Identifier for a sink.
+                Defaults to DEFAULT_GRAPH_IDENTIFIER.
 
         """
         self._store: deque[Triple | Quad] = deque()
         self._namespaces: dict[str, IRI] = {}
         self._parser: GenericSinkParser = GenericSinkParser()
-        self._identifier = identifier if identifier else DEFAULT_GRAPH_IDENTIFIER
+        self._identifier = identifier
 
     def add(self, statement: Triple | Quad) -> None:
         self._store.append(statement)
@@ -167,6 +171,13 @@ class GenericStatementSink:
                 )
 
     def parse(self, input_filename: Path) -> None:
+        """
+        Parse content from input file.
+
+        Args:
+            input_filename (Path): path to input file.
+
+        """
         warnings.warn(
             "this is a minimal parser from NT/NQ format, proceed with caution",
             category=UserWarning,
@@ -185,19 +196,26 @@ class GenericStatementSink:
 
 
 class GenericSinkParser:
-    _uri_re = re.compile(r"<([^>\s]+)>")
-    _bn_re = re.compile(r"_:(\S+)")
-    _literal_re = re.compile(r"""("[^"]*")(?:@(\S+)|\^\^(\S+))?""")
-    _quoted_triple_re = re.compile(r"<<.*?>>")
-    _token_quoted_triple_re = re.compile(r"<<\s*(.*?)\s*>>")
-    _prefix_re = re.compile(r"@prefix\s+(\w+):\s*<([^>]+)>\s*\.")
-    _split_tokens = re.compile(
+    _uri_re = re.compile(r"<([^>\s]+)>")  # returns URI
+    _bn_re = re.compile(r"_:(\S+)")  # returns blank node identificator
+    _literal_re = re.compile(
+        r"""("[^"]*")(?:@(\S+)|\^\^(\S+))?"""
+    )  # returns lex part of the literal and optional langtag and datatype
+    _quoted_triple_re = re.compile(
+        r"<<.*?>>"
+    )  # matches the quoted triple quotation marks syntax
+    _token_quoted_triple_re = re.compile(
+        r"<<\s*(.*?)\s*>>"
+    )  # returns the quoted triple
+    _prefix_re = re.compile(
+        r"@prefix\s+(\w+):\s*<([^>]+)>\s*\."
+    )  # returns prefix and namespace IRI
+    _split_tokens = re.compile(  # matches str to quoted triple/literal, IRI, or BN
         r"""
-        <<.*?>>         |
-        "[^"]*"(?:@\S+|\^\^\S+)?  |
+        <<.+?>>         |
+        "[^"]+"(?:@\S+|\^\^\S+)?  |
         <[^>]+>         |
         _:\S+           |
-        \S+
         """,
         re.VERBOSE,
     )
@@ -205,6 +223,26 @@ class GenericSinkParser:
     def process_term(
         self, term: str, slot: str
     ) -> IRI | BlankNode | Literal | Triple | str:
+        """
+        Process one term.
+
+        Notes:
+            terms are not validated to match RDF spec.
+
+        Args:
+            term (str): term to process
+            slot (str): data structure to associate with terms
+
+        Raises:
+            TypeError: if literal decoded has multiple parts except for lex, i.e.,
+                possibly both langtag and datatype are specified.
+            TypeError: if fail to parse quoted triple into valid s/p/o.
+            TypeError: if term did not match any pattern
+
+        Returns:
+            IRI | BlankNode | Literal | Triple | str: processed term
+
+        """
         match_bn = self._bn_re.match(term)
         if match_bn:
             return BlankNode(match_bn.groups()[0])
@@ -213,14 +251,21 @@ class GenericSinkParser:
             return IRI(match_iri.groups()[0])
         match_literal = self._literal_re.match(term)
         if match_literal:
+            max_literal_group_number = 2
             literal_parts = match_literal.groups()
             if literal_parts[0]:  # has lex part of the literal
                 return Literal(*literal_parts)
+            if len(literal_parts) > max_literal_group_number:
+                msg = "invalid literal encountered"
+                raise TypeError(msg)
+
         match_quoted_triple = self._quoted_triple_re.match(term)
         if match_quoted_triple:
             quoted_triple = self._token_quoted_triple_re.search(term)
-            if quoted_triple:
-                triple_tokens = self._split_tokens.findall(quoted_triple.groups()[0])
+            if quoted_triple and len(quoted_triple.groups()) == TRIPLE_ARITY:
+                triple_tokens = self.generate_statement_tokens(
+                    quoted_triple.groups()[0]
+                )
                 return Triple(
                     *(
                         self.process_term(group, slot)
@@ -228,6 +273,7 @@ class GenericSinkParser:
                     )
                 )
             msg = "invalid quoted triple encountered"
+            raise TypeError(msg)
 
         if term == "" and slot == "g":
             return DEFAULT_GRAPH_IDENTIFIER
@@ -235,24 +281,64 @@ class GenericSinkParser:
         msg = "failed to parse input file"
         raise TypeError(msg)
 
-    def parse_statement(
-        self, statement: str, statement_structure: type[Triple | Quad]
-    ) -> Triple | Quad:
-        terms = [
+    def generate_statement_tokens(self, statement: str) -> list[str]:
+        """
+        Split statement into separate tokens.
+
+        Notes:
+            Tokens are not validated to follow RDF spec.
+
+        Args:
+            statement (str): Triple/Quad to split.
+
+        Returns:
+            list[str]: tokens to further process, matching simple
+                IRI, Literal, blank node, quoted triple formats.
+
+        """
+        return [
             m.group(0)
             for m in self._split_tokens.finditer(statement)
             if m.group(0).strip()
         ]
-        terms.pop(-1)  # remove .
+
+    def parse_statement(
+        self, statement: str, statement_structure: type[Triple | Quad]
+    ) -> Triple | Quad:
+        """
+        Create Triple/Quad from statement string.
+
+        Args:
+            statement (str): full statement string (triple/quad).
+            statement_structure (type[Triple  |  Quad]): a data structure for statement.
+
+        Returns:
+            Triple | Quad: resulting triple/quad
+
+        """
+        terms = self.generate_statement_tokens(statement)
         if len(terms) == TRIPLE_ARITY and statement_structure == Quad:
-            terms.append("")
+            terms.append("")  # append default graph identificator
         generic_terms = (
             self.process_term(term.strip(), slot)
             for slot, term in zip(statement_structure._fields, terms)
         )
         return statement_structure(*generic_terms)
 
-    def parse_namespace(self, namespace: str) -> Prefix:
+    def parse_prefix(self, namespace: str) -> Prefix:
+        """
+        Create Prefix from namespace declaration string.
+
+        Args:
+            namespace (str): plain namespace declaration string.
+
+        Raises:
+            TypeError: raised if fail to match prefix and namespace IRI.
+
+        Returns:
+            Prefix: resulting Prefix
+
+        """
         matched_namespace_declaration = self._prefix_re.match(namespace)
         if matched_namespace_declaration:
             matched_parts = matched_namespace_declaration.groups()
@@ -263,13 +349,34 @@ class GenericSinkParser:
     def parse_line(
         self, line: str, statement_structure: type[Triple | Quad]
     ) -> Triple | Quad | Prefix:
+        """
+        Parse one line from input into a respective statement or prefix.
+
+        Args:
+            line (str): plain line from source file.
+            statement_structure (type[Triple  |  Quad]): a data structure for statement.
+
+        Returns:
+            Triple | Quad | Prefix: resulting parsed statement or namespace declaration.
+
+        """
         if line.startswith("@prefix"):
-            return self.parse_namespace(line)
+            return self.parse_prefix(line)
         return self.parse_statement(line, statement_structure)
 
     def parse(
         self, input_file: TextIOWrapper, statement_structure: type[Triple | Quad]
     ) -> Generator[Triple | Quad | Prefix]:
+        """
+        Parse input lines into statements and prefixes.
+
+        Note:
+            comments and blnk lines in input file are ignored.
+
+        Yields:
+            Generator[Triple | Quad | Prefix]: yields statements and prefixes
+
+        """
         for line in input_file:
             line_trimmed = line.strip()
             comment_index = line_trimmed.find("#")
