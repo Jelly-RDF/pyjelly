@@ -262,7 +262,7 @@ class GenericSinkParser:
         match_quoted_triple = self._quoted_triple_re.match(term)
         if match_quoted_triple:
             quoted_triple = self._token_quoted_triple_re.search(term)
-            if quoted_triple and len(quoted_triple.groups()) == TRIPLE_ARITY:
+            if quoted_triple:
                 triple_tokens = self.generate_statement_tokens(
                     quoted_triple.groups()[0]
                 )
