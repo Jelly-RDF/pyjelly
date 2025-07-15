@@ -41,7 +41,9 @@ class Literal:
 
     """
 
-    def __init__(self, lex: str, langtag: str | None, datatype: str | None) -> None:
+    def __init__(
+        self, lex: str, langtag: str | None = None, datatype: str | None = None
+    ) -> None:
         self._lex: str = lex
         self._langtag: str | None = langtag
         self._datatype: str | None = datatype
@@ -86,9 +88,9 @@ class Prefix(NamedTuple):
 
 
 class GenericStatementSink:
-    _store: deque[tuple[Node, ...]]
+    _store: deque[Triple | Quad]
 
-    def __init__(self) -> None:
+    def __init__(self, identifier: str | None = None) -> None:
         """
         Initialize statements storage, namespaces dictionary, and parser/serializer.
 
@@ -96,22 +98,31 @@ class GenericStatementSink:
             _store preserves the order of statements.
 
         """
-        self._store: deque[tuple[Node, ...]] = deque()
+        self._store: deque[Triple | Quad] = deque()
         self._namespaces: dict[str, IRI] = {}
         self._parser: GenericSinkParser = GenericSinkParser()
+        self._identifier = identifier if identifier else DEFAULT_GRAPH_IDENTIFIER
 
-    def add(self, statement: Iterable[Node]) -> None:
-        self._store.append(tuple(statement))
+    def add(self, statement: Triple | Quad) -> None:
+        self._store.append(statement)
 
     def bind(self, prefix: str, namespace: IRI) -> None:
         self._namespaces.update({prefix: namespace})
 
-    def __iter__(self) -> Generator[tuple[Node, ...]]:
+    def __iter__(self) -> Generator[Triple | Quad]:
         yield from self._store
 
     @property
     def namespaces(self) -> Generator[tuple[str, IRI]]:
         yield from self._namespaces.items()
+
+    @property
+    def identifier(self) -> str:
+        return self._identifier
+
+    @property
+    def store(self) -> Generator[Triple | Quad]:
+        yield from self._store
 
     @property
     def is_triples_sink(self) -> bool:

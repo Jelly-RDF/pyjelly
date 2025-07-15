@@ -32,8 +32,10 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 T = TypeVar("T")
 RowsAnd: TypeAlias = tuple[Sequence[jelly.RdfStreamRow], T]
-RowsAndTerm: TypeAlias = "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | \
+RowsAndTerm: TypeAlias = (
+    "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | \
     jelly.RdfDefaultGraph | jelly.RdfTriple]"
+)
 
 
 class TermEncoder:
