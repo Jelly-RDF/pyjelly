@@ -7,16 +7,16 @@ OUTPUT = "neo4j_output.jelly"
 URL = "https://www.wikidata.org/wiki/Special:EntityData/Q181191.ttl"
 
 # Please introduce your credentials
-AURA_DB_URI = "your_db_uri"
-AURA_DB_USERNAME = "neo4j"
-AURA_DB_PWD = "your_db_pwd"
+aura_db_uri = "your_db_uri"
+aura_db_username = "neo4j"
+aura_db_pwd = "your_db_pwd"
 
 # Prepare the authentication data to the Aura database
 auth_data = {
-    "uri": AURA_DB_URI,
+    "uri": aura_db_uri,
     "database": "neo4j",
-    "user": AURA_DB_USERNAME,
-    "pwd": AURA_DB_PWD,
+    "user": aura_db_username,
+    "pwd": aura_db_pwd,
 }
 
 # Prepare the configuration for neo4j store object
