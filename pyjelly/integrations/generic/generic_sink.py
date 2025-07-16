@@ -63,7 +63,10 @@ class Literal:
         return f'"{self._lex}"{suffix}'
 
     def __repr__(self) -> str:
-        return f"Literal({self._lex!r}, langtag={self._langtag!r}, datatype={self._datatype!r})"
+        return (
+            f"Literal({self._lex!r}, langtag={self._langtag!r}, "
+            f"datatype={self._datatype!r})"
+        )
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple", str]
