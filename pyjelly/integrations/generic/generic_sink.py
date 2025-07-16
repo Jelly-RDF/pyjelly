@@ -17,8 +17,11 @@ class BlankNode:
     def __init__(self, identifier: str) -> None:
         self._identifier: str = identifier
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"_:{self._identifier}"
+
+    def __repr__(self) -> str:
+        return f"BlankNode(identifier={self._identifier})"
 
 
 class IRI:
@@ -27,8 +30,11 @@ class IRI:
     def __init__(self, iri: str) -> None:
         self._iri: str = iri
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"<{self._iri}>"
+
+    def __repr__(self) -> str:
+        return f"IRI({self._iri})"
 
 
 class Literal:
@@ -48,13 +54,16 @@ class Literal:
         self._langtag: str | None = langtag
         self._datatype: str | None = datatype
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         suffix = ""
         if self._langtag:
             suffix = f"@{self._langtag}"
         elif self._datatype:
             suffix = f"^^<{self._datatype}>"
         return f'"{self._lex}"{suffix}'
+
+    def __repr__(self) -> str:
+        return f"Literal({self._lex!r}, langtag={self._langtag!r}, datatype={self._datatype!r})"
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple", str]
@@ -90,7 +99,7 @@ class Prefix(NamedTuple):
 class GenericStatementSink:
     _store: deque[Triple | Quad]
 
-    def __init__(self, identifier: str = DEFAULT_GRAPH_IDENTIFIER) -> None:
+    def __init__(self, identifier: Node = DEFAULT_GRAPH_IDENTIFIER) -> None:
         """
         Initialize statements storage, namespaces dictionary, and parser.
 
@@ -116,12 +125,15 @@ class GenericStatementSink:
     def __iter__(self) -> Generator[Triple | Quad]:
         yield from self._store
 
+    def __len__(self) -> int:
+        return len(self._store)
+
     @property
     def namespaces(self) -> Generator[tuple[str, IRI]]:
         yield from self._namespaces.items()
 
     @property
-    def identifier(self) -> str:
+    def identifier(self) -> Node:
         return self._identifier
 
     @property
@@ -199,7 +211,7 @@ class GenericSinkParser:
     _uri_re = re.compile(r"<([^>\s]+)>")  # returns URI
     _bn_re = re.compile(r"_:(\S+)")  # returns blank node identificator
     _literal_re = re.compile(
-        r"""("[^"]*")(?:@(\S+)|\^\^(\S+))?"""
+        r""""([^"]*)"(?:@(\S+)|\^\^(\S+))?"""
     )  # returns lex part of the literal and optional langtag and datatype
     _quoted_triple_re = re.compile(
         r"<<.*?>>"
