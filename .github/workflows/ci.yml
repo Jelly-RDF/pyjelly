@@ -72,11 +72,11 @@ jobs:
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
     - name: Run unit tests
-      run: uv run pytest -svv
+      run: uv run pytest -vv
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
 
     - name: Run unit tests (with conformance tests and coverage)
-      run: uv run pytest -svv --cov --cov-branch --cov-report=xml
+      run: uv run pytest -vv --cov --cov-branch --cov-report=xml
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
     - name: Upload coverage reports to Codecov
