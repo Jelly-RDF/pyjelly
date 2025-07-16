@@ -36,7 +36,9 @@ Neo4j_sink.parse(example_file, format="jelly")
 Neo4j_sink.close(True)
 
 # Cypher query to check loaded data
-with GraphDatabase.driver(aura_db_uri, auth=(aura_db_username, aura_db_pwd)).session() as session:
+with GraphDatabase.driver(
+    aura_db_uri, auth=(aura_db_username, aura_db_pwd)
+).session() as session:
     count = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
     print(f"Loaded {count} triples")
     for r in session.run(
