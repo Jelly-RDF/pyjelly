@@ -214,7 +214,7 @@ class GenericSinkParser:
     _uri_re = re.compile(r"<([^>\s]+)>")  # returns URI
     _bn_re = re.compile(r"_:(\S+)")  # returns blank node identificator
     _literal_re = re.compile(
-        r""""([^"]*)"(?:@(\S+)|\^\^(\S+))?"""
+        r""""([^"]*)"(?:@(\S+)|\^\^<(\S+)>)?"""
     )  # returns lex part of the literal and optional langtag and datatype
     _quoted_triple_re = re.compile(
         r"<<.*?>>"
@@ -266,13 +266,11 @@ class GenericSinkParser:
             return IRI(match_iri.groups()[0])
         match_literal = self._literal_re.match(term)
         if match_literal:
-            max_literal_group_number = 2
-            literal_parts = match_literal.groups()
-            if literal_parts[0]:  # has lex part of the literal
-                return Literal(*literal_parts)
-            if len(literal_parts) > max_literal_group_number:
+            lex, langtag, datatype = match_literal.groups()
+            if not lex or (langtag is not None and datatype is not None):
                 msg = "invalid literal encountered"
                 raise TypeError(msg)
+            return Literal(lex, langtag, datatype)
 
         match_quoted_triple = self._quoted_triple_re.match(term)
         if match_quoted_triple:
