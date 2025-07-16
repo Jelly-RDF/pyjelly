@@ -27,18 +27,19 @@ AURA_DB_USERNAME
 AURA_DB_PWD
 ```
 
-### Parsing data into neo4j from jelly file
+### Parsing grouped data into neo4j from jelly file
 
-To parse data into the neo4j database from `.jelly` file use the following example:
+To parse data in a grouped form into the neo4j database from `.jelly` file use the following example:
 
-{{ code_example('neo4j_integration/01_rdflib_neo4j_parse.py') }}
+{{ code_example('neo4j_integration/01_rdflib_neo4j_parse_grouped.py') }}
 
 It opens a stream through a neo4j integrated parser working with RDF library, which parses the data (also from `.jelly` file) into user's database.
 
-### Serializing grouped data from neo4j database
+### Parsing flat data into neo4j
 
-To effortlessly serialize the data in the grouped form into a local `.jelly` file, see the example below.
+Parsing flat type data into the AuraDB is similar as grouped example and is shown in the file here:
 
-{{ code_example('neo4j_integration/02_rdflib_neo4j_serialize_grouped.py') }}
+{{ code_example('neo4j_integration/02_rdflib_neo4j_parse_flat.py') }}
 
-By default the data fetched from user's database is in a grouped (in a Graph object) from, thus it can be serialized through grouped serializer (just like in the { code_example('rdflib/06_serialize_grouped.py')}).
+This time each triple is ingested separetely into the database.
+
