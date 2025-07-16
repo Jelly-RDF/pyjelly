@@ -16,5 +16,5 @@ with (
     for i, graph in enumerate(graphs):
         print(f"Graph {i} in the stream has {len(graph)} triples")
         # Limit to 50 graphs for demonstration -- the rest will not be parsed
-        if i >= 100:
+        if i >= 50:
             break
