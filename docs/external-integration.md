@@ -33,4 +33,4 @@ To parse data into the neo4j database from `.jelly` file use the following examp
 
 {{ code_example('neo4j_integration/01_rdflib_neo4j_parse.py') }}
 
-It opens a stream through a neo4j integrated parser working with RDFLib, which parses the data (also from `.jelly` file) into user's AuraDB database.
+which parses the data from `.jelly` file into the user's AuraDB database.
