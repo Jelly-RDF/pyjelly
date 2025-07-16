@@ -72,17 +72,10 @@ jobs:
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
     - name: Run unit tests
-      id: unit-tests
-      run: uv run pytest -svv
-      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
-
-    - name: Run unit tests
-      id: unit-tests
       run: uv run pytest -svv
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
 
     - name: Run unit tests (with conformance tests and coverage)
-      id: unit-tests
       run: uv run pytest -svv --cov --cov-branch --cov-report=xml
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
