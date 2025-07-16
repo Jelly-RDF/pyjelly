@@ -1,6 +1,6 @@
 # Pyjelly integration with external libraries
 
-This section focuses on describing integration with other libraries, which also utilize RDF framework.  
+This section describes how to integrate useful third‑party libraries that utilize RDFLib.  
 In order to proceed with the content of the document, one should be acquainted with the [getting-started.md](getting-started.md) file.
 
 ## Neo4j - rdflib
@@ -33,4 +33,4 @@ To parse data into the neo4j database from `.jelly` file use the following examp
 
 {{ code_example('neo4j_integration/01_rdflib_neo4j_parse.py') }}
 
-It opens a stream through a neo4j integrated parser working with RDF library, which parses the data (also from `.jelly` file) into user's AuraDB database.
+It opens a stream through a neo4j integrated parser working with RDFlib, which parses the data (also from `.jelly` file) into user's AuraDB database.
