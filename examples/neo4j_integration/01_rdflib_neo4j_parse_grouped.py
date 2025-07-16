@@ -27,13 +27,13 @@ config = Neo4jStoreConfig(
 )
 
 # Make a graph with Neo4jStore object
-Neo4j_sink = Graph(store=Neo4jStore(config=config))
+neo4j_sink = Graph(store=Neo4jStore(config=config))
 
 # Parse the file into the AuraDB
-Neo4j_sink.parse(example_file, format="jelly")
+neo4j_sink.parse(example_file, format="jelly")
 
 # Close the stream
-Neo4j_sink.close(True)
+neo4j_sink.close(True)
 
 # Cypher query to check loaded data
 with GraphDatabase.driver(

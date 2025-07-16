@@ -1,11 +1,11 @@
 # Pyjelly integration with external libraries
 
-This section focuses on describing integration with useful external libraries operating with RDF library.  
+This section focuses on describing integration with other libraries, which also utilize RDF framework.  
 In order to proceed with the content of the document, one should be acquainted with the [getting-started.md](getting-started.md) file.
 
 ## Neo4j - rdflib
 
-The Neo4j RDFLib library is a Python plugin that lets you use RDFLib’s API to store, query, and manage RDF triples directly in a Neo4j graph database.  
+The Neo4j RDFLib library is a Python plugin that lets you use RDFLib’s API to parse RDF triples directly in a Neo4j graph database.  
 Because Neo4j integrats well with the baseline RDF objects, which is also true for pyjelly, both libraries can be easily combined.  
 
 In fuerther steps we will exemplify the integration methods, however first, (in our pyjelly environment) we should install neo4j-rdflib:  
