@@ -194,7 +194,7 @@ class GenericStatementSink:
 
         """
         warnings.warn(
-            "this is a minimal parser from NT/NQ format, proceed with caution",
+            "This is a minimal parser for the NT/NQ format, not intended for use outside of conformance tests. Proceed with caution.",
             category=UserWarning,
             stacklevel=2,
         )
