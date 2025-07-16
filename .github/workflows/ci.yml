@@ -67,15 +67,30 @@ jobs:
       id: install
       run: uv sync
 
-    - name: Install latest Jelly CLI
-      id: install-cli
-      run: ./scripts/download-cli /opt/jelly-cli && echo '/opt' >> $GITHUB_PATH
+    - name: Install jelly-cli
+      uses: jelly-rdf/setup-cli@v1
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
     - name: Run unit tests
       id: unit-tests
       run: uv run pytest -svv
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Run unit tests
+      id: unit-tests
+      run: uv run pytest -svv
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
+
+    - name: Run unit tests (with conformance tests and coverage)
+      id: unit-tests
+      run: uv run pytest -svv --cov --cov-branch --cov-report=xml
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Check formatting
       id: formatting

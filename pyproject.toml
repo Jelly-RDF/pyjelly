@@ -33,6 +33,7 @@ keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
 dependencies = [
     "protobuf>=6.30.0",
+    "pytest-cov>=6.2.1",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
 
