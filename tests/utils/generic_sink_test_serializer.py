@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from pyjelly.integrations.generic.generic_sink import (
+    GenericStatementSink,
     Node,
     Triple,
-    GenericStatementSink,
 )
 
 
 class GenericSinkSerializer:
-
     def __init__(self, sink: GenericStatementSink) -> None:
         self._sink = sink
 

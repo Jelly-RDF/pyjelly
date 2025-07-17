@@ -3,16 +3,17 @@ from __future__ import annotations
 import re
 import warnings
 from pathlib import Path
+
 from pyjelly.integrations.generic.generic_sink import (
-    IRI,
-    BlankNode,
-    Literal,
-    Triple,
-    Quad,
-    Prefix,
     DEFAULT_GRAPH_IDENTIFIER,
+    IRI,
     TRIPLE_ARITY,
+    BlankNode,
     GenericStatementSink,
+    Literal,
+    Prefix,
+    Quad,
+    Triple,
 )
 
 
@@ -186,8 +187,7 @@ class GenericSinkParser:
             return self.parse_prefix(line)
         return self.parse_statement(line, statement_structure)
 
-    def parse(
-        self, input_filename: Path) -> None:
+    def parse(self, input_filename: Path) -> None:
         """
         Parse input lines into statements and prefixes.
 

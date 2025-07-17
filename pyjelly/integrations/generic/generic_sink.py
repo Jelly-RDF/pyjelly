@@ -159,5 +159,5 @@ class GenericStatementSink:
 
     def serialize(self, output_file: IO[bytes]) -> None:
         from pyjelly.integrations.generic.serialize import grouped_stream_to_file
-        grouped_stream_to_file((sink for sink in [self]), output_file)
 
+        grouped_stream_to_file((sink for sink in [self]), output_file)
