@@ -32,9 +32,8 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 T = TypeVar("T")
 RowsAnd: TypeAlias = tuple[Sequence[jelly.RdfStreamRow], T]
-RowsAndTerm: TypeAlias = (
-    "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph]"
-)
+RowsAndTerm: TypeAlias = "RowsAnd[jelly.RdfIri | jelly.RdfLiteral | str | \
+    jelly.RdfDefaultGraph | jelly.RdfTriple]"
 
 
 class TermEncoder:
@@ -43,6 +42,7 @@ class TermEncoder:
         jelly.RdfLiteral: "literal",
         str: "bnode",
         jelly.RdfDefaultGraph: "default_graph",
+        jelly.RdfTriple: "triple_term",
     }
 
     def __init__(
@@ -162,6 +162,33 @@ class TermEncoder:
             langtag=language,
             datatype=datatype_id,
         )
+
+    def encode_quoted_triple(self, terms: Iterable[object]) -> RowsAndTerm:
+        """
+        Encode a quoted triple.
+
+        Notes:
+            Although a triple, it is treated as a part of a statement.
+            Repeated terms are not used when encoding quoted triples.
+
+        Args:
+            terms (Iterable[object]): triple terms to encode.
+
+        Returns:
+            RowsAndTerm: additional stream rows with preceeding
+                information (prefixes, names, datatypes rows, if any)
+                and the encoded triple row.
+
+        """
+        statement: dict[str, Any] = {}
+        rows: list[jelly.RdfStreamRow] = []
+        for slot, term in zip(Slot, terms):
+            extra_rows, value = self.encode_any(term, slot)
+            oneof = self.TERM_ONEOF_NAMES[type(value)]
+            rows.extend(extra_rows)
+            field = f"{slot}_{oneof}"
+            statement[field] = value
+        return rows, jelly.RdfTriple(**statement)
 
     def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
         msg = f"unsupported term type: {type(term)}"

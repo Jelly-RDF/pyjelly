@@ -15,6 +15,7 @@ from pyjelly.errors import (
 MIN_NAME_LOOKUP_SIZE: Final[int] = 8
 
 MAX_LOOKUP_SIZE: Final[int] = 4096
+MIN_VERSION: Final[int] = 1
 MAX_VERSION: Final[int] = 2
 
 DEFAULT_NAME_LOOKUP_SIZE: Final[int] = 4000
@@ -96,6 +97,14 @@ class StreamParameters:
     delimited: bool = True
     namespace_declarations: bool = False
     stream_name: str = ""
+
+    def __post_init__(self) -> None:
+        selected = MAX_VERSION if self.namespace_declarations else MIN_VERSION
+        if not (MIN_VERSION <= selected <= MAX_VERSION):
+            msg = f"""Error occured while settin up the Stream options.
+            Version must be between {MIN_VERSION} and {MAX_VERSION}."""
+            raise JellyConformanceError(msg)
+        object.__setattr__(self, "version", selected)
 
 
 TRIPLES_ONLY_LOGICAL_TYPES = {
