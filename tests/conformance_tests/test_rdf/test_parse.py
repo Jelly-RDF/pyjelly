@@ -16,6 +16,7 @@ from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
+from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
     GeneralizedTestCasesDir,
@@ -128,7 +129,8 @@ def run_generic_test(path: Path) -> None:
         for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
             extension = f"n{'triples' if graph.is_triples_sink else 'quads'}"
             output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
-            graph.serialize(output_filename=output_filename, encoding="utf-8")
+            serializer = GenericSinkSerializer(graph)
+            serializer.serialize(output_filename=output_filename, encoding="utf-8")
             jelly_validate(
                 input_filename,
                 "--compare-ordered",
