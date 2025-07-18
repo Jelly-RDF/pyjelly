@@ -54,11 +54,11 @@ In the following sub-sections, we will describe a few useful and baseline use ca
 
 ### Parse graph into NetworkX object, visualize it, calculate useful graph-based characteristics
 
-To load data into a networkx object, starting from a `.jelly` file, and (optionally) calculate some practical graph characteristics, one can look into the example:
+To load data into a NetworkX object, starting from a `.jelly` file, and (optionally) calculate some practical graph characteristics, one can look into the example:
 
 {{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
 
-which loads the data from RDFLib graph into equivalent networkx graph, performs computation of useful graph theory metrics and visualizes the graph.
+which loads the data from RDFLib graph into equivalent NetworkX graph, performs computation of useful graph theory metrics and visualizes the graph.
 
 ### Transform and serialize NetworkX graph
 

@@ -4,14 +4,14 @@ from rdflib.extras.external_graph_libs import rdflib_to_networkx_graph
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Example file for .jelly file
+# Example Jelly file
 example_file, _ = urllib.request.urlretrieve("https://w3id.org/riverbench/v/dev.jelly")
 
-# Parse RDF from the .jelly
+# Parse RDF from the Jelly format
 rdf_g = Graph()
 rdf_g.parse(example_file, format="jelly")
 
-# Convert to a NetworkX graph from rdflib
+# Convert to a NetworkX graph from RDFLib
 nx_g = rdflib_to_networkx_graph(rdf_g)
 
 # Example calculation, get the number of connected components in a graph
