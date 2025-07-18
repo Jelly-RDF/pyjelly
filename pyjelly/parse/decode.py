@@ -66,6 +66,8 @@ def options_from_frame(
         ),
         params=StreamParameters(
             stream_name=options.stream_name,
+            generalized_statements=options.generalized_statements,
+            rdf_star=options.rdf_star,
             version=options.version,
             delimited=delimited,
         ),
