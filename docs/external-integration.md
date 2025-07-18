@@ -38,42 +38,32 @@ which parses the data from `.jelly` file into the user's AuraDB database.
 ## NetworkX
 
 NetworkX is a Python package for the creation, manipulation, and analysis of the structure, dynamics, and functions of networks represented as graphs.
-Due to its seamless integration RDFlib and PyJelly via its conversion utilities, these libraries can be easily combined for graph analysis and transformation tasks.
+Due to its seamless integration with RDFlib and PyJelly via its conversion utilities, these libraries can be easily combined for graph analysis and transformation tasks.
 
 To successfully go through the use cases, one should primarily install the following libraries:
 ```
 pip install networkx==3.2.1 matplotlib==3.9.4
 ```
 
-To get more information about the NetworkX itself, see the package's documentation and how it integrates with RDFLib, and thus also PyJelly, please visit the following websites:
+To get more information about the NetworkX itself, see the package's documentation and other useful utilities:
     - [networkx.org/documentation/stable/auto_examples](https://networkx.org/documentation/stable/auto_examples/index.html)
     - [rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html](https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html)
     - [github.com/networkx/networkx](https://github.com/networkx/networkx)
 
 In the following sub-sections, we will describe a few useful and baseline use cases for performing integration between the modules.
 
-### Parse graph into NetworkX object and visualizing it
+### Parse graph into NetworkX object, visualize it, calculate useful graph-based characteristics
 
-To load data into a networkx object, starting from a `.jelly` file, one can look into the example:
+To load data into a networkx object, starting from a `.jelly` file, and (optionally) calculate some practical graph characteristics, one can look into the example:
 
-{{ code_example('networkx_integration/01_parse_visualize.py') }}
+{{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
 
-which loads the data from RDFLib graph into equivalent networkx graph, and performs its visualization.
-
-### Calculating useful graph-based characteristics via NetworkX library
-
-NetworkX allows for advanced, thorough and easy computation of important metrics from graph theory, which are also useful for KG.
-
-In the example {{ code_example('networkx_integration/02_parse_calculate.py') }}
-
-we demonstrate how to easily calculate the number of connected components and top 5 nodes sorted by degree.
-
-For more useful functions, attributes provided by the NetworkX library, please visit the aforementioned documentation.
+which loads the data from RDFLib graph into equivalent networkx graph, performs computation of useful graph theory metrics and visualizes the graph.
 
 ### Transform and serialize NetworkX graph
 
 To transform a NetworkX graph into RDFLib graph and perform its serialization into the `.jelly` format, look into the example:
 
-{{ code_example('networkx_integration/03_serialize.py') }}
+{{ code_example('networkx_integration/02_serialize.py') }}
 
 Which converts an example-defined NetworkX graph into RDFLib graph and performs its serialization.
