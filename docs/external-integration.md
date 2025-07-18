@@ -34,3 +34,36 @@ To parse data into the neo4j database from `.jelly` file use the following examp
 {{ code_example('neo4j_integration/01_rdflib_neo4j_parse.py') }}
 
 which parses the data from `.jelly` file into the user's AuraDB database.
+
+## NetworkX
+
+NetworkX is a Python package for the creation, manipulation, and analysis of the structure, dynamics, and functions of networks represented as graphs.
+Due to its seamless integration with RDFlib and PyJelly via its conversion utilities, these libraries can be easily combined for graph analysis and transformation tasks.
+
+To successfully go through the use cases, one should primarily install the following libraries:
+```
+pip install networkx==3.2.1 matplotlib==3.9.4
+```
+
+To get more information about the NetworkX itself, see the package's documentation and other useful utilities:
+    - [networkx.org/documentation/stable/auto_examples](https://networkx.org/documentation/stable/auto_examples/index.html)
+    - [rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html](https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html)
+    - [github.com/networkx/networkx](https://github.com/networkx/networkx)
+
+In the following sub-sections, we will describe a few useful and baseline use cases for performing integration between the modules.
+
+### Parse graph into NetworkX object, visualize it, calculate useful graph-based characteristics
+
+To load data into a NetworkX object, starting from a `.jelly` file, and (optionally) calculate some practical graph characteristics, one can look into the example:
+
+{{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
+
+which loads the data from RDFLib graph into equivalent NetworkX graph, performs computation of useful graph theory metrics and visualizes the graph.
+
+### Transform and serialize NetworkX graph
+
+To transform a NetworkX graph into RDFLib graph and perform its serialization into the `.jelly` format, look into the example:
+
+{{ code_example('networkx_integration/02_serialize.py') }}
+
+Which converts an example-defined NetworkX graph into RDFLib graph and performs its serialization.
