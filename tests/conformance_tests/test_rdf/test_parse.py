@@ -126,7 +126,7 @@ def run_generic_test(path: Path) -> None:
     output_dir.mkdir(exist_ok=True)
     with input_filename.open("rb") as input_file:
         for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
-            extension = f"n{'triples' if graph.is_triples_sink else 'quads'}"
+            extension = f"n{'triples' if 'triples' in test_id else 'quads'}"
             output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
             graph.serialize(output_filename=output_filename, encoding="utf-8")
             jelly_validate(
