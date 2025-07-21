@@ -14,6 +14,7 @@
 
 - **[Getting started](getting-started.md)**
 - **[Overview and supported features](overview.md)**
+- **[Integration with Python RDF Tools](external-integration.md)**
 - **[API reference](api.md)**
 - **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
