@@ -211,7 +211,7 @@ class GenericSinkParser:
         with input_filename.open("r") as input_file:
             for line in input_file:
                 line_trimmed = line[: line.rfind(".")] + line[line.rfind(".") + 1 :]
-                line_trimmed = line.strip()
+                line_trimmed = line_trimmed.strip()
                 comment_index = line_trimmed.find("#")
                 if comment_index == 0 or len(line_trimmed) == 0:
                     continue
