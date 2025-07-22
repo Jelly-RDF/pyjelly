@@ -10,10 +10,11 @@ from pyjelly.options import (
     MIN_NAME_LOOKUP_SIZE,
     MIN_VERSION,
     LookupPreset,
+    StreamParameters,
+    StreamTypes,
     register_mimetypes,
     validate_type_compatibility,
 )
-from pyjelly.serialize.streams import StreamParameters, StreamTypes
 
 
 def test_register_mimetypes() -> None:
@@ -67,5 +68,5 @@ def test_stream_parameters_version() -> None:
 def test_stream_types_repr_supress() -> None:
     physical_val = 9999
     logical_val = 8888
-    st = StreamTypes(physical_type=physical_val, logical_type=logical_val)
+    st = StreamTypes(physical_type=physical_val, logical_type=logical_val)  # type: ignore[arg-type]
     assert str(st) == f"StreamTypes({physical_val}, {logical_val})"

@@ -1,11 +1,8 @@
 import pytest
 
-from pyjelly.parse.lookup import (
-    MAX_LOOKUP_SIZE,
-    JellyAssertionError,
-    JellyConformanceError,
-    LookupDecoder,
-)
+from pyjelly.errors import JellyAssertionError, JellyConformanceError
+from pyjelly.options import MAX_LOOKUP_SIZE
+from pyjelly.parse.lookup import LookupDecoder
 from pyjelly.serialize.lookup import Lookup, LookupEncoder
 
 
