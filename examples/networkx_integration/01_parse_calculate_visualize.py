@@ -37,7 +37,7 @@ plt.axis("off")
 plt.show()
 
 print(f"Connected components: {num_components}")
-print("Top 5 nodes by degree:")
+print("Top 5 nodes sorted by degree:")
 for node, deg in top5:
     print(f"{node}: {deg}")
 print(f"Shortest path from {source} to {target}: {' -> '.join(path)}")
