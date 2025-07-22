@@ -88,6 +88,17 @@ def test_parses(path: Path) -> None:
 
 @needs_jelly_cli
 @walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
+    glob="pos_*",
+)
+def test_1_1_parses(path: Path) -> None:
+    run_generic_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
     RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.TRIPLES,
     RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.QUADS,
     RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.GRAPHS,
@@ -181,6 +192,17 @@ def run_generic_fail_test(path: Path) -> None:
     glob="neg_*",
 )
 def test_parsing_rdf_star_fails(path: Path) -> None:
+    run_generic_fail_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
+    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
+    glob="neg_*",
+)
+def test_parsing_rdf_1_1_fails(path: Path) -> None:
     run_generic_fail_test(path)
 
 

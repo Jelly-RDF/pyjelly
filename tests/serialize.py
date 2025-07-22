@@ -7,11 +7,17 @@ from pathlib import Path
 
 import rdflib
 
+from pyjelly.integrations.generic.generic_sink import GenericStatementSink
+from pyjelly.integrations.generic.serialize import GenericSinkTermEncoder
+from pyjelly.integrations.generic.serialize import (
+    stream_frames as generic_stream_frames,
+)
 from pyjelly.integrations.rdflib.serialize import stream_frames
 from pyjelly.parse.decode import ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import SerializerOptions, stream_for_type
+from tests.utils.generic_sink_test_parser import GenericSinkParser
 from tests.utils.ordered_memory import OrderedMemory
 
 
@@ -91,6 +97,37 @@ def write_graph_or_dataset(
         write_dataset([first, *extra], out_filename=out_filename, options=options)
     else:
         write_graph(first, out_filename=out_filename, options=options)
+
+
+def write_generic_sink(
+    first: str | Path,
+    *extra: str | Path,
+    out_filename: str | Path = "out.jelly",
+    options: str | Path | ParserOptions | None = None,
+) -> None:
+    if not isinstance(options, ParserOptions):
+        options = get_options_from(options)
+    assert options
+    if options is not None:
+        lookup_preset = options.lookup_preset
+    stream_class = stream_for_type(options.stream_types.physical_type)
+    stream = stream_class(
+        encoder=GenericSinkTermEncoder(lookup_preset=lookup_preset),
+        options=SerializerOptions(
+            lookup_preset=options.lookup_preset,
+            logical_type=options.stream_types.logical_type,
+            params=options.params,
+        ),
+    )
+    filenames = [first, *extra]
+    with Path(out_filename).open("wb") as file:
+        sink: GenericStatementSink
+        for filename in map(str, filenames):
+            sink = GenericStatementSink()
+            sink_parser = GenericSinkParser(sink)
+            sink_parser.parse(Path(filename))
+            if frames := next(generic_stream_frames(stream, sink)):
+                write_delimited(frames, file)
 
 
 if __name__ == "__main__":
