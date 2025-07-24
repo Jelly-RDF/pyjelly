@@ -1,6 +1,6 @@
-# Contributing to pyjelly
+# Contributing to Pyjelly
 
-Hi! This guide explains how to get started with developing pyjelly and contributing to it.
+Hi! This guide explains how to get started with developing Pyjelly and contributing to it.
 
 ## Quick start
 

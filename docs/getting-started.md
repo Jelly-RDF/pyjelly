@@ -1,25 +1,27 @@
 # Getting started
 
-This guide shows how to install pyjelly and prepare your environment for use with RDFLib.
+This guide shows how to install Pyjelly, prepare your environment for use with RDFLib and to cover libraries fundamental features.
 
 ## Installation (with RDFLib)
 
-Install pyjelly from PyPI:
+Install Pyjelly from PyPI:
 
-```
+```bash
 pip install pyjelly[rdflib]
 ```
 
-pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux, macOS, Windows).
+### Requirements
 
+- Python 3.9 or newer  
+- Linux, macOS, or Windows
 
 ## Usage with RDFLib
 
-Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
+Once you install Pyjelly, it automatically integrates with RDFLib. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
 
 ### Serializing a graph
 
-To serialize a graph to the Jelly format:
+To serialize a graph to the Jelly format see:
 
 {{ code_example('rdflib/01_serialize.py') }}
 
@@ -27,7 +29,7 @@ This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-
 
 ### Parsing a graph
 
-To load RDF data from a `.jelly` file:
+To load RDF data from a `.jelly` file see:
 
 {{ code_example('rdflib/02_parse.py') }}
 
