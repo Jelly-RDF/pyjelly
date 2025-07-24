@@ -1,12 +1,12 @@
-# Pyjelly integration with external libraries
+# pyjelly integration with external libraries
 
-In this section, you will learn how to integrate popular third‑party libraries built on RDFLib.
+In this section, you will learn how to use popular third-party libraries that connect with RDFLib.
 Before you continue with this document, please review the [getting started chapter](getting-started.md).
 
 ## Neo4j – RDFLib
 
 The Neo4j RDFLib library is a Python plugin that lets you use RDFLib’s API to parse RDF triples directly in a Neo4j graph database.  
-Because Neo4j integrates well with the baseline RDFLib objects, which is also true for Pyjelly, you can easily combine both libraries.  
+Because Neo4j integrates well with the baseline RDFLib objects, which is also true for pyjelly, you can easily combine both libraries.  
 
 Install the following library first:  
 
@@ -39,7 +39,7 @@ AURA_DB_PWD
 ## NetworkX
 
 NetworkX is a Python package that represents networks as graphs and allows for their creation, manipulation, and analysis.
-Due to its seamless integration with RDFLib and Pyjelly via its conversion utilities, you can easily combine these libraries for graph analysis task.
+Due to its seamless integration with RDFLib and pyjelly via its conversion utilities, you can easily combine these libraries for graph analysis task.
 
 Install the following libraries:
 
@@ -49,9 +49,9 @@ pip install networkx==3.2.1 matplotlib==3.9.4
 
 To get more information, see the package's documentation and other useful utilities:
 
-- [NetworkX Examples](https://networkx.org/documentation/stable/auto_examples/index.html)
-- [NetworkX Repository (GitHub)](https://github.com/networkx/networkx)
-- [RDFLib External Graph Integration](https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html)
+- [NetworkX examples](https://networkx.org/documentation/stable/auto_examples/index.html)
+- [NetworkX repository (github)](https://github.com/networkx/networkx)
+- [RDFLib external graph integration](https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html)
 
 In the following sub-sections, we will describe a few useful and baseline use cases for performing integration between the modules.
 

@@ -1,5 +1,5 @@
-site_name: Pyjelly
-site_description: Pyjelly is a Python implementation of the Jelly RDF streaming protocol.
+site_name: pyjelly
+site_description: pyjelly is a Python implementation of the Jelly RDF streaming protocol.
 site_url: https://jelly-rdf.github.io/pyjelly/
 
 plugins:
@@ -121,7 +121,7 @@ nav:
   - User guide:
       - Getting started: "getting-started.md"
       - Overview and supported features: "overview.md"
-      - Integration with Python RDF Tools: "external-integration.md"
+      - Integration with Python RDF tools: "external-integration.md"
   - API:
       - Reference guide: "api.md"
   - Contributing:
