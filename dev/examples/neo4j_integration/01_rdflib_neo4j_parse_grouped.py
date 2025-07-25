@@ -11,7 +11,7 @@ aura_db_uri = "aura_db_uri"
 aura_db_username = "neo4j"
 aura_db_pwd = "aura_db_pwd"
 
-# Prepare the authentication data to the Aura database
+# Prepare the authentication data to the AuraDB
 auth_data = {
     "uri": aura_db_uri,
     "database": "neo4j",
@@ -19,7 +19,7 @@ auth_data = {
     "pwd": aura_db_pwd,
 }
 
-# Prepare the configuration for neo4j store object
+# Prepare the configuration for Neo4jStore object
 config = Neo4jStoreConfig(
     auth_data=auth_data,
     handle_vocab_uri_strategy=HANDLE_VOCAB_URI_STRATEGY.IGNORE,

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://jelly-rdf.github.io/pyjelly/dev/overview/">
+        <link rel="canonical" href="https://jelly-rdf.github.io/pyjelly/dev/rdflib-neo4j-integration/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../overview/">
       
       
-        <link rel="next" href="../rdflib-neo4j-integration/">
+        <link rel="next" href="../networkx-integration/">
       
       
       <link rel="icon" href="../assets/jelly_color.png">
@@ -24,7 +24,7 @@
     
     
       
-        <title>Overview and supported features - pyjelly</title>
+        <title>RDFLib-Neo4j integration - pyjelly</title>
       
     
     
@@ -68,7 +68,7 @@
 
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="pyjelly – Overview and supported features" />
+<meta property="og:title" content="pyjelly – RDFLib-Neo4j integration" />
 <meta property="og:description" content="pyjelly is a Python implementation of the Jelly RDF streaming protocol." />
 <meta property="og:image" content="https://w3id.org/jelly/jelly-jvm/dev/assets/social.png" />
 <meta property="og:image:type" content="image/jpeg" />
@@ -95,7 +95,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#what-is-jelly-and-pyjelly" class="md-skip">
+        <a href="#rdflib-neo4j" class="md-skip">
           Skip to content
         </a>
       
@@ -134,7 +134,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview and supported features
+              RDFLib-Neo4j integration
             
           </span>
         </div>
@@ -373,6 +373,29 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview and supported features
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -382,13 +405,15 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
   
   
   <span class="md-ellipsis">
-    Overview and supported features
+    RDFLib-Neo4j integration
     
   </span>
   
@@ -401,7 +426,7 @@
   
   
   <span class="md-ellipsis">
-    Overview and supported features
+    RDFLib-Neo4j integration
     
   </span>
   
@@ -414,6 +439,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -422,60 +449,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-is-jelly-and-pyjelly" class="md-nav__link">
+  <a href="#parsing-data-from-a-jelly-file-into-neo4j" class="md-nav__link">
     <span class="md-ellipsis">
-      What is Jelly and pyjelly?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      Overview
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Overview">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#supported-stream-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported stream types
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#conformance-to-the-jelly-specification" class="md-nav__link">
-    <span class="md-ellipsis">
-      Conformance to the Jelly specification
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use cases
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pyjelly-integration-with-external-libraries" class="md-nav__link">
-    <span class="md-ellipsis">
-      pyjelly integration with external libraries
+      Parsing data from a Jelly file into Neo4j
     </span>
   </a>
   
@@ -485,29 +461,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../rdflib-neo4j-integration/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    RDFLib-Neo4j integration
-    
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -733,6 +686,8 @@
   
   
   
+    
+  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -741,60 +696,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#what-is-jelly-and-pyjelly" class="md-nav__link">
+  <a href="#parsing-data-from-a-jelly-file-into-neo4j" class="md-nav__link">
     <span class="md-ellipsis">
-      What is Jelly and pyjelly?
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      Overview
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Overview">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#supported-stream-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      Supported stream types
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#conformance-to-the-jelly-specification" class="md-nav__link">
-    <span class="md-ellipsis">
-      Conformance to the Jelly specification
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#use-cases" class="md-nav__link">
-    <span class="md-ellipsis">
-      Use cases
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pyjelly-integration-with-external-libraries" class="md-nav__link">
-    <span class="md-ellipsis">
-      pyjelly integration with external libraries
+      Parsing data from a Jelly file into Neo4j
     </span>
   </a>
   
@@ -816,7 +720,7 @@
 
 
   
-    <a href="https://github.com/Jelly-RDF/pyjelly/edit/main/docs/overview.md" title="Edit this page" class="md-content__button md-icon">
+    <a href="https://github.com/Jelly-RDF/pyjelly/edit/main/docs/rdflib-neo4j-integration.md" title="Edit this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -824,44 +728,70 @@
   
 
 
-  <h1>Overview and supported features</h1>
-
-<h2 id="what-is-jelly-and-pyjelly">What is Jelly and pyjelly?</h2>
-<p><strong><a href="https://w3id.org/jelly/dev/">Jelly</a></strong> is a high-performance serialization format for RDF knowledge graphs and knowledge graph streams. It's designed to be fast, compact, and flexible. </p>
-<p>With Jelly, you can transmit both flat and structured streams of triples, quads, graphs, and datasets. Jelly works well in both batch and real-time settings – including files, sockets, or streaming protocols like Kafka or gRPC.</p>
-<p><strong>pyjelly</strong> is a Python implementation of the Jelly protocol. It provides:</p>
+<h1 id="rdflib-neo4j">RDFLib-Neo4j</h1>
+<p>The RDFLib-Neo4j library is a Python plugin that lets you use RDFLib’s API to parse RDF triples directly into a Neo4j graph database.<br />
+Because Neo4j integrates well with the baseline RDFLib objects, which is also true for pyjelly, you can easily use both libraries.  </p>
+<p>Install the following library:  </p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>rdflib-neo4j
+</span></code></pre></div>
+<p>For more information, visit the following references from the RDFLib-Neo4j original sources:</p>
 <ul>
-<li>Full support for reading and writing Jelly-encoded RDF data</li>
-<li>Seamless integration with <a href="https://rdflib.readthedocs.io/">RDFLib</a> (<em>"works just like Turtle"</em>)</li>
-<li>Support for all Jelly stream types</li>
-<li>Tools for working with delimited and non-delimited Jelly streams</li>
-<li>Fine-grained control over serialization options, compression, and framing</li>
+<li><a href="https://github.com/neo4j-labs/rdflib-neo4j">RDFLib-Neo4j (GitHub)</a></li>
+<li><a href="https://neo4j.com/labs/rdflib-neo4j/">Neo4j Labs: RDFLib-Neo4j</a></li>
 </ul>
-<h2 id="overview">Overview</h2>
-<h3 id="supported-stream-types">Supported stream types</h3>
-<p>pyjelly supports all <a href="https://w3id.org/jelly/dev/specification/reference/#physicalstreamtype">physical stream types</a>: <code>TRIPLES</code>, <code>QUADS</code> and <code>GRAPHS</code>.</p>
-<p>See the full <a href="https://w3id.org/jelly/dev/specification/serialization/#consistency-with-physical-stream-types">stream type matrix</a> for an overview of valid combinations.</p>
-<h3 id="conformance-to-the-jelly-specification">Conformance to the Jelly specification</h3>
-<p>pyjelly is continuously tested for conformance to <a href="https://w3id.org/jelly/dev/specification/">the Jelly specification</a>. While the vast majority of features are implemented, there are a few edge cases left to resolve.</p>
-<p>You can track the progress in <a href="https://github.com/Jelly-RDF/pyjelly/blob/main/tests/utils/rdf_test_cases.py">the conformance test suite definition</a>.</p>
-<h2 id="use-cases">Use cases</h2>
-<p>Use cases for pyjelly include:</p>
-<ul>
-<li><strong>Client-server communication</strong> – link your client app in Python to the server (e.g., <a href="https://w3id.org/jelly/jelly-jvm">Apache Jena, RDF4J</a>) with Jelly to reduce latency and improve user experience.</li>
-<li><strong>Inter-service communication</strong> – use Jelly to efficiently exchange RDF data between microservices.</li>
-<li><strong>Data science workflows</strong> – use Jelly to read and write RDF data in data science pipelines, enabling efficient processing of large datasets. <ul>
-<li>pyjelly is fully streaming, so it can handle large datasets without loading everything into memory at once.</li>
-<li>We are working on support for pandas and other data science libraries – stay tuned for updates!</li>
-</ul>
-</li>
-<li><strong>Database dumps and bulk loads</strong> – quickly read and write large RDF datasets with Jelly, reducing storage space and improving database maintenance tasks.</li>
-</ul>
-<h2 id="pyjelly-integration-with-external-libraries">pyjelly integration with external libraries</h2>
-<p>To learn how to use popular third-party libraries that connect with RDFLib, please see:</p>
-<ul>
-<li><strong><a href="../rdflib-neo4j-integration/">RDFLib-Neo4j integration</a></strong></li>
-<li><strong><a href="../networkx-integration/">NetworkX integration</a></strong></li>
-</ul>
+<h2 id="parsing-data-from-a-jelly-file-into-neo4j">Parsing data from a Jelly file into Neo4j</h2>
+<p>To parse data from a <code>.jelly</code> file into the Neo4j database, use the following example with your own credentials to AuraDB:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">neo4j</span><span class="w"> </span><span class="kn">import</span> <span class="n">GraphDatabase</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib_neo4j</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neo4jStoreConfig</span><span class="p">,</span> <span class="n">Neo4jStore</span><span class="p">,</span> <span class="n">HANDLE_VOCAB_URI_STRATEGY</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Example file from the Riverbench</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">example_file</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="s2">&quot;https://w3id.org/riverbench/v/dev.jelly&quot;</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Please introduce your credentials</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="n">aura_db_uri</span> <span class="o">=</span> <span class="s2">&quot;aura_db_uri&quot;</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">aura_db_username</span> <span class="o">=</span> <span class="s2">&quot;neo4j&quot;</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">aura_db_pwd</span> <span class="o">=</span> <span class="s2">&quot;aura_db_pwd&quot;</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="c1"># Prepare the authentication data to the AuraDB</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="n">auth_data</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="s2">&quot;uri&quot;</span><span class="p">:</span> <span class="n">aura_db_uri</span><span class="p">,</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="s2">&quot;neo4j&quot;</span><span class="p">,</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">aura_db_username</span><span class="p">,</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="s2">&quot;pwd&quot;</span><span class="p">:</span> <span class="n">aura_db_pwd</span><span class="p">,</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="p">}</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="c1"># Prepare the configuration for Neo4jStore object</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="n">config</span> <span class="o">=</span> <span class="n">Neo4jStoreConfig</span><span class="p">(</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="n">auth_data</span><span class="o">=</span><span class="n">auth_data</span><span class="p">,</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="n">handle_vocab_uri_strategy</span><span class="o">=</span><span class="n">HANDLE_VOCAB_URI_STRATEGY</span><span class="o">.</span><span class="n">IGNORE</span><span class="p">,</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="n">batching</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p">)</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="c1"># Make a graph with Neo4jStore object</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="n">neo4j_sink</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">Neo4jStore</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">))</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a><span class="c1"># Parse the file into the AuraDB</span>
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a><span class="n">neo4j_sink</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">example_file</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;jelly&quot;</span><span class="p">)</span>
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a><span class="c1"># Close the stream</span>
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a><span class="n">neo4j_sink</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a><span class="c1"># Cypher query to check loaded data</span>
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a><span class="k">with</span> <span class="n">GraphDatabase</span><span class="o">.</span><span class="n">driver</span><span class="p">(</span>
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>    <span class="n">aura_db_uri</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="p">(</span><span class="n">aura_db_username</span><span class="p">,</span> <span class="n">aura_db_pwd</span><span class="p">)</span>
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a><span class="p">)</span><span class="o">.</span><span class="n">session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>    <span class="n">count</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;MATCH ()-[r]-&gt;() RETURN count(r) AS c&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">single</span><span class="p">()[</span><span class="s2">&quot;c&quot;</span><span class="p">]</span>
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> triples&quot;</span><span class="p">)</span>
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>        <span class="s2">&quot;MATCH (s)-[r]-&gt;(o) RETURN s.uri AS s, type(r) AS p, coalesce(o.uri,o.name) AS o LIMIT 5&quot;</span>
+</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>    <span class="p">):</span>
+</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>        <span class="nb">print</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;s&quot;</span><span class="p">],</span> <span class="sa">f</span><span class="s2">&quot;-[</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">]-&gt;&quot;</span><span class="p">,</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;o&quot;</span><span class="p">])</span>
+</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>
+</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>which parses the data from a <code>.jelly</code> file into your AuraDB database.</p>
 
 
 
@@ -894,7 +824,7 @@
     <span class="md-icon" title="Created">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 18, 2025 16:36:47">May 18, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
   </span>
 
     

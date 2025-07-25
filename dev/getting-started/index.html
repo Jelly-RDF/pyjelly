@@ -24,7 +24,7 @@
     
     
       
-        <title>Getting started - pyjelly</title>
+        <title>Getting started (RDFLib) - pyjelly</title>
       
     
     
@@ -68,7 +68,7 @@
 
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="pyjelly – Getting started" />
+<meta property="og:title" content="pyjelly – Getting started (RDFLib)" />
 <meta property="og:description" content="pyjelly is a Python implementation of the Jelly RDF streaming protocol." />
 <meta property="og:image" content="https://w3id.org/jelly/jelly-jvm/dev/assets/social.png" />
 <meta property="og:image:type" content="image/jpeg" />
@@ -134,7 +134,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Getting started
+              Getting started (RDFLib)
             
           </span>
         </div>
@@ -304,6 +304,56 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            User guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
     <li class="md-nav__item md-nav__item--active">
       
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
@@ -317,7 +367,7 @@
   
   
   <span class="md-ellipsis">
-    Getting started
+    Getting started (RDFLib)
     
   </span>
   
@@ -330,7 +380,7 @@
   
   
   <span class="md-ellipsis">
-    Getting started
+    Getting started (RDFLib)
     
   </span>
   
@@ -358,6 +408,21 @@
       Installation (with RDFLib)
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Installation (with RDFLib)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -455,9 +520,10 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -477,25 +543,57 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../external-integration/" class="md-nav__link">
+      <a href="../rdflib-neo4j-integration/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Integration with Python RDF Tools
+    RDFLib-Neo4j integration
     
   </span>
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../networkx-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    NetworkX integration
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -545,7 +643,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -562,14 +660,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_6" id="__nav_6_label" tabindex="0">
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             Contributing
           </label>
@@ -619,7 +717,7 @@
   
   
   <span class="md-ellipsis">
-    Changelog
+    Releases
     
   </span>
   
@@ -705,6 +803,21 @@
       Installation (with RDFLib)
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Installation (with RDFLib)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      Requirements
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -820,16 +933,20 @@
 
 
 <h1 id="getting-started">Getting started</h1>
-<p>This guide shows how to install pyjelly and prepare your environment for use with RDFLib.</p>
+<p>This guide walks you through installing pyjelly, setting up your environment for RDFLib, and using the library's core features.</p>
 <h2 id="installation-with-rdflib">Installation (with RDFLib)</h2>
 <p>Install pyjelly from PyPI:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip install pyjelly[rdflib]
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyjelly<span class="o">[</span>rdflib<span class="o">]</span>
 </span></code></pre></div>
-<p>pyjelly requires <strong>Python 3.9</strong> or newer and works on all major platforms (Linux, macOS, Windows).</p>
+<h3 id="requirements">Requirements</h3>
+<ul>
+<li>Python 3.9 or newer  </li>
+<li>Linux, macOS, or Windows</li>
+</ul>
 <h2 id="usage-with-rdflib">Usage with RDFLib</h2>
-<p>Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse <code>.jelly</code> files using the standard RDFLib API.</p>
+<p>Once you install pyjelly, it automatically integrates with RDFLib. You can immediately serialize and parse <code>.jelly</code> files using the standard RDFLib API.</p>
 <h3 id="serializing-a-graph">Serializing a graph</h3>
-<p>To serialize a graph to the Jelly format:</p>
+<p>To serialize a graph to the Jelly format see:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
@@ -838,7 +955,7 @@
 </span></code></pre></div>
 <p>This creates a <a href="https://w3id.org/jelly/dev/user-guide/#delimited-vs-non-delimited-jelly">delimited Jelly stream</a> using default options.</p>
 <h3 id="parsing-a-graph">Parsing a graph</h3>
-<p>To load RDF data from a <code>.jelly</code> file:</p>
+<p>To load RDF data from a <code>.jelly</code> file see:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
@@ -957,7 +1074,7 @@ For more precise control over frame serialization you can use <a href="../api/">
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>    <span class="n">flat_stream_to_file</span><span class="p">(</span><span class="n">sample_triples</span><span class="p">,</span> <span class="n">out_file</span><span class="p">)</span>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping the simplicity and order of the data.
+<p>The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping its the simplicity and order.
 For more precise control over frame serialization you can use <a href="../api/">lower-level API</a></p>
 <h3 id="serializing-a-stream-of-graphs_1">Serializing a stream of graphs</h3>
 <p>If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: </p>
@@ -1020,7 +1137,7 @@ For more precise control over frame serialization you can use <a href="../api/">
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 11, 2025 13:19:49">July 11, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
   </span>
 
     
