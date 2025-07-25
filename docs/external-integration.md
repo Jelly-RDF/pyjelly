@@ -3,12 +3,12 @@
 In this section, you will learn how to use popular third-party libraries that connect with RDFLib.
 Before you continue with this document, please review the [getting started chapter](getting-started.md).
 
-## Neo4j – RDFLib
+## RDFLib-Neo4j
 
-The Neo4j RDFLib library is a Python plugin that lets you use RDFLib’s API to parse RDF triples directly in a Neo4j graph database.  
-Because Neo4j integrates well with the baseline RDFLib objects, which is also true for pyjelly, you can easily combine both libraries.  
+The RDFLib-Neo4j library is a Python plugin that lets you use RDFLib’s API to parse RDF triples directly into a Neo4j graph database.  
+Because Neo4j integrates well with the baseline RDFLib objects, which is also true for pyjelly, you can easily use both libraries.  
 
-Install the following library first:  
+Install the following library:  
 
 ```bash
 pip install rdflib-neo4j
@@ -19,13 +19,13 @@ For more information, visit the following references from the RDFLib-Neo4j origi
 - [RDFLib-Neo4j (GitHub)](https://github.com/neo4j-labs/rdflib-neo4j)
 - [Neo4j Labs: RDFLib-Neo4j](https://neo4j.com/labs/rdflib-neo4j/)
 
-### Parsing data into Neo4j from a Jelly file
+### Parsing data from a Jelly file into Neo4j
 
-To parse data into the Neo4j database from a `.jelly` file use the following example:
+To parse data from a `.jelly` file into the Neo4j database use the following example:
 
 {{ code_example('neo4j_integration/01_rdflib_neo4j_parse_grouped.py') }}
 
-which parses the data from a `.jelly` file into the user's AuraDB database.  
+which parses the data from a `.jelly` file into your AuraDB database.  
 
 Please make sure that you provide your own credentials to the AuraDB instance:
 
@@ -38,7 +38,7 @@ AURA_DB_PWD
 ## NetworkX
 
 NetworkX is a Python package that represents networks as graphs and allows for their creation, manipulation, and analysis.
-Due to its seamless integration with RDFLib and pyjelly via its conversion utilities, you can easily integrate these libraries for graph analysis task.
+Due to its conversion utilities, it integrates seamlessly with RDFLib and pyjelly, so you can easily integrate these libraries.
 
 Install the following libraries:
 
@@ -62,7 +62,7 @@ To load data into a NetworkX object, starting from a `.jelly` file, and (optiona
 
 which loads the data from RDFLib graph into equivalent NetworkX graph, performs computation of useful graph theory metrics and visualizes the graph.
 
-### Transform and Serialize NetworkX graph
+### Transform and serialize NetworkX graph
 
 To transform a NetworkX graph into an RDFLib graph and perform its serialization into the `.jelly` format, look into the example:
 

@@ -57,7 +57,7 @@ markdown_extensions:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 repo_url: https://github.com/Jelly-RDF/pyjelly
-repo_name: Jelly-RDF/Pyjelly
+repo_name: Jelly-RDF/pyjelly
 edit_uri: edit/main/docs/
 
 theme:
