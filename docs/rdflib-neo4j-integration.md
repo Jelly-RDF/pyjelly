@@ -16,15 +16,7 @@ For more information, visit the following references from the RDFLib-Neo4j origi
 
 ## Parsing data from a Jelly file into Neo4j
 
-Please make sure that you provide your own credentials to the AuraDB instance:
-
-```python
-aura_db_uri
-aura_db_username
-aura_db_pwd
-```
-
-To parse data from a `.jelly` file into the Neo4j database use the following example:
+To parse data from a `.jelly` file into the Neo4j database, use the following example with your own credentials to AuraDB:
 
 {{ code_example('neo4j_integration/01_rdflib_neo4j_parse_grouped.py') }}
 
