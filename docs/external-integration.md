@@ -14,8 +14,7 @@ Install the following library first:
 pip install rdflib-neo4j
 ```
 
-For more information, one should visit the following references found on the RDFLib-Neo4j original sources, which forms the basis of
-the following document:
+For more information, visit the following references from the RDFLib-Neo4j original sources:
 
 - [RDFLib-Neo4j (GitHub)](https://github.com/neo4j-labs/rdflib-neo4j)
 - [Neo4j Labs: RDFLib-Neo4j](https://neo4j.com/labs/rdflib-neo4j/)
@@ -39,7 +38,7 @@ AURA_DB_PWD
 ## NetworkX
 
 NetworkX is a Python package that represents networks as graphs and allows for their creation, manipulation, and analysis.
-Due to its seamless integration with RDFLib and pyjelly via its conversion utilities, you can easily combine these libraries for graph analysis task.
+Due to its seamless integration with RDFLib and pyjelly via its conversion utilities, you can easily integrate these libraries for graph analysis task.
 
 Install the following libraries:
 

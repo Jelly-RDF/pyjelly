@@ -1,4 +1,4 @@
-streams## What is Jelly and pyjelly?
+## What is Jelly and pyjelly?
 
 **[Jelly]({{ proto_link() }})** is a high-performance serialization format for RDF knowledge graphs and knowledge graph streams. It's designed to be fast, compact, and flexible. 
 

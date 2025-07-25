@@ -1,6 +1,6 @@
 # Getting started
 
-This guide shows how to install pyjelly, prepare your environment for use with RDFLib and to cover libraries core features.
+This guide walks you through installing pyjelly, setting up your environment for RDFLib, and using the library's core features.
 
 ## Installation (with RDFLib)
 
