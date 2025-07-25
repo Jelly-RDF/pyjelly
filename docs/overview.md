@@ -18,7 +18,7 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 pyjelly supports all [physical stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}): `TRIPLES`, `QUADS` and `GRAPHS`.
 
-See the full [stream type matrix]({{ proto_link("serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
+See the full [stream type matrix]({{ proto_link("specification/serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
 
 ### Conformance to the Jelly specification
 
@@ -36,3 +36,10 @@ Use cases for pyjelly include:
     - pyjelly is fully streaming, so it can handle large datasets without loading everything into memory at once.
     - We are working on support for pandas and other data science libraries – stay tuned for updates!
 - **Database dumps and bulk loads** – quickly read and write large RDF datasets with Jelly, reducing storage space and improving database maintenance tasks.
+
+## pyjelly integration with external libraries
+
+To learn how to use popular third-party libraries that connect with RDFLib, please see:
+
+- **[RDFLib-Neo4j integration](rdflib-neo4j-integration.md)**
+- **[NetworkX integration](networkx-integration.md)**

@@ -2,19 +2,18 @@
 
 [![PyPI – Version](https://img.shields.io/pypi/v/pyjelly)](https://pypi.org/project/pyjelly/) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyjelly)](https://pypi.org/project/pyjelly/) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) [![CI status](https://github.com/Jelly-RDF/pyjelly/actions/workflows/ci.yml/badge.svg)](https://github.com/Jelly-RDF/pyjelly/actions/workflows/ci.yml) [![Code coverage](https://codecov.io/gh/Jelly-RDF/pyjelly/branch/main/graph/badge.svg?token=2D8M2QH6U0)](https://codecov.io/gh/Jelly-RDF/pyjelly) [![Discord](https://img.shields.io/discord/1333391881404420179?label=Discord%20chat)](https://discord.gg/A8sN5XwVa5)
 
-**pyjelly** is a Python implementation of [Jelly]({{ proto_link("") }}), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. It works great with [rdflib](getting-started.md).
+**pyjelly** is a Python implementation of [Jelly]({{ proto_link("") }}), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs. It works great with [RDFLib](getting-started.md).
 
 ## Features
 
 - **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
-- **Seamless integration with [rdflib](https://rdflib.readthedocs.io/)**
+- **Seamless integration with [RDFLib](https://rdflib.readthedocs.io/)**
 - **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
 ## Documentation
 
 - **[Getting started](getting-started.md)**
 - **[Overview and supported features](overview.md)**
-- **[Integration with Python RDF Tools](external-integration.md)**
 - **[API reference](api.md)**
 - **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 

@@ -1,25 +1,27 @@
 # Getting started
 
-This guide shows how to install pyjelly and prepare your environment for use with RDFLib.
+This guide walks you through installing pyjelly, setting up your environment for RDFLib, and using the library's core features.
 
 ## Installation (with RDFLib)
 
 Install pyjelly from PyPI:
 
-```
+```bash
 pip install pyjelly[rdflib]
 ```
 
-pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux, macOS, Windows).
+### Requirements
 
+- Python 3.9 or newer  
+- Linux, macOS, or Windows
 
 ## Usage with RDFLib
 
-Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
+Once you install pyjelly, it automatically integrates with RDFLib. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
 
 ### Serializing a graph
 
-To serialize a graph to the Jelly format:
+To serialize a graph to the Jelly format see:
 
 {{ code_example('rdflib/01_serialize.py') }}
 
@@ -27,7 +29,7 @@ This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-
 
 ### Parsing a graph
 
-To load RDF data from a `.jelly` file:
+To load RDF data from a `.jelly` file see:
 
 {{ code_example('rdflib/02_parse.py') }}
 
@@ -68,7 +70,7 @@ If you have a generator object containing statements, you can easily serialize i
 
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
-The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping the simplicity and order of the data.
+The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping its the simplicity and order.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of graphs

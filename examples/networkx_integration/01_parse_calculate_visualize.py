@@ -17,11 +17,10 @@ nx_g = rdflib_to_networkx_graph(rdf_g)
 # Example calculation, get the number of connected components in a graph
 num_components = nx.number_connected_components(nx_g)
 
-# Example calculation, get top 5 objects with highest degrees, something simple in NetworkX
+# Example calculation, get top 5 objects with highest degrees, simple in NetworkX
 top5 = sorted(nx_g.degree, key=lambda x: x[1], reverse=True)[:5]
 
-# Example calculation, shortest path between two nodes
-# Provide two example nodes in a graph
+# Example calculation, shortest path between two nodes (provided at least two nodes)
 source, target = list(nx_g.nodes)[0], list(nx_g.nodes)[-1]
 path = nx.shortest_path(nx_g, source=source, target=target)
 
