@@ -119,15 +119,14 @@ extra:
 nav:
   - Home : "index.md"
   - User guide:
-      - Getting started: "getting-started.md"
+      - Getting started (RDFLib): "getting-started.md"
       - Overview and supported features: "overview.md"
-      - Integration with Python RDF tools: "external-integration.md"
-  - API:
-      - Reference guide: "api.md"
+      - RDFLib-Neo4j integration: "rdflib-neo4j-integration.md"
+      - NetworkX integration: "networkx-integration.md"
+  - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"
-  - Releases:
-      - Changelog: "https://github.com/Jelly-RDF/pyjelly/releases"
+  - Releases: "https://github.com/Jelly-RDF/pyjelly/releases"
   - Licensing and citation: "https://w3id.org/jelly/dev/licensing"
   - Back to main Jelly docs ↩: "https://w3id.org/jelly/"
