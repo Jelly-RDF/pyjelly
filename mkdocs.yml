@@ -121,8 +121,8 @@ nav:
   - User guide:
       - Getting started (RDFLib): "getting-started.md"
       - Overview and supported features: "overview.md"
-      - RDFLib-Neo4j integration: "rdflib-neo4j-integration.md"
-      - NetworkX integration: "networkx-integration.md"
+      - Neo4j: "rdflib-neo4j-integration.md"
+      - NetworkX: "networkx-integration.md"
   - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
