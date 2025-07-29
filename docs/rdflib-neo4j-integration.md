@@ -5,7 +5,7 @@ RDFLib-Neo4j lets you import RDF triples into Neo4j via the RDFLib API.
 Install the following library:  
 
 ```bash
-pip install rdflib-neo4j
+pip install pyjelly[rdflib] rdflib-neo4j
 ```
 
 ## Parsing data from a Jelly file into Neo4j
