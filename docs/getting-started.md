@@ -1,6 +1,6 @@
 # Getting started
 
-This guide walks you through installing pyjelly, setting up your environment for RDFLib, and using the library's core features.
+This guide walks you through installing and working with pyjelly.
 
 ## Installation (with RDFLib)
 
@@ -17,7 +17,7 @@ pip install pyjelly[rdflib]
 
 ## Usage with RDFLib
 
-Once you install pyjelly, it automatically integrates with RDFLib. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
+Once you install pyjelly, it integrates automatically with RDFLib through standard RDFLib API.
 
 ### Serializing a graph
 
@@ -37,13 +37,13 @@ RDFLib will reconstruct the graph from the Jelly file.
 
 ### Parsing a stream of graphs
 
-You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
+You can process a Jelly stream as a stream of graphs.
 
-In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev), which is an RDF graph stream. We count the number of triples in each graph:
+In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev). We count the number of triples in each graph:
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
-Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.
+Each iteration receives **one** graph, allowing for processing large datasets efficiently.
 
 ### Parsing a stream of triples
 
@@ -53,38 +53,29 @@ In this more complex example, we look through a fragment of Denmark's OpenStreet
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
+This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
 ### Serializing a stream of graphs
 
-If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: 
+If you have a generator object containing graphs, you can easily serialize it into the Jelly format: 
 
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
-This method allows for transmitting logically grouped data, preserving their original division.
+Allowing for transmitting logically grouped data.  
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of statements
 
-If you have a generator object containing statements, you can easily serialize it into the Jelly format, like in the following example: 
+If you have a generator object containing statements, you can easily serialize it into the Jelly format: 
 
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
-The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping its the simplicity and order.
-For more precise control over frame serialization you can use [lower-level API](api.md)
-
-### Serializing a stream of graphs
-
-If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: 
-
-{{ code_example('rdflib/06_serialize_grouped.py')}}
-
-This method allows for transmitting logically grouped data, preserving their original division.
+The flat method transmits the data as a continuous sequence of statements, keeping it simple.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### File extension support
 
-You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
+RDFLib will auto-detect the format, so its not always necessary to pass `format="jelly"` parameter:
 
 {{ code_example('rdflib/03_parse_autodetect.py') }}
 
