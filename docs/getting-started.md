@@ -1,6 +1,6 @@
 # Getting started
 
-This guide walks you through installing and working with pyjelly.
+This guide walks you through installing and working with pyjelly and RDFLib.
 
 ## Installation (with RDFLib)
 
@@ -37,13 +37,13 @@ RDFLib will reconstruct the graph from the Jelly file.
 
 ### Parsing a stream of graphs
 
-You can process a Jelly stream as a stream of graphs.
+You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
 
 In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev). We count the number of triples in each graph:
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
-Each iteration receives **one** graph, allowing for processing large datasets efficiently.
+Each iteration receives only **one** graph, allowing for processing large datasets efficiently, without exhausting memory.
 
 ### Parsing a stream of triples
 
@@ -53,7 +53,7 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
+`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
 ### Serializing a stream of graphs
 
@@ -61,7 +61,7 @@ If you have a generator object containing graphs, you can easily serialize it in
 
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
-Allowing for transmitting logically grouped data.  
+This method allows for transmitting logically grouped data, preserving their original division. 
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of statements
@@ -70,12 +70,12 @@ If you have a generator object containing statements, you can easily serialize i
 
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
-The flat method transmits the data as a continuous sequence of statements, keeping it simple.
+The flat method transmits the data as a continuous sequence of statements, keeping it simple and ordered.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### File extension support
 
-RDFLib will auto-detect the format, so its not always necessary to pass `format="jelly"` parameter:
+You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
 
 {{ code_example('rdflib/03_parse_autodetect.py') }}
 

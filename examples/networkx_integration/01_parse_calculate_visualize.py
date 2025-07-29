@@ -24,16 +24,14 @@ top5 = sorted(nx_g.degree, key=lambda x: x[1], reverse=True)[:5]
 source, target = list(nx_g.nodes)[0], list(nx_g.nodes)[-1]
 path = nx.shortest_path(nx_g, source=source, target=target)
 
-# Take first 10 nodes
-nodes = list(nx_g)[:10]
-subg = nx_g.subgraph(nodes)
-
 # Draw and display the graph
-pos_sub = nx.spring_layout(subg, k=1.0, iterations=100, scale=5)
-plt.figure(figsize=(12, 12))
+pos = nx.spring_layout(nx_g)
+plt.figure(figsize=(10, 10))
 
 # Introduce your own settings for display
-nx.draw_networkx(subg, pos_sub, font_size=7, node_size=300, linewidths=0.6)
+nx.draw_networkx(
+    nx_g, pos, with_labels=True, font_size=4, node_size=300, linewidths=0.6
+)
 plt.axis("off")
 plt.show()
 
