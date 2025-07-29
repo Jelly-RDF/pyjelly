@@ -12,11 +12,46 @@ Below there are few useful examples to follow.
 
 ## Parse graph, show it
 
-To load graph form a `.jelly` file, and (optionally) calculate some practical graph characteristics, see:
+Let's say we have a graph in `.jelly` fromat and wanted some insight into it.  
+
+We can easily load it:  
+
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=7-12}
+```  
+
+Convert it into a convenient NetworkX graph:
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=14-15}
+``` 
+
+Is our graph fully connected? It's important to know, let's check here:
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=17-18}
+``` 
+
+Which nodes are connected the most (the most congested?), let's see top 5 of them:
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=20-21}
+``` 
+
+What is the shortest path between two nodes we want to traverse? We can check:
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=24-25}
+``` 
+
+However afterall, its best to the full picture (for our example we truncate to 8 nodes for clarity):
+```python
+{!networkx_integration/01_parse_calculate_visualize.py! lines=27-43}
+``` 
+
+The graph presents as follows ![NetworkX visualization example](assets/images/networkx_visualization_example.png).
+
+In summary:
 
 {{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
 
-which converts an RDFLib graph to NetworkX, computes key metrics and visualizes it.
+we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.
 
 ## Serialize NetworkX graph
 
