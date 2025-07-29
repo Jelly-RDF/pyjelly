@@ -49,7 +49,7 @@ Each iteration receives **one** graph, allowing for processing large datasets ef
 
 You can also process a Jelly stream as a flat stream of triples.
 
-In this more complex example, we look through a fragment of Denmark's OpenStreetMap to find all city names:
+We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 

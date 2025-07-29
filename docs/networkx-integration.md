@@ -16,7 +16,7 @@ To load graph form a `.jelly` file, and (optionally) calculate some practical gr
 
 {{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
 
-which loads the data from RDFLib graph into equivalent NetworkX graph, performs computation of useful graph theory metrics and visualizes the graph.
+which converts an RDFLib graph to NetworkX, computes key metrics, and visualizes it.
 
 ## Serialize NetworkX graph
 
@@ -24,7 +24,7 @@ This example shows how to write a NetworkX graph to a Jelly file.:
 
 {{ code_example('networkx_integration/02_serialize.py') }}
 
-which converts an example-defined NetworkX graph into an RDFLib graph and performs its serialization.
+which converts NetworkX graph into an RDFLib insance and serializes it.
 
 ## Related sources
 
