@@ -1,6 +1,6 @@
 # NetworkX
 
-NetworkX is a Python package that represents networks as graphs and allows for their manipulation.
+NetworkX is a Python package that represents complex networks as graphs and allows for their manipulation.
 
 Install the following libraries:
 
