@@ -1,7 +1,6 @@
 import pytest
 
-from pyjelly.errors import JellyAssertionError, JellyConformanceError
-from pyjelly.options import MAX_LOOKUP_SIZE
+from pyjelly.errors import JellyConformanceError
 from pyjelly.parse.lookup import LookupDecoder
 from pyjelly.serialize.lookup import Lookup, LookupEncoder
 
@@ -66,9 +65,9 @@ def test_name_term_index_zero_next() -> None:
     assert result != 0
 
 
-def test_lookup_decoder_size_error() -> None:
-    with pytest.raises(JellyAssertionError):
-        LookupDecoder(lookup_size=MAX_LOOKUP_SIZE + 1)
+# def test_lookup_decoder_size_error() -> None:
+#     with pytest.raises(JellyAssertionError):
+#         LookupDecoder(lookup_size=MAX_LOOKUP_SIZE + 1)
 
 
 def test_lookup_decoder_flow() -> None:

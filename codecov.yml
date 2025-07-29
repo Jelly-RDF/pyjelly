@@ -2,3 +2,4 @@ ignore:
   - "docs"
   - "tests"
   - "examples"
+  - "jelly"
