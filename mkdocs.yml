@@ -117,14 +117,16 @@ extra:
       name: Community Discord server
 
 nav:
-  - Home: "index.md"
-  - Getting started: "getting-started.md"
-  - Overview and supported features: "overview.md"
-  - Integration with Python RDF Tools: "external-integration.md"
+  - Home : "index.md"
+  - User guide:
+      - Getting started (RDFLib): "getting-started.md"
+      - Overview and supported features: "overview.md"
+      - Neo4j: "rdflib-neo4j-integration.md"
+      - NetworkX: "networkx-integration.md"
   - API reference: "api.md"
   - Contributing:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"
-  - Changelog: "https://github.com/Jelly-RDF/pyjelly/releases"
+  - Releases: "https://github.com/Jelly-RDF/pyjelly/releases"
   - Licensing and citation: "https://w3id.org/jelly/dev/licensing"
   - Back to main Jelly docs ↩: "https://w3id.org/jelly/"

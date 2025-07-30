@@ -1,25 +1,27 @@
 # Getting started
 
-This guide shows how to install pyjelly and prepare your environment for use with RDFLib.
+This guide walks you through installing and working with pyjelly and RDFLib.
 
 ## Installation (with RDFLib)
 
 Install pyjelly from PyPI:
 
-```
+```bash
 pip install pyjelly[rdflib]
 ```
 
-pyjelly requires **Python 3.9** or newer and works on all major platforms (Linux, macOS, Windows).
+### Requirements
 
+- Python 3.9 or newer  
+- Linux, macOS, or Windows
 
 ## Usage with RDFLib
 
-Once installed, pyjelly integrates with RDFLib automatically. You can immediately serialize and parse `.jelly` files using the standard RDFLib API.
+Once you install pyjelly, it integrates automatically with RDFLib through standard RDFLib API.
 
 ### Serializing a graph
 
-To serialize a graph to the Jelly format:
+To serialize a graph to the Jelly format see:
 
 {{ code_example('rdflib/01_serialize.py') }}
 
@@ -27,7 +29,7 @@ This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-
 
 ### Parsing a graph
 
-To load RDF data from a `.jelly` file:
+To load RDF data from a `.jelly` file see:
 
 {{ code_example('rdflib/02_parse.py') }}
 
@@ -37,47 +39,38 @@ RDFLib will reconstruct the graph from the Jelly file.
 
 You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
 
-In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev), which is an RDF graph stream. We count the number of triples in each graph:
+In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev). We count the number of triples in each graph:
 
 {{ code_example('rdflib/04_parse_grouped.py') }}
 
-Because `parse_jelly_grouped` returns a generator, each iteration receives **one** graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.
+Each iteration receives only **one** graph, allowing for processing large datasets efficiently, without exhausting memory.
 
 ### Parsing a stream of triples
 
 You can also process a Jelly stream as a flat stream of triples.
 
-In this more complex example, we look through a fragment of Denmark's OpenStreetMap to find all city names:
+We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('rdflib/05_parse_flat.py') }}
 
-`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
+`parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
 ### Serializing a stream of graphs
 
-If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: 
+If you have a generator object containing graphs, you can easily serialize it into the Jelly format: 
 
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
-This method allows for transmitting logically grouped data, preserving their original division.
+This method allows for transmitting logically grouped data, preserving their original division. 
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of statements
 
-If you have a generator object containing statements, you can easily serialize it into the Jelly format, like in the following example: 
+If you have a generator object containing statements, you can easily serialize it into the Jelly format: 
 
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
-The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping the simplicity and order of the data.
-For more precise control over frame serialization you can use [lower-level API](api.md)
-
-### Serializing a stream of graphs
-
-If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: 
-
-{{ code_example('rdflib/06_serialize_grouped.py')}}
-
-This method allows for transmitting logically grouped data, preserving their original division.
+The flat method transmits the data as a continuous sequence of statements, keeping it simple and ordered.
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### File extension support

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyjelly"
-version = "0.4.0"
+version = "0.5.1"
 readme = "README.md"
 description = "Jelly-RDF implementation for Python"
 authors = [
@@ -33,7 +33,6 @@ keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
 dependencies = [
     "protobuf>=6.30.0",
-    "pytest-cov>=6.2.1",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
 
@@ -65,6 +64,7 @@ test = [
     "hypothesis>=6.131.0",
     "inline-snapshot>=0.20.8",
     "pytest>=8.3.4",
+    "pytest-cov>=6.2.1",
     "pytest-accept>=0.1.12",
     "pytest-mock>=3.14.0",
     "pytest-subtests>=0.14.1",

@@ -84,25 +84,117 @@ class GenericSinkParser:
 
         match_quoted_triple = self._quoted_triple_re.match(term)
         if match_quoted_triple:
-            quoted_triple = self._token_quoted_triple_re.search(term)
-            if quoted_triple:
-                triple_tokens = self.generate_statement_tokens(
-                    quoted_triple.groups()[0]
+            triple_tokens = self.split_statement(term.strip())
+            return Triple(
+                *(
+                    self.process_term(group, slot)
+                    for slot, group in zip(Triple._fields, triple_tokens)
                 )
-                return Triple(
-                    *(
-                        self.process_term(group, slot)
-                        for slot, group in zip(Triple._fields, triple_tokens)
-                    )
-                )
-            msg = "invalid quoted triple encountered"
-            raise TypeError(msg)
-
+            )
         if term == "" and slot == "g":
             return DEFAULT_GRAPH_IDENTIFIER
 
         msg = "failed to parse input file"
         raise TypeError(msg)
+
+    def find_closing_quotation(self, text: str, start: int) -> int:
+        """
+        Find the closing >> to a passed one.
+
+        Notes:
+            Examines what is inside the current quoted triple.
+            Counts nesting levels and reports only the paired
+            closing quote.
+
+        Args:
+            text (str): the current quoted triple parsed
+            start (int): location of the opning quotation
+
+        Returns:
+            int: position of the closing quotation mark.
+
+        """
+        depth = 1
+        pos = start + 2
+        while pos < len(text) - 1 and depth > 0:
+            if text[pos : pos + 2] == "<<":
+                depth += 1
+                pos += 2
+            elif text[pos : pos + 2] == ">>":
+                depth -= 1
+                pos += 2
+            else:
+                pos += 1
+        return pos
+
+    def process_quoted(self, statement: str) -> list[str]:
+        """
+        Process quoted triple or its part.
+
+        Notes:
+            Allows having more quoted triples inside.
+            Decides whether to:
+                - tokenize the current triple, if no more nesting found or a part of
+                    quoted triple is given
+                - return as is -- if the statement is this only triple,
+                    used during splitting statements into s/p/o/g
+                - split quoted triple further -- during active term processing,
+                    goes until all nesting levels are exhausted and the first
+                    if is triggered
+
+        Args:
+            statement (str): quoted triple to process or a part of one
+
+        Returns:
+            list[str]: list of processed triple terms
+
+        """
+        start = statement.find("<<")
+        if start == -1:
+            split = self.generate_statement_tokens(statement.strip())
+        else:
+            if start == 0 and self.find_closing_quotation(statement, start) == len(
+                statement
+            ):
+                return [statement]
+            split = self.split_statement(statement.strip())
+        return split
+
+    def split_statement(self, text: str) -> list[str]:
+        """
+        Split the statement based on quotation marks position.
+
+        Notes:
+            If no quotation is found, uses tokenizer right away.
+            If quotation is found, locates the first quoted triple and
+            its surrounding terms and processes them separately, combining
+            all in s/p/o list.
+
+        Args:
+            text (str): quoted triple to process
+
+        Returns:
+            list[str]: list of processed triple terms
+
+        """
+        start = text.find("<<")
+        if start == -1:
+            return self.generate_statement_tokens(text)
+        pos = self.find_closing_quotation(text, start)
+
+        if start == 0 and pos == len(text):
+            triple = text[start + 2 : pos - 2].strip()
+            split_triple = self.process_quoted(triple)
+        else:
+            split_triple = []
+            if start > 0:
+                text_before_quoted_triple = text[:start].strip()
+                split_triple.extend(self.process_quoted(text_before_quoted_triple))
+            split_triple.append(text[start:pos].strip())
+            if pos < len(text):
+                text_after_quoted_triple = text[pos:].strip()
+                split_triple.extend(self.process_quoted(text_after_quoted_triple))
+        return split_triple
 
     def generate_statement_tokens(self, statement: str) -> list[str]:
         """
@@ -139,7 +231,7 @@ class GenericSinkParser:
             Triple | Quad: resulting triple/quad
 
         """
-        terms = self.generate_statement_tokens(statement)
+        terms = self.split_statement(statement)
         if len(terms) == TRIPLE_ARITY and statement_structure == Quad:
             terms.append("")  # append default graph identificator
         generic_terms = (

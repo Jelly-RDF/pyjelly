@@ -13,32 +13,6 @@ import pytest
 # See https://github.com/Jelly-RDF/pyjelly/issues/145
 failing_test_cases = [
     "to_jelly_triples_rdf_1_1_pos_014",
-    "to_jelly_triples_rdf_star_pos_004",
-    "to_jelly_triples_rdf_star_pos_005",
-    "to_jelly_triples_rdf_star_pos_006",
-    "to_jelly_triples_rdf_star_pos_007",
-    "to_jelly_quads_rdf_star_pos_003",
-    "to_jelly_quads_rdf_star_pos_004",
-    "to_jelly_quads_rdf_star_pos_005",
-    "to_jelly_quads_rdf_star_pos_006",
-    "to_jelly_quads_rdf_star_pos_007",
-    "to_jelly_graphs_rdf_star_pos_003",
-    "to_jelly_graphs_rdf_star_pos_004",
-    "to_jelly_graphs_rdf_star_pos_005",
-    "to_jelly_graphs_rdf_star_pos_006",
-    "to_jelly_graphs_rdf_star_pos_007",
-    "to_jelly_triples_rdf_star_generalized_pos_001",
-    "to_jelly_triples_rdf_star_generalized_pos_002",
-    "to_jelly_triples_rdf_star_generalized_pos_003",
-    "to_jelly_triples_rdf_star_generalized_pos_004",
-    "to_jelly_triples_rdf_star_generalized_pos_005",
-    "to_jelly_triples_rdf_star_generalized_pos_006",
-    "to_jelly_quads_rdf_star_generalized_pos_001",
-    "to_jelly_quads_rdf_star_generalized_pos_002",
-    "to_jelly_quads_rdf_star_generalized_pos_003",
-    "to_jelly_quads_rdf_star_generalized_pos_004",
-    "to_jelly_quads_rdf_star_generalized_pos_005",
-    "to_jelly_quads_rdf_star_generalized_pos_006",
 ]
 
 JELLY_CLI = shutil.which("jelly-cli")
