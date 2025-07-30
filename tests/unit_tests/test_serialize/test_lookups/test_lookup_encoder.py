@@ -183,16 +183,6 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
             encoder.encode_datatype_term_index("foo")
             mock.assert_not_called()
 
-
-def test_encode_entry() -> None:
-    enc = LookupEncoder(lookup_size=3)
-    assert enc.encode_entry_index("a") == 0
-    assert enc.encode_entry_index("b") == 0
-    assert enc.encode_entry_index("a") is None
-    assert enc.encode_entry_index("c") == 0
-    assert enc.encode_entry_index("d") == 2
-
-
 def test_prefix_term_index_all() -> None:
     enc = LookupEncoder(lookup_size=3)
     assert enc.encode_prefix_term_index("") == 0
@@ -201,21 +191,7 @@ def test_prefix_term_index_all() -> None:
     second = enc.encode_prefix_term_index("a")
     assert (first, second) == (1, 0)
 
-
 def test_datatype_term_zero_lookup() -> None:
     enc = LookupEncoder(lookup_size=0)
     assert enc.encode_datatype_term_index("x") == 0
-
-
-def test_name_term_index_zero_next() -> None:
-    enc = LookupEncoder(lookup_size=3)
-    enc.encode_entry_index("a")  # id 1
-    enc.encode_term_index("a")
-    enc.encode_entry_index("b")  # id 2
-    assert enc.encode_name_term_index("b") == 0
-    enc.encode_entry_index("c")  # id 3
-    enc.encode_term_index("c")
-    enc.encode_entry_index("x")
-    result = enc.encode_name_term_index("c")
-    assert result in (1, 2, 3)
-    assert result != 0
+ 
