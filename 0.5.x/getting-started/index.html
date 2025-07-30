@@ -491,15 +491,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#serializing-a-stream-of-graphs_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Serializing a stream of graphs
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#file-extension-support" class="md-nav__link">
     <span class="md-ellipsis">
       File extension support
@@ -557,7 +548,7 @@
   
   
   <span class="md-ellipsis">
-    RDFLib-Neo4j integration
+    Neo4j
     
   </span>
   
@@ -580,7 +571,7 @@
   
   
   <span class="md-ellipsis">
-    NetworkX integration
+    NetworkX
     
   </span>
   
@@ -886,15 +877,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#serializing-a-stream-of-graphs_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Serializing a stream of graphs
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#file-extension-support" class="md-nav__link">
     <span class="md-ellipsis">
       File extension support
@@ -933,7 +915,7 @@
 
 
 <h1 id="getting-started">Getting started</h1>
-<p>This guide walks you through installing pyjelly, setting up your environment for RDFLib, and using the library's core features.</p>
+<p>This guide walks you through installing and working with pyjelly and RDFLib.</p>
 <h2 id="installation-with-rdflib">Installation (with RDFLib)</h2>
 <p>Install pyjelly from PyPI:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyjelly<span class="o">[</span>rdflib<span class="o">]</span>
@@ -944,7 +926,7 @@
 <li>Linux, macOS, or Windows</li>
 </ul>
 <h2 id="usage-with-rdflib">Usage with RDFLib</h2>
-<p>Once you install pyjelly, it automatically integrates with RDFLib. You can immediately serialize and parse <code>.jelly</code> files using the standard RDFLib API.</p>
+<p>Once you install pyjelly, it integrates automatically with RDFLib through standard RDFLib API.</p>
 <h3 id="serializing-a-graph">Serializing a graph</h3>
 <p>To serialize a graph to the Jelly format see:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
@@ -968,7 +950,7 @@
 <p>RDFLib will reconstruct the graph from the Jelly file.</p>
 <h3 id="parsing-a-stream-of-graphs">Parsing a stream of graphs</h3>
 <p>You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.</p>
-<p>In this example, we use a <a href="https://w3id.org/riverbench/datasets/lod-katrina/dev">dataset of weather measurements</a>, which is an RDF graph stream. We count the number of triples in each graph:</p>
+<p>In this example, we use a <a href="https://w3id.org/riverbench/datasets/lod-katrina/dev">dataset of weather measurements</a>. We count the number of triples in each graph:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
@@ -990,10 +972,10 @@
 </span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">50</span><span class="p">:</span>
 </span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>            <span class="k">break</span>
 </span></code></pre></div>
-<p>Because <code>parse_jelly_grouped</code> returns a generator, each iteration receives <strong>one</strong> graph, keeping memory usage bounded to the current frame. So, large datasets and live streams can be processed efficiently.</p>
+<p>Each iteration receives only <strong>one</strong> graph, allowing for processing large datasets efficiently, without exhausting memory.</p>
 <h3 id="parsing-a-stream-of-triples">Parsing a stream of triples</h3>
 <p>You can also process a Jelly stream as a flat stream of triples.</p>
-<p>In this more complex example, we look through a fragment of Denmark's OpenStreetMap to find all city names:</p>
+<p>We look through a fragment of Denmark's OpenStreetMap to find all city names:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">gzip</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
@@ -1024,9 +1006,9 @@
 </span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="k">for</span> <span class="n">city</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">city_names</span><span class="p">)[:</span><span class="mi">10</span><span class="p">]:</span>
 </span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;- </span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p><code>parse_jelly_flat</code> returns a generator of stream events (i.e., statements parsed). This allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.</p>
+<p><code>parse_jelly_flat</code> returns a generator of stream events (i.e., statements parsed). This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.</p>
 <h3 id="serializing-a-stream-of-graphs">Serializing a stream of graphs</h3>
-<p>If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: </p>
+<p>If you have a generator object containing graphs, you can easily serialize it into the Jelly format: </p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib.serialize</span><span class="w"> </span><span class="kn">import</span> <span class="n">grouped_stream_to_file</span>
 </span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Namespace</span>
@@ -1050,10 +1032,10 @@
 </span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="n">grouped_stream_to_file</span><span class="p">(</span><span class="n">sample_graphs</span><span class="p">,</span> <span class="n">out_file</span><span class="p">)</span>
 </span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>This method allows for transmitting logically grouped data, preserving their original division.
+<p>This method allows for transmitting logically grouped data, preserving their original division. 
 For more precise control over frame serialization you can use <a href="../api/">lower-level API</a></p>
 <h3 id="serializing-a-stream-of-statements">Serializing a stream of statements</h3>
-<p>If you have a generator object containing statements, you can easily serialize it into the Jelly format, like in the following example: </p>
+<p>If you have a generator object containing statements, you can easily serialize it into the Jelly format: </p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib.serialize</span><span class="w"> </span><span class="kn">import</span> <span class="n">flat_stream_to_file</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Namespace</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
@@ -1074,42 +1056,15 @@ For more precise control over frame serialization you can use <a href="../api/">
 </span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>    <span class="n">flat_stream_to_file</span><span class="p">(</span><span class="n">sample_triples</span><span class="p">,</span> <span class="n">out_file</span><span class="p">)</span>
 </span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>The flat method transmits the data as a continuous sequence of individual statements (i.e., triples or quads), keeping its the simplicity and order.
-For more precise control over frame serialization you can use <a href="../api/">lower-level API</a></p>
-<h3 id="serializing-a-stream-of-graphs_1">Serializing a stream of graphs</h3>
-<p>If you have a generator object containing graphs, you can easily serialize it into the Jelly format, like in the following example: </p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib.serialize</span><span class="w"> </span><span class="kn">import</span> <span class="n">grouped_stream_to_file</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Namespace</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">generate_sample_graphs</span><span class="p">():</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="n">ex</span> <span class="o">=</span> <span class="n">Namespace</span><span class="p">(</span><span class="s2">&quot;http://example.org/&quot;</span><span class="p">)</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>        <span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>        <span class="n">g</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">ex</span><span class="o">.</span><span class="n">sensor</span><span class="p">,</span> <span class="n">ex</span><span class="o">.</span><span class="n">temperature</span><span class="p">,</span> <span class="n">Literal</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())))</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>        <span class="n">g</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">ex</span><span class="o">.</span><span class="n">sensor</span><span class="p">,</span> <span class="n">ex</span><span class="o">.</span><span class="n">humidity</span><span class="p">,</span> <span class="n">Literal</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">())))</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>        <span class="k">yield</span> <span class="n">g</span>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="n">output_file_name</span> <span class="o">=</span> <span class="s2">&quot;output.jelly&quot;</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Streaming graphs into </span><span class="si">{</span><span class="n">output_file_name</span><span class="si">}</span><span class="s2">…&quot;</span><span class="p">)</span>
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="n">sample_graphs</span> <span class="o">=</span> <span class="n">generate_sample_graphs</span><span class="p">()</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_file_name</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    <span class="n">grouped_stream_to_file</span><span class="p">(</span><span class="n">sample_graphs</span><span class="p">,</span> <span class="n">out_file</span><span class="p">)</span>
-</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
-</span></code></pre></div>
-<p>This method allows for transmitting logically grouped data, preserving their original division.
+<p>The flat method transmits the data as a continuous sequence of statements, keeping it simple and ordered.
 For more precise control over frame serialization you can use <a href="../api/">lower-level API</a></p>
 <h3 id="file-extension-support">File extension support</h3>
 <p>You can generally omit the <code>format="jelly"</code> parameter if the file ends in <code>.jelly</code> – RDFLib will auto-detect the format:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">g</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;foaf.jelly&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">g</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;foaf.jelly&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -1137,7 +1092,7 @@ For more precise control over frame serialization you can use <a href="../api/">
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 29, 2025 10:33:33">July 29, 2025</span>
   </span>
 
     

@@ -24,7 +24,7 @@
     
     
       
-        <title>NetworkX integration - pyjelly</title>
+        <title>NetworkX - pyjelly</title>
       
     
     
@@ -68,7 +68,7 @@
 
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="pyjelly – NetworkX integration" />
+<meta property="og:title" content="pyjelly – NetworkX" />
 <meta property="og:description" content="pyjelly is a Python implementation of the Jelly RDF streaming protocol." />
 <meta property="og:image" content="https://w3id.org/jelly/jelly-jvm/dev/assets/social.png" />
 <meta property="og:image:type" content="image/jpeg" />
@@ -134,7 +134,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              NetworkX integration
+              NetworkX
             
           </span>
         </div>
@@ -404,7 +404,7 @@
   
   
   <span class="md-ellipsis">
-    RDFLib-Neo4j integration
+    Neo4j
     
   </span>
   
@@ -436,7 +436,7 @@
   
   
   <span class="md-ellipsis">
-    NetworkX integration
+    NetworkX
     
   </span>
   
@@ -449,7 +449,7 @@
   
   
   <span class="md-ellipsis">
-    NetworkX integration
+    NetworkX
     
   </span>
   
@@ -472,18 +472,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#parse-graph-visualize-it-calculate-useful-graph-based-characteristics" class="md-nav__link">
+  <a href="#parse-graph-show-it" class="md-nav__link">
     <span class="md-ellipsis">
-      Parse graph, visualize it, calculate useful graph-based characteristics
+      Parse graph, show it
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#transform-and-serialize-networkx-graph" class="md-nav__link">
+  <a href="#serialize-networkx-graph" class="md-nav__link">
     <span class="md-ellipsis">
-      Transform and serialize NetworkX graph
+      Serialize NetworkX graph
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related sources
     </span>
   </a>
   
@@ -705,18 +714,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#parse-graph-visualize-it-calculate-useful-graph-based-characteristics" class="md-nav__link">
+  <a href="#parse-graph-show-it" class="md-nav__link">
     <span class="md-ellipsis">
-      Parse graph, visualize it, calculate useful graph-based characteristics
+      Parse graph, show it
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#transform-and-serialize-networkx-graph" class="md-nav__link">
+  <a href="#serialize-networkx-graph" class="md-nav__link">
     <span class="md-ellipsis">
-      Transform and serialize NetworkX graph
+      Serialize NetworkX graph
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Related sources
     </span>
   </a>
   
@@ -747,20 +765,13 @@
 
 
 <h1 id="networkx">NetworkX</h1>
-<p>NetworkX is a Python package that represents networks as graphs and allows for their creation, manipulation, and analysis.
-Due to its conversion utilities, it integrates seamlessly with RDFLib and pyjelly, so you can easily integrate these libraries.</p>
+<p>NetworkX is a Python package that represents complex networks as graphs and allows for their manipulation.</p>
 <p>Install the following libraries:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">networkx</span><span class="o">==</span><span class="m">3</span>.2.1<span class="w"> </span><span class="nv">matplotlib</span><span class="o">==</span><span class="m">3</span>.9.4
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>pyjelly<span class="o">[</span>rdflib<span class="o">]</span><span class="w"> </span><span class="nv">networkx</span><span class="o">==</span><span class="m">3</span>.2.1<span class="w"> </span><span class="nv">matplotlib</span><span class="o">==</span><span class="m">3</span>.9.4
 </span></code></pre></div>
-<p>To get more information, see the package's documentation and other useful utilities:</p>
-<ul>
-<li><a href="https://networkx.org/documentation/stable/auto_examples/index.html">NetworkX examples</a></li>
-<li><a href="https://github.com/networkx/networkx">NetworkX repository (github)</a></li>
-<li><a href="https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html">RDFLib external graph integration</a></li>
-</ul>
-<p>In the following sub-sections, we will describe a few useful and baseline use cases for performing integration between the modules.</p>
-<h2 id="parse-graph-visualize-it-calculate-useful-graph-based-characteristics">Parse graph, visualize it, calculate useful graph-based characteristics</h2>
-<p>To load data into a NetworkX object, starting from a <code>.jelly</code> file, and (optionally) calculate some practical graph characteristics, see the example:</p>
+<p>Below there are few useful examples to follow.</p>
+<h2 id="parse-graph-show-it">Parse graph, show it</h2>
+<p>To load graph form a <code>.jelly</code> file, and (optionally) calculate some practical graph characteristics, see:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib.extras.external_graph_libs</span><span class="w"> </span><span class="kn">import</span> <span class="n">rdflib_to_networkx_graph</span>
@@ -805,9 +816,9 @@ Due to its conversion utilities, it integrates seamlessly with RDFLib and pyjell
 </span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Shortest path from </span><span class="si">{</span><span class="n">source</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">target</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="s1">&#39; -&gt; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>which loads the data from RDFLib graph into equivalent NetworkX graph, performs computation of useful graph theory metrics and visualizes the graph.</p>
-<h2 id="transform-and-serialize-networkx-graph">Transform and serialize NetworkX graph</h2>
-<p>To transform a NetworkX graph into an RDFLib graph and perform its serialization into the <code>.jelly</code> format, look into the example:</p>
+<p>which converts an RDFLib graph to NetworkX, computes key metrics and visualizes it.</p>
+<h2 id="serialize-networkx-graph">Serialize NetworkX graph</h2>
+<p>This example shows how to write a NetworkX graph to a Jelly file.:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Graph</span><span class="p">,</span> <span class="n">URIRef</span><span class="p">,</span> <span class="n">Namespace</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">rdflib.namespace</span><span class="w"> </span><span class="kn">import</span> <span class="n">RDF</span>
@@ -837,7 +848,14 @@ Due to its conversion utilities, it integrates seamlessly with RDFLib and pyjell
 </span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="n">rdf_g</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">destination</span><span class="o">=</span><span class="s2">&quot;networkx_graph.jelly&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;jelly&quot;</span><span class="p">)</span>
 </span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;All done.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>which converts an example-defined NetworkX graph into an RDFLib graph and performs its serialization.</p>
+<p>which converts NetworkX graph into an RDFLib insance and serializes it.</p>
+<h2 id="related-sources">Related sources</h2>
+<p>To get more information, see the following:</p>
+<ul>
+<li><a href="https://networkx.org/documentation/stable/auto_examples/index.html">NetworkX examples</a></li>
+<li><a href="https://github.com/networkx/networkx">NetworkX repository (github)</a></li>
+<li><a href="https://rdflib.readthedocs.io/en/7.1.0/_modules/rdflib/extras/external_graph_libs.html">RDFLib external graph integration</a></li>
+</ul>
 
 
 
@@ -860,7 +878,7 @@ Due to its conversion utilities, it integrates seamlessly with RDFLib and pyjell
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 29, 2025 11:48:58">July 29, 2025</span>
   </span>
 
     
