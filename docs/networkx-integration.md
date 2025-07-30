@@ -12,7 +12,7 @@ Below there are few useful examples to follow.
 
 ## Parse graph, show it
 
-Let's say we have a graph in `.jelly` fromat and wanted some insight into it.  
+Let's say we have a graph in `.jelly` format and wanted some insight into it.  
 
 We can easily load it:  
 
