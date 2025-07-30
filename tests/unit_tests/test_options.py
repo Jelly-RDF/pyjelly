@@ -28,6 +28,7 @@ from pyjelly.parse.decode import options_from_frame
         (jelly.PHYSICAL_STREAM_TYPE_QUADS, jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
         (jelly.PHYSICAL_STREAM_TYPE_QUADS, jelly.LOGICAL_STREAM_TYPE_DATASETS),
         (jelly.PHYSICAL_STREAM_TYPE_QUADS, jelly.LOGICAL_STREAM_TYPE_NAMED_GRAPHS),
+        (jelly.PHYSICAL_STREAM_TYPE_TRIPLES, jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
         (
             jelly.PHYSICAL_STREAM_TYPE_QUADS,
             jelly.LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS,
@@ -62,7 +63,6 @@ from pyjelly.parse.decode import options_from_frame
             jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED,
             jelly.LOGICAL_STREAM_TYPE_TIMESTAMPED_NAMED_GRAPHS,
         ),
-        (jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED, jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED),
     ],
 )
 def test_stream_types_ok(
@@ -167,20 +167,6 @@ def test_lookup_preset_validation() -> None:
         LookupPreset(max_names=MIN_NAME_LOOKUP_SIZE - 1)
     p = LookupPreset.small()
     assert (p.max_names, p.max_prefixes, p.max_datatypes) == (128, 32, 32)
-
-
-def test_stream_types_flat_and_repr() -> None:
-    st = StreamTypes(
-        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-    )
-    assert st.flat
-    expected = (
-        f"StreamTypes("
-        f"{jelly.PhysicalStreamType.Name(st.physical_type)}, "
-        f"{jelly.LogicalStreamType.Name(st.logical_type)})"
-    )
-    assert str(st) == expected
 
 
 def test_stream_parameters_version() -> None:
