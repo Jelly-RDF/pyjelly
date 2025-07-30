@@ -76,21 +76,17 @@ class StreamTypes:
         )
 
     def __repr__(self) -> str:
-        '''
+        """
+        Return the representation of StreamTypes.
+
         >>> repr(StreamTypes(9999, 8888))
         'StreamTypes(9999, 8888)'
-        '''
+        """
         with suppress(ValueError):
             physical_type_name = jelly.PhysicalStreamType.Name(self.physical_type)
             logical_type_name = jelly.LogicalStreamType.Name(self.logical_type)
             return f"StreamTypes({physical_type_name}, {logical_type_name})"
         return f"StreamTypes({self.physical_type}, {self.logical_type})"
-
-    def __post_init__(self) -> None:
-        validate_type_compatibility(
-            physical_type=self.physical_type,
-            logical_type=self.logical_type,
-        )
 
 
 @dataclass(frozen=True)
