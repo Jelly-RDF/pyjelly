@@ -88,6 +88,12 @@ class StreamTypes:
             return f"StreamTypes({physical_type_name}, {logical_type_name})"
         return f"StreamTypes({self.physical_type}, {self.logical_type})"
 
+    def __post_init__(self) -> None:
+        validate_type_compatibility(
+            physical_type=self.physical_type,
+            logical_type=self.logical_type,
+        )
+
 
 @dataclass(frozen=True)
 class StreamParameters:
