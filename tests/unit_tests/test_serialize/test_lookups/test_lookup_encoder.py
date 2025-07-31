@@ -183,6 +183,7 @@ def test_encode_datatype_term_index(subtests: SubTests) -> None:
             encoder.encode_datatype_term_index("foo")
             mock.assert_not_called()
 
+
 def test_prefix_term_index_all() -> None:
     enc = LookupEncoder(lookup_size=3)
     assert enc.encode_prefix_term_index("") == 0
@@ -190,6 +191,7 @@ def test_prefix_term_index_all() -> None:
     first = enc.encode_prefix_term_index("a")
     second = enc.encode_prefix_term_index("a")
     assert (first, second) == (1, 0)
+
 
 def test_datatype_term_zero_lookup() -> None:
     enc = LookupEncoder(lookup_size=0)
