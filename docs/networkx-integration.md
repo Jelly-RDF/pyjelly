@@ -19,27 +19,27 @@ Let's dive in and get some useful information!
 We can easily load it:  
 
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=16-19}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=17-20}
 ```  
 
 Convert it into a convenient NetworkX graph:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=21-22}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=22-23}
 ``` 
 
 Is our graph fully connected? It's important to know (are all political relations tied togehter?), let's check here:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=24-26}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=25-27}
 ``` 
 
 Which nodes are connected the most (have most connections?), let's see top 5 of them:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=28-32}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=29-33}
 ``` 
 
 What is the shortest path between two nodes? We can check:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=37-42}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=38-42}
 ``` 
 
 However afterall, its best to the full picture (for our example we truncate to 15 nodes for clarity):

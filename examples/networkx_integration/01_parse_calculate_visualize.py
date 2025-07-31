@@ -27,7 +27,7 @@ num_components = nx.number_connected_components(nx_g)
 print(f"Connected components: {num_components}")
 
 # Example calculation, get top 5 objects with highest degrees, simple in NetworkX
-top5 = sorted(nx_g.degree, key=lambda x: x[1], reverse=True)[:35]
+top5 = sorted(nx_g.degree, key=lambda x: x[1], reverse=True)[:5]
 print("Top 5 nodes sorted by degree:")
 for node, deg in top5:
     print(f"{node}: {deg}")
@@ -38,8 +38,7 @@ norm = lambda x: str(x).strip().lower()
 # Example calculation, shortest path between two nodes (provided at least two nodes)
 source = next(n for n in nx_g if norm(n) == "putin")
 target = next(n for n in nx_g if norm(n) == "obama")
-source_id, target_id = list(nx_g.nodes)[200], list(nx_g.nodes)[100]
-path = nx.shortest_path(nx_g, source=list(nx_g.nodes)[200], target=list(nx_g.nodes)[40])
+path = nx.shortest_path(nx_g, source=source, target=target)
 print(f"Shortest path from {source} to {target}: {' -> '.join(path)}")
 
 # Take first 15 nodes
