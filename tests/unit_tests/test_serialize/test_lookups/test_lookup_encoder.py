@@ -194,4 +194,3 @@ def test_prefix_term_index_all() -> None:
 def test_datatype_term_zero_lookup() -> None:
     enc = LookupEncoder(lookup_size=0)
     assert enc.encode_datatype_term_index("x") == 0
- 
