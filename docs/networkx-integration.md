@@ -12,46 +12,55 @@ Below there are few useful examples to follow.
 
 ## Parse graph, show it
 
-Let's say we have a graph in `.jelly` format and wanted some insight into it.  
+Let's investigate worldwide political connections (support and oposition relations)!
+We are given a graph in `.jelly` containing information about political stances extracted from news articles.  
+Let's dive in and get some useful information!
 
 We can easily load it:  
 
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=7-12}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=16-19}
 ```  
 
 Convert it into a convenient NetworkX graph:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=14-15}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=21-22}
 ``` 
 
-Is our graph fully connected? It's important to know, let's check here:
+Is our graph fully connected? It's important to know (are all political relations tied togehter?), let's check here:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=17-18}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=24-26}
 ``` 
 
-Which nodes are connected the most (the most congested?), let's see top 5 of them:
+Which nodes are connected the most (have most connections?), let's see top 5 of them:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=20-21}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=28-32}
 ``` 
 
-What is the shortest path between two nodes we want to traverse? We can check:
+What is the shortest path between two nodes? We can check:
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=24-25}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=37-42}
 ``` 
 
-However afterall, its best to the full picture (for our example we truncate to 8 nodes for clarity):
+However afterall, its best to the full picture (for our example we truncate to 15 nodes for clarity):
 ```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=27-43}
+{!networkx_integration/01_parse_calculate_visualize.py! lines=44-50}
 ``` 
 
-The graph presents as follows ![NetworkX visualization example](assets/images/networkx_visualization_example.png).
+The graph presents as follows  
+![NetworkX visualization example](assets/images/networkx_visualization_example.png).
 
 In summary:
 
-{{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
+??? note "Full NetworkX integration example"
+    {{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
 
-we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.
+
+we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  
+
+For more info about the data source please see:
+
+-[Politiquices graph dataset](https://riverbench.github.io/v/2.1.0/datasets/politiquices/)
 
 ## Serialize NetworkX graph
 
