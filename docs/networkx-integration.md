@@ -48,7 +48,7 @@ However afterall, its best to the full picture (for our example we truncate to 1
 ``` 
 
 The graph presents as follows  
-![NetworkX visualization example](assets/images/networkx_visualization_example.png).
+![NetworkX visualization example](assets/images/networkx_visualization_example.png){ width="420" loading=lazy }.
 
 In summary:
 
