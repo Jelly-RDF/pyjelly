@@ -20,6 +20,11 @@ We can easily load it:
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 17, 20, title="Loading") }}
 
+???+ tip "Output from print()"
+    ```text
+    Loaded graph with 90000 instances.
+    ```
+
 Convert it into a convenient NetworkX graph:
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 22, 23, title="Converting") }}
@@ -28,14 +33,33 @@ Is our graph fully connected? It's important to know (are all political relation
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 25, 27, title="Fully connected check") }}
 
+???+ tip "Output from print()"
+    ```text
+    Connected components: 1
+    ```
 
 Which nodes are connected the most (have most connections?), let's see top 5 of them:
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 29, 33, title="Top 5 nodes by degree") }}
 
+???+ tip "Output from print()"
+    ```text
+    Top 5 nodes sorted by degree:
+    ent1_other_ent2: 5980
+    ent1_opposes_ent2: 2642
+    http://www.wikidata.org/entity/Q182367: 1556
+    http://www.wikidata.org/entity/Q610788: 1518
+    http://www.wikidata.org/entity/Q57398: 1401
+    ```
+
 What is the shortest path between two nodes? We can check:
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Shortest path") }}
+
+???+ tip "Output from print()"
+    ```text
+    Shortest path from Socrates to Obama: Socrates -> 6bec096e56059ca9329fa47d55b27ac6 -> http://www.wikidata.org/entity/Q182367 -> 113c7118f119477658d06eb0cd40bc4a -> Obama
+    ```
 
 However afterall, its best to the full picture (for our example we truncate to 15 nodes for clarity):
 

@@ -36,7 +36,7 @@ for node, deg in top5:
 norm = lambda x: str(x).strip().lower()
 
 # Example calculation, shortest path between two nodes (provided at least two nodes)
-source = next(n for n in nx_g if norm(n) == "putin")
+source = next(n for n in nx_g if norm(n) == "socrates")
 target = next(n for n in nx_g if norm(n) == "obama")
 path = nx.shortest_path(nx_g, source=source, target=target)
 print(f"Shortest path from {source} to {target}: {' -> '.join(path)}")
