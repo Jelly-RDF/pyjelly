@@ -18,42 +18,36 @@ Let's dive in and get some useful information!
 
 We can easily load it:  
 
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=17-20}
-```  
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 17, 20, title="Loading") }}
 
 Convert it into a convenient NetworkX graph:
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=22-23}
-``` 
+
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 22, 23, title="Converting") }}
 
 Is our graph fully connected? It's important to know (are all political relations tied togehter?), let's check here:
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=25-27}
-``` 
+
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 25, 27, title="Fully connected check") }}
+
 
 Which nodes are connected the most (have most connections?), let's see top 5 of them:
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=29-33}
-``` 
+
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 29, 33, title="Top 5 nodes by degree") }}
 
 What is the shortest path between two nodes? We can check:
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=38-42}
-``` 
+
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Shortest path") }}
 
 However afterall, its best to the full picture (for our example we truncate to 15 nodes for clarity):
-```python
-{!networkx_integration/01_parse_calculate_visualize.py! lines=44-50}
-``` 
+
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Visualize graph") }}
 
 The graph presents as follows  
+
 ![NetworkX visualization example](assets/images/networkx_visualization_example.png){ width="420" loading=lazy }.
 
 In summary:
 
-??? note "Full NetworkX integration example"
-    {{ code_example('networkx_integration/01_parse_calculate_visualize.py') }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 57, title="Entire example", expanded=False) }}
 
 
 we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  

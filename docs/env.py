@@ -132,6 +132,42 @@ def define_env(env):
     ```
 """
 
+    @env.macro
+    def snippet_raw_lines(path, start, end):
+        try:
+            with open(path, "r") as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            return f"Error: file {path} not found."
+        if start < 1:
+            start = 1
+        if end > len(lines):
+            end = len(lines)
+        if start > end:
+            return (
+                f"Error: invalid range {start}-{end} for file with {len(lines)} lines."
+            )
+        snippet = "".join(lines[start - 1 : end])
+        return snippet
+
+    @env.macro
+    def snippet_admonition(
+        path, start, end, title="Snippet", expanded=True, kind="note"
+    ):
+        marker = "???+" if expanded else "???"
+        snippet = snippet_raw_lines(path, start, end)
+
+        if snippet.startswith("Error:"):
+            inner = f"""```text
+{snippet}
+```"""
+        else:
+            inner = f"```python\n{snippet}```"
+        indented = "\n".join(
+            ("    " + line) if line.strip() != "" else "" for line in inner.splitlines()
+        )
+        return f'{marker} {kind} "{title}"\n{indented}'
+
     def transform_nav_item(item):
         if list(item.values())[0] == "https://w3id.org/jelly/":
             return {list(item.keys())[0]: proto_link("")}

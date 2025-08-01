@@ -1,0 +1,1 @@
+![Example graph](https://w3id.org/riverbench/assets/riverbench_painting.png){ width="420" loading=lazy } Example 
