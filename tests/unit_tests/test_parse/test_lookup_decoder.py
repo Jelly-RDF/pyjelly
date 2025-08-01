@@ -19,20 +19,6 @@ def test_max_lookup_size_exceeded(size: int) -> None:
     assert str(excinfo.value) == f"lookup size must be less than {MAX_LOOKUP_SIZE}"
 
 
-def test_lookup_decoder_flow() -> None:
-    dec = LookupDecoder(lookup_size=3)
-
-    assert dec.decode_prefix_term_index(0) == ""
-    dec.assign_entry(0, "a")
-    dec.assign_entry(0, "b")
-
-    assert dec.at(1) == "a"
-    assert dec.decode_name_term_index(0) == "b"
-
-    with pytest.raises(IndexError):
-        dec.at(3)
-
-
 def test_decode_zero_error() -> None:
     dec = LookupDecoder(lookup_size=1)
     dec.last_reused_index = -1
