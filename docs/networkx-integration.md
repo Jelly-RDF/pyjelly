@@ -41,14 +41,16 @@ However afterall, its best to the full picture (for our example we truncate to 1
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Visualize graph") }}
 
-The graph presents as follows  
+The graph presents as follows
 
-![NetworkX visualization example](assets/images/networkx_visualization_example.png){ width="420" loading=lazy }.
+<div style="text-align:center;">
+  <img src="../assets/images/networkx_visualization_example.png" width="600" loading="lazy" alt="NetworkX visualization example" />
+</div>
+
 
 In summary:
 
 {{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 57, title="Entire example", expanded=False) }}
-
 
 we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  
 
@@ -60,7 +62,7 @@ For more info about the data source please see:
 
 This example shows how to write a NetworkX graph to a Jelly file.:
 
-{{ code_example('networkx_integration/02_serialize.py') }}
+{{ snippet_admonition('examples/networkx_integration/02_serialize.py', 0, 29, title="Serialization") }}
 
 which converts NetworkX graph into an RDFLib insance and serializes it.
 
