@@ -118,3 +118,26 @@ def test_make_last_to_evict_for_existing_key_raises() -> None:
     lookup = Lookup(1)
     with pytest.raises(KeyError, match="key1"):
         lookup.make_last_to_evict("key1")
+
+
+def test_lookup_core_functionality() -> None:
+    lk = Lookup(2)
+    with pytest.raises(IndexError):
+        Lookup(0).insert("x")
+
+    a = lk.insert("a")
+    b = lk.insert("b")
+    with pytest.raises(AssertionError):
+        lk.insert("a")
+
+    lk.make_last_to_evict("a")
+    c = lk.insert("c")
+
+    assert (a, b, c) == (1, 2, 2)
+    assert list(lk.data.items()) == [("a", 1), ("c", 2)]
+
+
+def test_lookup_repr() -> None:
+    lk = Lookup(1)
+    lk.insert("a")
+    assert str(lk) == f"Lookup(max_size={lk.max_size!r}, data={lk.data!r})"
