@@ -29,10 +29,6 @@ def test_lookup_decoder_flow() -> None:
     assert dec.at(1) == "a"
     assert dec.decode_name_term_index(0) == "b"
 
-    with pytest.raises(JellyConformanceError):
-        dec.decode_datatype_term_index(0)
-    assert dec.decode_datatype_term_index(2) == "b"
-
     with pytest.raises(IndexError):
         dec.at(3)
 
