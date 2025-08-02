@@ -12,7 +12,7 @@ pip install pyjelly[rdflib] rdflib-neo4j
 
 To parse data from a `.jelly` file into the Neo4j database, use the following example (insert your own credentials to AuraDB):
 
-{{ code_example('neo4j_integration/01_rdflib_neo4j_parse_grouped.py') }}
+{{ snippet_admonition('examples/neo4j_integration/01_rdflib_neo4j_parse_grouped.py',0, 50, title="Parsing", expanded=True) }}
 
 which inserts your data into your AuraDB database.
 
