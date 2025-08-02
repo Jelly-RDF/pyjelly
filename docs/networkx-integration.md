@@ -18,7 +18,7 @@ Let's dive in and get some useful information!
 
 We can easily load it:  
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 17, 20, title="Loading") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 24, 27, title="Loading") }}
 
 ???+ tip "Output from print()"
     ```text
@@ -27,43 +27,43 @@ We can easily load it:
 
 Convert it into a convenient NetworkX graph:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 22, 23, title="Converting") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 55, 56, title="Converting") }}
 
 Is our graph fully connected? It's important to know (are all political relations tied togehter?), let's check here:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 25, 27, title="Fully connected check") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 58, 60, title="Fully connected check") }}
 
 ???+ tip "Output from print()"
     ```text
-    Connected components: 1
+    Connected components: 24
     ```
 
 Which nodes are connected the most (have most connections?), let's see top 5 of them:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 29, 33, title="Top 5 nodes by degree") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 62, 66, title="Top 5 nodes by degree") }}
 
 ???+ tip "Output from print()"
     ```text
     Top 5 nodes sorted by degree:
-    ent1_other_ent2: 5980
-    ent1_opposes_ent2: 2642
-    http://www.wikidata.org/entity/Q182367: 1556
-    http://www.wikidata.org/entity/Q610788: 1518
-    http://www.wikidata.org/entity/Q57398: 1401
+    Socrates: 241
+    Cavaco: 189
+    Passos Coelho: 187
+    Costa: 179
+    Antonio Costa: 168
     ```
 
 What is the shortest path between two nodes? We can check:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Shortest path") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 75, 79, title="Shortest path") }}
 
 ???+ tip "Output from print()"
     ```text
-    Shortest path from Socrates to Obama: Socrates -> 6bec096e56059ca9329fa47d55b27ac6 -> http://www.wikidata.org/entity/Q182367 -> 113c7118f119477658d06eb0cd40bc4a -> Obama
+    Shortest path from Socrates to Obama: Socrates -> Marcelo Rebelo de Sousa -> Durao Barroso -> Obama
     ```
 
-However afterall, its best to the full picture (for our example we truncate to 15 nodes for clarity):
+However afterall, its best to the full picture (for our example we truncate to 10 nodes for clarity):
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 38, 42, title="Visualize graph") }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 81, 92, title="Visualize graph") }}
 
 The graph presents as follows
 
@@ -74,7 +74,7 @@ The graph presents as follows
 
 In summary:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 57, title="Entire example", expanded=False) }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 95, title="Entire example", expanded=False) }}
 
 we converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  
 
