@@ -134,11 +134,8 @@ def define_env(env):
 
     @env.macro
     def snippet_raw_lines(path, start, end):
-        try:
-            with open(path, "r") as f:
-                lines = f.readlines()
-        except FileNotFoundError:
-            return f"Error: file {path} not found."
+        with open(path, "r") as f:
+            lines = f.readlines()
         if start < 1:
             start = 1
         if end > len(lines):
