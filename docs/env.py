@@ -107,14 +107,21 @@ def define_env(env):
         return f"https://w3id.org/jelly/{version}/{page}"
 
     @env.macro
-    def code_example(file_name):
-        with open(f"examples/{file_name}", "r") as f:
-            code = f.read()
-        return f"""
-```python
-{code}
-```
-"""
+    def code_example(file_name, start=None, end=None):
+        try:
+            lines = open(f"examples/{file_name}").read().splitlines(keepends=True)
+        except:
+            return "```python\n\n```"
+        start_index = 0 if not start or start < 1 else start - 1
+        end_index = len(lines) if not end or end < 1 else end
+        if start_index < 0:
+            start_index = 0
+        if end_index > len(lines):
+            end_index = len(lines)
+        if start_index >= end_index:
+            return "```python\n\n```"
+        return "```python\n" + "".join(lines[start_index:end_index]) + "```"
+
 
     @env.macro
     def code_example_box(file_name):
