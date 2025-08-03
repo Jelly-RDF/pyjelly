@@ -1373,11 +1373,10 @@ wheels = [
 
 [[package]]
 name = "pyjelly"
-version = "0.5.1"
+version = "0.5.2"
 source = { editable = "." }
 dependencies = [
     { name = "protobuf" },
-    { name = "pytest-cov" },
     { name = "typing-extensions" },
 ]
 
@@ -1418,6 +1417,7 @@ test = [
     { name = "inline-snapshot" },
     { name = "pytest" },
     { name = "pytest-accept" },
+    { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "pytest-subtests" },
     { name = "pytest-sugar" },
@@ -1429,7 +1429,6 @@ types = [
 [package.metadata]
 requires-dist = [
     { name = "protobuf", specifier = ">=6.30.0" },
-    { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -1463,6 +1462,7 @@ test = [
     { name = "inline-snapshot", specifier = ">=0.20.8" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-accept", specifier = ">=0.1.12" },
+    { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "pytest-subtests", specifier = ">=0.14.1" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
