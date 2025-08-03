@@ -82,9 +82,7 @@ In summary:
 
 We converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  
 
-For more info about the data source please see:
-
--[Politiquices graph dataset](https://riverbench.github.io/v/2.1.0/datasets/politiquices/)
+For more info about the data source please see the [Politiquices dataset in RiverBench](https://riverbench.github.io/v/2.1.0/datasets/politiquices/) and its [original source (Portuguese)](http://www.politiquices.pt/).
 
 ## Serialize NetworkX graph
 
