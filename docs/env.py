@@ -122,7 +122,6 @@ def define_env(env):
             return "```python\n\n```"
         return "```python\n" + "".join(lines[start_index:end_index]) + "```"
 
-
     @env.macro
     def code_example_box(file_name):
         name = f"examples/{file_name}"
