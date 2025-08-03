@@ -107,14 +107,20 @@ def define_env(env):
         return f"https://w3id.org/jelly/{version}/{page}"
 
     @env.macro
-    def code_example(file_name):
-        with open(f"examples/{file_name}", "r") as f:
-            code = f.read()
-        return f"""
-```python
-{code}
-```
-"""
+    def code_example(file_name, start=None, end=None):
+        try:
+            lines = open(f"examples/{file_name}").read().splitlines(keepends=True)
+        except:
+            return "```python\n\n```"
+        start_index = 0 if not start or start < 1 else start - 1
+        end_index = len(lines) if not end or end < 1 else end
+        if start_index < 0:
+            start_index = 0
+        if end_index > len(lines):
+            end_index = len(lines)
+        if start_index >= end_index:
+            return "```python\n\n```"
+        return "```python\n" + "".join(lines[start_index:end_index]) + "```"
 
     @env.macro
     def code_example_box(file_name):
@@ -131,6 +137,39 @@ def define_env(env):
     {code}
     ```
 """
+
+    @env.macro
+    def snippet_raw_lines(path, start, end):
+        with open(path, "r") as f:
+            lines = f.readlines()
+        if start < 1:
+            start = 1
+        if end > len(lines):
+            end = len(lines)
+        if start > end:
+            return (
+                f"Error: invalid range {start}-{end} for file with {len(lines)} lines."
+            )
+        snippet = "".join(lines[start - 1 : end])
+        return snippet
+
+    @env.macro
+    def snippet_admonition(
+        path, start, end, title="Snippet", expanded=True, kind="note"
+    ):
+        marker = "???+" if expanded else "???"
+        snippet = snippet_raw_lines(path, start, end)
+
+        if snippet.startswith("Error:"):
+            inner = f"""```text
+{snippet}
+```"""
+        else:
+            inner = f"```python\n{snippet}```"
+        indented = "\n".join(
+            ("    " + line) if line.strip() != "" else "" for line in inner.splitlines()
+        )
+        return f'{marker} {kind} "{title}"\n{indented}'
 
     def transform_nav_item(item):
         if list(item.values())[0] == "https://w3id.org/jelly/":
