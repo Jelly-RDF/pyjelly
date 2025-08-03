@@ -87,7 +87,7 @@ docs = [
 source = "uv-dynamic-versioning"
 
 [tool.uv-dynamic-versioning]
-fallback-version = "0.5.2"
+fallback-version = "0.0.0"
 
 [tool.uv]
 required-version = "~=0.7.3"
