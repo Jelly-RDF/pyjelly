@@ -118,3 +118,9 @@ def test_make_last_to_evict_for_existing_key_raises() -> None:
     lookup = Lookup(1)
     with pytest.raises(KeyError, match="key1"):
         lookup.make_last_to_evict("key1")
+
+
+def test_lookup_repr() -> None:
+    lk = Lookup(1)
+    lk.insert("a")
+    assert str(lk) == f"Lookup(max_size={lk.max_size!r}, data={lk.data!r})"
