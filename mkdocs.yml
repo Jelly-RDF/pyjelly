@@ -120,6 +120,7 @@ nav:
   - Home : "index.md"
   - User guide:
       - Getting started (RDFLib): "getting-started.md"
+      - Generic (no RDFLib): "generic-sink.md"
       - Overview and supported features: "overview.md"
       - Neo4j: "rdflib-neo4j-integration.md"
       - NetworkX: "networkx-integration.md"
