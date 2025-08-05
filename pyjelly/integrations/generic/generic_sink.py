@@ -32,6 +32,13 @@ class IRI:
     def __repr__(self) -> str:
         return f"IRI({self._iri})"
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, IRI):
+            return self._iri == other._iri
+        if isinstance(other, str):
+            return self._iri == other
+        return False
+
 
 class Literal:
     """

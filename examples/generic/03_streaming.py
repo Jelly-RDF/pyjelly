@@ -1,7 +1,7 @@
 from pyjelly.integrations.generic.generic_sink import GenericStatementSink
 
 
-# Helper funcion
+# Helper generator that streams triples from a Jelly file path
 def stream_triples(jelly_path):
     generic_sink = GenericStatementSink()
     with open(jelly_path, "rb") as f:
