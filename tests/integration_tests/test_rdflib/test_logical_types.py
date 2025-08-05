@@ -5,6 +5,7 @@ from rdflib import Dataset, Graph
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 
 from pyjelly import jelly
+from pyjelly.errors import JellyConformanceError
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions, Stream
 
@@ -87,3 +88,41 @@ def test_graphs() -> None:
     for g_out, g_in in zip(graphs_out, graphs_in):
         assert len(g_out) == len(g_in)
         assert set(g_out) == set(g_in)
+
+
+def test_get_options_and_frames_delimited_only_empty() -> None:
+    with pytest.raises(JellyConformanceError) as exc:
+        get_options_and_frames(io.BytesIO(b"\x00\x00\x00"))
+    assert "No non-empty frames found" in str(exc.value)
+
+
+def test_get_options_and_frames_non_delimited_empty() -> None:
+    with pytest.raises(JellyConformanceError) as exc:
+        get_options_and_frames(io.BytesIO(b""))
+    assert "only contains an empty frame" in str(exc.value)
+
+
+def test_get_options_and_frames_non_delimited_success_only_return() -> None:
+    opts_msg = jelly.RdfStreamOptions(
+        stream_name="test",
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+        generalized_statements=False,
+        rdf_star=False,
+        max_name_table_size=8,
+        max_prefix_table_size=8,
+        max_datatype_table_size=8,
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        version=1,
+    )
+    frame = jelly.RdfStreamFrame(rows=[jelly.RdfStreamRow(options=opts_msg)])
+    data = frame.SerializeToString(deterministic=True)
+
+    options, frames_iter = get_options_and_frames(io.BytesIO(data))
+
+    assert options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+
+    frames = list(frames_iter)
+    assert len(frames) == 1
+    assert isinstance(frames[0], jelly.RdfStreamFrame)
+    assert frames[0].rows[0].options == opts_msg
