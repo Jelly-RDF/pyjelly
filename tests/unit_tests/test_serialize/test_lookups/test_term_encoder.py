@@ -9,14 +9,7 @@ from pyjelly.serialize.encode import (
     Slot,
     TermEncoder,
     encode_namespace_declaration,
-    split_iri,
 )
-
-
-def test_split_iri_invalid_iri_raises() -> None:
-    with pytest.raises(ValueError, match=r"Invalid IRI: example_A"):
-        split_iri("example_A")
-
 
 def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
     encoder = TermEncoder(
