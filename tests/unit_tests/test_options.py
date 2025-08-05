@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from unittest.mock import Mock
 
 import pytest
@@ -16,6 +17,7 @@ from pyjelly.options import (
     StreamTypes,
 )
 from pyjelly.parse.decode import options_from_frame
+from pyjelly.parse.ioutils import get_options_and_frames
 
 
 @pytest.mark.parametrize(
@@ -184,3 +186,41 @@ def test_stream_options_invalid_version(monkeypatch: MonkeyPatch) -> None:
 
     msg = str(excinfo.value)
     assert "Version must be between 10 and 5" in msg
+
+
+def test_get_options_and_frames_delimited_only_empty() -> None:
+    with pytest.raises(JellyConformanceError) as exc:
+        get_options_and_frames(io.BytesIO(b"\x00\x00\x00"))
+    assert "No non-empty frames found" in str(exc.value)
+
+
+def test_get_options_and_frames_non_delimited_empty() -> None:
+    with pytest.raises(JellyConformanceError) as exc:
+        get_options_and_frames(io.BytesIO(b""))
+    assert "only contains an empty frame" in str(exc.value)
+
+
+def test_get_options_and_frames_non_delimited_success_only_return() -> None:
+    opts_msg = jelly.RdfStreamOptions(
+        stream_name="test",
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+        generalized_statements=False,
+        rdf_star=False,
+        max_name_table_size=8,
+        max_prefix_table_size=8,
+        max_datatype_table_size=8,
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        version=1,
+    )
+    frame = jelly.RdfStreamFrame(rows=[jelly.RdfStreamRow(options=opts_msg)])
+    data = frame.SerializeToString(deterministic=True)
+
+    options, frames_iter = get_options_and_frames(io.BytesIO(data))
+
+    assert options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+
+    frames = list(frames_iter)
+    assert len(frames) == 1
+    assert isinstance(frames[0], jelly.RdfStreamFrame)
+    assert frames[0].rows[0].options == opts_msg
