@@ -9,7 +9,7 @@ from typing_extensions import Never
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
-
+from line_profiler import profile
 
 class ParsingMode(Enum):
     """
@@ -172,7 +172,8 @@ class Decoder:
     @property
     def options(self) -> ParserOptions:
         return self.adapter.options
-
+    
+    @profile
     def iter_rows(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
         """
         Iterate through rows in the frame.
@@ -184,13 +185,14 @@ class Decoder:
 
         """
         for row_owner in frame.rows:
-            row = getattr(row_owner, row_owner.WhichOneof("row"))
+            row = getattr(row_owner, row_owner.WhichOneof("row")) # potentially improve
             decoded_row = self.decode_row(row)
             if isinstance(
                 row, (jelly.RdfTriple, jelly.RdfQuad, jelly.RdfNamespaceDeclaration)
             ):
                 yield decoded_row
-
+                
+    @profile
     def decode_row(self, row: Any) -> Any | None:
         """
         Decode a row based on its type.
@@ -216,7 +218,7 @@ class Decoder:
             msg = f"decoder not implemented for {type(row)}"
             raise TypeError(msg) from None
         return decode_row(self, row)
-
+    @profile
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         stream_types, lookup_preset, params = self.options
         assert stream_types.physical_type == options.physical_type
@@ -226,7 +228,7 @@ class Decoder:
         assert lookup_preset.max_prefixes == options.max_prefix_table_size
         assert lookup_preset.max_datatypes == options.max_datatype_table_size
         assert lookup_preset.max_names == options.max_name_table_size
-
+    @profile
     def ingest_prefix_entry(self, entry: jelly.RdfPrefixEntry) -> None:
         """
         Update prefix lookup table based on the table entry.
@@ -236,7 +238,7 @@ class Decoder:
 
         """
         self.prefixes.assign_entry(index=entry.id, value=entry.value)
-
+    @profile
     def ingest_name_entry(self, entry: jelly.RdfNameEntry) -> None:
         """
         Update name lookup table based on the table entry.
@@ -246,7 +248,7 @@ class Decoder:
 
         """
         self.names.assign_entry(index=entry.id, value=entry.value)
-
+    @profile
     def ingest_datatype_entry(self, entry: jelly.RdfDatatypeEntry) -> None:
         """
         Update datatype lookup table based on the table entry.
@@ -256,7 +258,7 @@ class Decoder:
 
         """
         self.datatypes.assign_entry(index=entry.id, value=entry.value)
-
+    @profile
     def decode_term(self, term: Any) -> Any:
         """
         Decode a term based on its type: IRI/literal/BN/default graph.
@@ -279,7 +281,7 @@ class Decoder:
             msg = f"decoder not implemented for {type(term)}"
             raise TypeError(msg) from None
         return decode_term(self, term)
-
+    @profile
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         """
         Decode RdfIri message to IRI using a custom adapter.
@@ -294,10 +296,10 @@ class Decoder:
         name = self.names.decode_name_term_index(iri.name_id)
         prefix = self.prefixes.decode_prefix_term_index(iri.prefix_id)
         return self.adapter.iri(iri=prefix + name)
-
+    @profile
     def decode_default_graph(self, _: jelly.RdfDefaultGraph) -> Any:
         return self.adapter.default_graph()
-
+    @profile
     def decode_bnode(self, bnode: str) -> Any:
         """
         Decode string message to blank node (BN) using a custom adapter.
@@ -310,7 +312,7 @@ class Decoder:
 
         """
         return self.adapter.bnode(bnode)
-
+    @profile
     def decode_literal(self, literal: jelly.RdfLiteral) -> Any:
         """
         Decode RdfLiteral to literal based on custom adapter implementation.
@@ -342,14 +344,14 @@ class Decoder:
     ) -> Any:
         iri = self.decode_iri(declaration.value)
         return self.adapter.namespace_declaration(declaration.name, iri)
-
+    @profile
     def decode_graph_start(self, graph_start: jelly.RdfGraphStart) -> Any:
         term = getattr(graph_start, graph_start.WhichOneof("graph"))
         return self.adapter.graph_start(self.decode_term(term))
-
+    @profile
     def decode_graph_end(self, _: jelly.RdfGraphEnd) -> Any:
         return self.adapter.graph_end()
-
+    @profile
     def decode_statement(
         self,
         statement: jelly.RdfTriple | jelly.RdfQuad,
@@ -385,11 +387,11 @@ class Decoder:
                     raise ValueError(msg)
             terms.append(decoded_term)
         return terms
-
+    @profile
     def decode_triple(self, triple: jelly.RdfTriple) -> Any:
         terms = self.decode_statement(triple, ("subject", "predicate", "object"))
         return self.adapter.triple(terms)
-
+    @profile
     def decode_quoted_triple(self, triple: jelly.RdfTriple) -> Any:
         oneofs: Sequence[str] = ("subject", "predicate", "object")
         terms = []
@@ -409,6 +411,7 @@ class Decoder:
         return self.adapter.quad(terms)
 
     # dispatch by invariant type (no C3 resolution)
+    # get the row kind --> e.g., index --> dict to array (arrays are faster), so we index array
     row_handlers: ClassVar = {
         jelly.RdfStreamOptions: validate_stream_options,
         jelly.RdfPrefixEntry: ingest_prefix_entry,

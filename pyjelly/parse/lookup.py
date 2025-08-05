@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from pyjelly.errors import JellyAssertionError, JellyConformanceError
 from pyjelly.options import MAX_LOOKUP_SIZE
-
+from line_profiler import profile
 
 @dataclass
 class LookupDecoder:
@@ -41,7 +41,7 @@ class LookupDecoder:
         assert index > 0
         self.data[index - 1] = value
         self.last_assigned_index = index
-
+    @profile
     def at(self, index: int) -> str:
         self.last_reused_index = index
         value = self.data[index - 1]
@@ -49,20 +49,20 @@ class LookupDecoder:
             msg = f"invalid resolved index {index}"
             raise IndexError(msg)
         return value
-
+    @profile
     def decode_prefix_term_index(self, index: int) -> str:
         actual_index = index or self.last_reused_index
         if actual_index == 0:
             return ""
         return self.at(actual_index)
-
+    @profile
     def decode_name_term_index(self, index: int) -> str:
         actual_index = index or self.last_reused_index + 1
         if actual_index == 0:
             msg = "0 is not a valid name term index"
             raise JellyConformanceError(msg)
         return self.at(actual_index)
-
+    @profile
     def decode_datatype_term_index(self, index: int) -> str | None:
         if index == 0:
             msg = "0 is not a valid datatype term index"

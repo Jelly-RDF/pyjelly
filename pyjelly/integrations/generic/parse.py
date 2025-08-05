@@ -22,6 +22,8 @@ from pyjelly.parse.ioutils import get_options_and_frames
 Statement = Union[Triple, Quad]
 
 
+from line_profiler import profile
+
 class GenericStatementSinkAdapter(Adapter):
     """
     Implement Adapter for generic statements.
@@ -149,7 +151,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
     def graph_end(self) -> None:
         self._graph_id = None
 
-
+@profile
 def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
@@ -173,7 +175,7 @@ def parse_triples_stream(
         yield decoder.iter_rows(frame)
     return
 
-
+@profile
 def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
@@ -292,7 +294,7 @@ def parse_jelly_to_graph(
             sink.add(item)
     return sink
 
-
+@profile
 def parse_jelly_flat(
     inp: IO[bytes],
     frames: Iterable[jelly.RdfStreamFrame] | None = None,

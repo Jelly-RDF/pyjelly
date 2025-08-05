@@ -57,7 +57,8 @@ def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
     while frame := parse_length_prefixed(jelly.RdfStreamFrame, inp):
         yield frame
 
-
+from line_profiler import profile
+@profile
 def get_options_and_frames(
     inp: IO[bytes],
 ) -> tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]:
