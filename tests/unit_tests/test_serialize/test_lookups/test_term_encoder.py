@@ -2,9 +2,14 @@ import pytest
 from inline_snapshot import snapshot
 from pytest_subtests import SubTests
 
+from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.options import LookupPreset
-from pyjelly.serialize.encode import TermEncoder
+from pyjelly.serialize.encode import (
+    Slot,
+    TermEncoder,
+    encode_namespace_declaration,
+)
 
 
 def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
@@ -23,6 +28,13 @@ def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
             lex="42",
             datatype="http://www.w3.org/2001/XMLSchema#integer",
         )
+
+
+def test_encode_any_raises_not_implemented() -> None:
+    encoder = TermEncoder()
+    with pytest.raises(NotImplementedError) as exc:
+        encoder.encode_any(123, Slot.subject)
+    assert "unsupported term type: <class 'int'>" in str(exc.value)
 
 
 def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
@@ -54,3 +66,13 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
         assert literal.lex == snapshot("baz")
         assert literal.langtag == snapshot("en")
         assert literal.datatype == snapshot(0)
+
+
+def test_encode_namespace_declaration() -> None:
+    encoder = TermEncoder()
+    rows = encode_namespace_declaration("ex", "http://example.org/A", encoder)
+
+    assert isinstance(rows[-1].namespace, jelly.RdfNamespaceDeclaration)
+
+    assert any(r.prefix for r in rows[:-1])
+    assert any(r.name for r in rows[:-1])
