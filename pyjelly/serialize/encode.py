@@ -12,22 +12,27 @@ from pyjelly.serialize.lookup import LookupEncoder
 
 def split_iri(iri_string: str) -> tuple[str, str]:
     """
-    Split iri into prefix and name.
+    Split IRI into prefix and name, or raise on invalid IRI.
 
     Args:
-        iri_string (str): full iri string.
+        iri_string (str): full IRI string.
 
     Returns:
-        tuple[str, str]: iri's prefix and name.
+        tuple[str, str]: IRI's prefix and name.
+
+    Raises:
+        ValueError: if input does not contain '#' or '/'.
 
     """
-    name = iri_string
-    prefix = ""
+    if "#" not in iri_string and "/" not in iri_string:
+        msg = "Invalid IRI: " + iri_string
+        raise ValueError(msg)
+
     for sep in "#", "/":
         prefix, char, name = iri_string.rpartition(sep)
         if char:
             return prefix + char, name
-    return prefix, name
+    return "", ""
 
 
 T = TypeVar("T")
