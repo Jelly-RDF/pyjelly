@@ -11,6 +11,7 @@ from pyjelly.serialize.encode import (
     encode_namespace_declaration,
 )
 
+
 def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
     encoder = TermEncoder(
         lookup_preset=LookupPreset(
