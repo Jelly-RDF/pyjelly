@@ -69,7 +69,7 @@ Without using external RDF dependencies, grouped data is streamed preserving the
 
 ### Serializing a stream of statements
 
-Serializing a generator object of statements to `.jelly` through generic API:
+Serializing a generator object of statements to `.jelly` file through generic API:
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
