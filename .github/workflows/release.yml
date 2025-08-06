@@ -31,7 +31,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
-          persist-credentials: true
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v6
         with:
