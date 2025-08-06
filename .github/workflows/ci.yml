@@ -99,3 +99,34 @@ jobs:
       id: types
       run: uv run mypy .
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
+
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install
+        id: install
+        run: uv sync --group docs
+
+      - name: Check docs build
+        run: uv run mkdocs build -s
+
+      - name: Check docs for dead links
+        run: |
+          uv run mkdocs serve &
+          sleep 10
+          uv run linkchecker \
+            --no-warning \
+            --check-extern \
+            --ignore "https://doi.org" \
+            http://localhost:8000
+          kill $!
