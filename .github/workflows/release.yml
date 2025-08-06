@@ -14,7 +14,7 @@ defaults:
     shell: bash
 
 env:
-  UV_LOCKED: 0
+  UV_LOCKED: 1
   UV_NO_SYNC: 1
 
 jobs:
@@ -29,7 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
           fetch-depth: 0
           submodules: true
           persist-credentials: true
@@ -43,18 +42,8 @@ jobs:
         run: |
           set -Eeuxo pipefail
           version="${GITHUB_REF#refs/tags/v}"
-          echo ">> uv version $version"
           uv version "$version"
       
-      - name: Commit version update
-        id: automatic-version-update
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml
-          git commit -m "chore: bump version to $version"
-          git push origin HEAD:main
-    
       - name: Validate tag
         id: validate-tag
         run: |

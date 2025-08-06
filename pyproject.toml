@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyjelly"
-version = "0.5.2"
+version = "0.0.0"
 readme = "README.md"
 description = "Jelly-RDF implementation for Python"
 authors = [
