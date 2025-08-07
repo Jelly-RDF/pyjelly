@@ -94,11 +94,8 @@ uv run mkdocs serve
 
 1. Make sure you are on the `main` branch and that it is up-to-date: `git checkout main && git pull`.
 2. Checkout a new branch.
-3. Update the version in `pyproject.toml` with either:
-    - `uv version X.Y.Z`
-    - `uv version --bump major|minor|patch`
-4. Commit the changes, push the branch, and open a pull request.
-5. Once the pull request is merged, go back to the `main` branch: `git checkout main && git pull`.
-6. Create a new tag for the release. For example, for version 1.2.3: `git tag v1.2.3`. **The tag must start with `v`!**
-7. Push the tag to GitHub: `git push origin v1.2.3`.
-8. The release will be automatically built and published to PyPI.
+3. Commit the changes, push the branch, and open a pull request.
+4. Once the pull request is merged, go back to the `main` branch: `git checkout main && git pull`.
+5. Create a new tag for the release. For example, for version 1.2.3: `git tag v1.2.3`. **The tag must start with `v`!**
+6. Push the tag to GitHub: `git push origin v1.2.3`.
+7. The release will be automatically built and published to PyPI.
