@@ -23,7 +23,7 @@ To make a set of triples and write them to a Jelly file, you use:
 
 {{ code_example('generic/01_serialize.py') }}
 
-Which provides a simple triple/quad type that is easy to create and work with.
+Which provides a simple custom triple/quad type that is easy to create and work with.
 
 ## Reading triples from a Jelly file
 
