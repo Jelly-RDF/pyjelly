@@ -37,6 +37,8 @@ class IRI:
             return self._iri == other._iri
         if isinstance(other, str):
             return self._iri == other
+        if other is None:
+            return False
         msg = f"Can not compare {self.__class__.__name__} with {type(other).__name__}"
         raise TypeError(msg)
 
