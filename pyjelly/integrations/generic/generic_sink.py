@@ -35,6 +35,8 @@ class IRI:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, IRI):
             return self._iri == other._iri
+        elif isinstance(other, str):
+            return self._iri == other
         msg = f"Can not compare {self.__class__.__name__} with {type(other).__name__}"
         raise TypeError(msg)
 
