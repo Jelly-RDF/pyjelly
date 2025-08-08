@@ -117,8 +117,8 @@ nav:
   - Home : "index.md"
   - User guide:
       - Getting started (RDFLib): "getting-started.md"
-      - Generic API: "generic-sink.md"
       - Overview and supported features: "overview.md"
+      - Generic API (no RDFLib): "generic-sink.md"
       - Neo4j: "rdflib-neo4j-integration.md"
       - NetworkX: "networkx-integration.md"
   - API reference: "api.md"

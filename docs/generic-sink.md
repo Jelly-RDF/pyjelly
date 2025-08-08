@@ -17,7 +17,7 @@ pip install pyjelly
 
 ## Usage without external libraries
 
-Because we avoid third-party tools, the generic API looks a bit different but works the same way.
+Because we avoid third-party tools, the generic API looks a bit different from the one presented in [getting started](getting-started.md), but works the same way.
 
 ## Serializing statements to a Jelly file
 
@@ -76,3 +76,10 @@ Serializing a generator object of statements to `.jelly` file through generic AP
 {{ code_example('generic/05_serialize_flat.py')}}
 
 Data is transmitted and kept ordered and simple. 
+
+## See also
+
+For more information, visit:
+
+- [Getting started with RDFLib](https://rdflib.readthedocs.io/en/stable/gettingstarted.html)
+- [RDFLib GitHub repository](https://github.com/RDFLib/rdflib)
