@@ -3,10 +3,10 @@ from pyjelly.integrations.generic.generic_sink import (
     BlankNode,
     GenericStatementSink,
     Literal,
-    Triple,
+    Triple
 )
 
-# Create a generic sink object
+# Create a generic sink object, identifier is optional
 generic_sink = GenericStatementSink(identifier="my_graph")
 
 # Let's add triples one by one

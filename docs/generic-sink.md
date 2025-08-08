@@ -1,5 +1,5 @@
 # Generic API
-This guide explains how to use pyjelly’s **Generic API** to write and read RDF triples into the Jelly format without requiring any external library.
+This guide explains how to use pyjelly’s **Generic API** to write and read RDF statements into the Jelly format without requiring any external library.
 
 ## Installation
 
@@ -15,19 +15,19 @@ pip install pyjelly
 - Linux, macOS, or Windows
 
 ## Usage without external libraries
-Because we don't rely on any external libraries, using generic API looks slightly different, however keeps the same functionality.
+Because we don't rely on any third-party tools, using generic API looks slightly different, however keeps the same functionality.
 
 ## Writing triples to a Jelly file
 
-To make a set of triples and write them to a Jelly file, you use:
+To make a set of triples/quads and write them to a Jelly file, you use:
 
 {{ code_example('generic/01_serialize.py') }}
 
 Which provides a simple custom triple/quad type that is easy to create and work with.
 
-## Reading triples from a Jelly file
+## Reading triples/quads from a Jelly file
 
-To load triples into your python object from a `.jelly` file, see:
+To load triples/quads into your python object from a `.jelly` file, see:
 
 {{ code_example('generic/02_parse.py') }}
 
@@ -41,7 +41,7 @@ Similarly, to process a Jelly stream as a stream of graphs through core API, see
 
 Where we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
 
-### Parsing a stream of triples
+### Parsing a stream of triples/quads
 
 You can also process a Jelly stream as a flat stream with only generic API:
 
@@ -49,11 +49,11 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('generic/07_parse_flat.py') }}
 
-We are also yielded a generator of stream events, which allows us to process the file triple-by-triple, however with no external libraries used.
+We are also yielded a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
 
 ## Streaming data
 
-If you need to process a certain quantity of triples both efficiently and iteratively, you can provide a simple generator:
+If you need to process a certain quantity of statements both efficiently and iteratively, you can provide a simple generator:
 
 {{ code_example('generic/03_streaming.py') }}
 

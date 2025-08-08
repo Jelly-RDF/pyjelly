@@ -6,7 +6,7 @@ from pyjelly.integrations.generic.generic_sink import (
 from pyjelly.integrations.generic.serialize import grouped_stream_to_file
 import random
 
-
+# Helper function to generate a generator of graphs
 def generate_sample_sinks():
     content = (
         IRI("http://example.com/sensor"),
