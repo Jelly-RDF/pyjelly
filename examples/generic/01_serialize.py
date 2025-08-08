@@ -3,7 +3,7 @@ from pyjelly.integrations.generic.generic_sink import (
     BlankNode,
     GenericStatementSink,
     Literal,
-    Triple
+    Triple,
 )
 
 # Create a generic sink object, identifier is optional
