@@ -17,15 +17,15 @@ pip install pyjelly
 ## Usage without external libraries
 Because we don't rely on any external libraries, using generic API looks slightly different, however keeps the same functionality.
 
-## Writing Triples to a Jelly file
+## Writing triples to a Jelly file
 
 To make a set of triples and write them to a Jelly file, you use:
 
 {{ code_example('generic/01_serialize.py') }}
 
-Which provides a simple Triple/Quad type that is easy to create and work with.
+Which provides a simple triple/quad type that is easy to create and work with.
 
-## Reading Triples from a Jelly file
+## Reading triples from a Jelly file
 
 To load triples into your python object from a `.jelly` file, see:
 
