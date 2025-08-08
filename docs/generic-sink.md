@@ -1,5 +1,5 @@
 # Generic API
-This guide explains how to use pyjelly’s **generic API** to write and read RDF statements into the Jelly format without requiring any external library.
+This guide explains how to use pyjelly’s **generic API** to write and read RDF statements into the Jelly format without any external library.
 
 ## Installation
 
@@ -15,7 +15,7 @@ pip install pyjelly
 - Linux, macOS, or Windows
 
 ## Usage without external libraries
-Because we don't rely on any third-party tools, using generic API looks slightly different, however keeps the same functionality.
+Because we avoid third-party tools, the generic API looks a bit different but works the same way.
 
 ## Serializing statements to a Jelly file
 
@@ -31,7 +31,7 @@ To load triples/quads into your python object from a `.jelly` file, see:
 
 {{ code_example('generic/02_parse.py') }}
 
-Which will retrieve data from your `.jelly` file.
+Which retrieves data from your `.jelly` file.
 
 ### Parsing a stream of graphs
 
@@ -57,7 +57,7 @@ If you need to process a certain quantity of statements both efficiently and ite
 
 {{ code_example('generic/03_streaming.py') }}
 
-With this method you don't store every statement in memory, greatly improving parsing performance.
+With this method you avoid storing all statements in memory, which greatly improves performance.
 
 ### Serializing a stream of graphs
 
