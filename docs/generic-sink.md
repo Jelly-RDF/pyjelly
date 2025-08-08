@@ -19,11 +19,11 @@ Because we don't rely on any external libraries, using generic API looks slightl
 
 ## Writing Triples to a Jelly file
 
-To create a set of triples and write them to a Jelly file, you use:
+To make a set of triples and write them to a Jelly file, you use:
 
 {{ code_example('generic/01_serialize.py') }}
 
-Which allows for serialization with no need for extra dependencies.
+Which provides a simple Triple/Quad type that is easy to create and work with.
 
 ## Reading Triples from a Jelly file
 
@@ -31,7 +31,7 @@ To load triples into your python object from a `.jelly` file, see:
 
 {{ code_example('generic/02_parse.py') }}
 
-Which will retrieve data from your previously saved file.
+Which will retrieve data from your `.jelly` file.
 
 ### Parsing a stream of graphs
 
@@ -51,17 +51,17 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 We are also yielded a generator of stream events, which allows us to process the file triple-by-triple, however with no external libraries used.
 
-## Streaming large data
+## Streaming data
 
-If you need to process a large file/quantity of triples, you can provide a simple generator to iterate through data efficiently:
+If you need to process a certain quantity of triples both efficiently and iteratively, you can provide a simple generator:
 
 {{ code_example('generic/03_streaming.py') }}
 
-Through this method you don't store every statement in memory, greatly improving its performance.
+With this method you don't store every statement in memory, greatly improving parsing performance.
 
 ### Serializing a stream of graphs
 
-If you have a generator object containing graphs, you can use generic approach of serialization: 
+If you have a generator object containing graphs, you can use a generic approach for serialization:
 
 {{ code_example('generic/04_serialize_grouped.py')}}
 
