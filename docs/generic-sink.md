@@ -1,5 +1,5 @@
 # Generic API
-This guide explains how to use pyjelly’s **Generic API** to write and read RDF statements into the Jelly format without requiring any external library.
+This guide explains how to use pyjelly’s **generic API** to write and read RDF statements into the Jelly format without requiring any external library.
 
 ## Installation
 
@@ -17,15 +17,15 @@ pip install pyjelly
 ## Usage without external libraries
 Because we don't rely on any third-party tools, using generic API looks slightly different, however keeps the same functionality.
 
-## Writing triples to a Jelly file
+## Serializing statements to a Jelly file
 
-To make a set of triples/quads and write them to a Jelly file, you use:
+To make a set of triples/quads and write them to a Jelly file, use:
 
 {{ code_example('generic/01_serialize.py') }}
 
 Which provides a simple custom triple/quad type that is easy to create and work with.
 
-## Reading triples/quads from a Jelly file
+## Parsing statements from a Jelly file
 
 To load triples/quads into your python object from a `.jelly` file, see:
 
@@ -35,13 +35,13 @@ Which will retrieve data from your `.jelly` file.
 
 ### Parsing a stream of graphs
 
-Similarly, to process a Jelly stream as a stream of graphs through core API, see:
+Similarly, to process a Jelly stream as a stream of graphs through generic API, see:
 
 {{ code_example('generic/06_parse_grouped.py') }}
 
 Where we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
 
-### Parsing a stream of triples/quads
+### Parsing a stream of statements
 
 You can also process a Jelly stream as a flat stream with only generic API:
 
@@ -65,7 +65,7 @@ If you have a generator object containing graphs, you can use a generic approach
 
 {{ code_example('generic/04_serialize_grouped.py')}}
 
-Without using external RDF dependencies, grouped data is streamed preserving their original division. 
+Grouped data is streamed in its original form, with no need for external RDF dependencies. 
 
 ### Serializing a stream of statements
 
