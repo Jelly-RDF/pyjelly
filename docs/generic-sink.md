@@ -17,7 +17,7 @@ pip install pyjelly
 
 ## Usage without external libraries
 
-Because we avoid third-party tools, the generic API looks a bit different from the one presented in [getting started](getting-started.md), but works the same way.
+Unlike the example in [getting started](getting-started.md), the Generic API does not use the RDFLib or any other third-party libraries, but it works in much the same way.
 
 ## Serializing statements to a Jelly file
 
@@ -67,7 +67,7 @@ If you have a generator object containing graphs, you can use a generic approach
 
 {{ code_example('generic/04_serialize_grouped.py')}}
 
-Grouped data is streamed in its original form, with no need for external RDF dependencies. 
+Grouped data is streamed in its original form, no need for additional RDF libraries like RDFLib. 
 
 ### Serializing a stream of statements
 
@@ -75,11 +75,4 @@ Serializing a generator object of statements to `.jelly` file through generic AP
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
-Data is transmitted and kept ordered and simple. 
-
-## See also
-
-For more information, visit:
-
-- [Getting started with RDFLib](https://rdflib.readthedocs.io/en/stable/gettingstarted.html)
-- [RDFLib GitHub repository](https://github.com/RDFLib/rdflib)
+Data is transmitted and kept ordered and simple. See also [RDFLib serialization formats](https://rdflib.readthedocs.io/en/stable/intro_to_parsing.html?utm_source=chatgpt.com).

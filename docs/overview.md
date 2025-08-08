@@ -8,7 +8,7 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 * Full support for reading and writing Jelly-encoded RDF data
 * Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) (*"works just like Turtle"*)
-* Standalone generic API with no third-party dependencies
+* Standalone generic API with no third-party dependencies [Generic API](generic-sink.md)
 * Support for all Jelly stream types
 * Tools for working with delimited and non-delimited Jelly streams
 * Fine-grained control over serialization options, compression, and framing
