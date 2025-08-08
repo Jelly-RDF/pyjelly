@@ -15,6 +15,7 @@
 - **[Getting started](getting-started.md)**
 - **[Overview and supported features](overview.md)**
 - **[API reference](api.md)**
+- **[Generic API](generic-sink.md)**
 - **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
 ## Commercial and community support

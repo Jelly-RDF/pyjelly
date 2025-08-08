@@ -1,4 +1,5 @@
 # Generic API
+
 This guide explains how to use pyjelly’s **generic API** to write and read RDF statements into the Jelly format without any external library.
 
 ## Installation
@@ -15,6 +16,7 @@ pip install pyjelly
 - Linux, macOS, or Windows
 
 ## Usage without external libraries
+
 Because we avoid third-party tools, the generic API looks a bit different but works the same way.
 
 ## Serializing statements to a Jelly file
@@ -23,7 +25,7 @@ To make a set of triples/quads and write them to a Jelly file, use:
 
 {{ code_example('generic/01_serialize.py') }}
 
-Which provides a simple custom triple/quad type that is easy to create and work with.
+This example uses pyjelly’s simple custom triple/quad type, which is easy to create and work with.
 
 ## Parsing statements from a Jelly file
 
@@ -49,7 +51,7 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('generic/07_parse_flat.py') }}
 
-We are also yielded a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
+We get a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
 
 ## Streaming data
 
