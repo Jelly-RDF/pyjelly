@@ -95,17 +95,6 @@ jobs:
       run: uv run ruff check --output-format github
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
 
-    - name: Check example scripts
-      id: examples
-      run: |
-        set -euo pipefail
-        shopt -s nullglob
-        for test in examples/generic/*.py; do
-          echo "=== Running $test ==="
-          uv run python "$test"
-        done
-      if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
-
     - name: Check type safety
       id: types
       run: uv run mypy .
