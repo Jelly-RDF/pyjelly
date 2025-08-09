@@ -342,10 +342,10 @@ def test_iri_repr(iri: str, expected_repr: str) -> None:
 def test_parse_serialize() -> None:
     sink = GenericStatementSink()
     input_file_path = Path(
-        "./tests/integration_tests/test_rdflib/temp/flat_output.jelly"
+        "./tests/integration_tests/test_examples/temp/flat_output.jelly"
     )
     output_file_path = Path(
-        "./tests/integration_tests/test_rdflib/temp/temp_output.jelly"
+        "./tests/integration_tests/test_examples/temp/temp_output.jelly"
     )
     with input_file_path.open("rb") as file:
         sink.parse(file)
