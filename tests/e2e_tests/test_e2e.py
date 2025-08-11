@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import replace
 from itertools import chain, product
 from pathlib import Path
@@ -6,6 +8,7 @@ import pytest
 
 from pyjelly.options import LookupPreset
 from tests.e2e_tests.ser_des.base_ser_des import BaseSerDes
+from tests.e2e_tests.ser_des.generic_ser_des import GenericSerDes
 from tests.e2e_tests.ser_des.rdflib_ser_des import RdflibSerDes
 
 
@@ -48,6 +51,39 @@ class End2EndOptionSetup:
         return list(chain(*[[(*o, f) for o in options] for f in files]))
 
 
+class End2EndOptionSetupGeneric:
+    test_root: Path = Path("tests/e2e_test_cases/generic")
+
+    def setup_ser_des(
+        self,
+    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int]]:
+        ser = [GenericSerDes()]
+        des = [GenericSerDes()]
+        small = LookupPreset.small()
+        no_prefixes = replace(LookupPreset.small(), max_prefixes=0)
+        tiny_lookups = replace(LookupPreset.small(), max_names=16, max_prefixes=8)
+        big = LookupPreset()
+        presets = [small, no_prefixes, tiny_lookups, big]
+        frame_sizes = [1, 4, 200, 10_000]
+        return list(product(ser, des, presets, frame_sizes))
+
+    def setup_triple_files(
+        self,
+    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
+        test_dir: Path = self.test_root / "triples_generic_1_1"
+        files = test_dir.glob("*.jelly")
+        options = self.setup_ser_des()
+        return list(chain(*[[(*o, f) for o in options] for f in files]))
+
+    def setup_quad_files(
+        self,
+    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
+        test_dir: Path = self.test_root / "quads_generic_1_1"
+        files = test_dir.glob("*.jelly")
+        options = self.setup_ser_des()
+        return list(chain(*[[(*o, f) for o in options] for f in files]))
+
+
 class TestEnd2End:
     setup = End2EndOptionSetup()
 
@@ -85,4 +121,44 @@ class TestEnd2End:
             quads = nq_reader.read_quads(f.read())
             jelly_io = ser.write_quads_jelly(quads, preset, frame_size)
             new_g = des.read_quads_jelly(jelly_io)
+            assert set(quads) == set(new_g)
+
+
+class TestEnd2EndGeneric:
+    setup = End2EndOptionSetupGeneric()
+
+    @pytest.mark.parametrize(
+        ("ser", "des", "preset", "frame_size", "file"), setup.setup_triple_files()
+    )
+    def test_triple_files(
+        self,
+        ser: GenericSerDes,
+        des: GenericSerDes,
+        preset: LookupPreset,
+        frame_size: int,
+        file: Path,
+    ) -> None:
+        reader = GenericSerDes()
+        with file.open("rb") as f:
+            triples = reader.read_triples(f.read())
+            jelly = ser.write_triples_jelly(triples, preset, frame_size)
+            new_g = des.read_triples_jelly(jelly)
+            assert set(triples) == set(new_g)
+
+    @pytest.mark.parametrize(
+        ("ser", "des", "preset", "frame_size", "file"), setup.setup_quad_files()
+    )
+    def test_quad_files(
+        self,
+        ser: GenericSerDes,
+        des: GenericSerDes,
+        preset: LookupPreset,
+        frame_size: int,
+        file: Path,
+    ) -> None:
+        reader = GenericSerDes()
+        with file.open("rb") as f:
+            quads = reader.read_quads(f.read())
+            jelly = ser.write_quads_jelly(quads, preset, frame_size)
+            new_g = des.read_quads_jelly(jelly)
             assert set(quads) == set(new_g)
