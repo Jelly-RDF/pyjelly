@@ -16,7 +16,7 @@
         <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../rdflib-neo4j-integration/">
+        <link rel="next" href="../generic-sink/">
       
       
       <link rel="icon" href="../assets/jelly_color.png">
@@ -313,6 +313,8 @@
       
         
       
+        
+      
     
     
     
@@ -479,10 +481,42 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic API
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-sink/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Generic API (no RDFLib)
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -798,6 +832,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic API
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -831,6 +874,7 @@
 <ul>
 <li>Full support for reading and writing Jelly-encoded RDF data</li>
 <li>Seamless integration with <a href="https://rdflib.readthedocs.io/">RDFLib</a> (<em>"works just like Turtle"</em>)</li>
+<li>Standalone generic API with no third-party dependencies <a href="../generic-sink/">Generic API</a></li>
 <li>Support for all Jelly stream types</li>
 <li>Tools for working with delimited and non-delimited Jelly streams</li>
 <li>Fine-grained control over serialization options, compression, and framing</li>
@@ -860,6 +904,9 @@
 <li><strong><a href="../rdflib-neo4j-integration/">RDFLib-Neo4j integration</a></strong></li>
 <li><strong><a href="../networkx-integration/">NetworkX integration</a></strong></li>
 </ul>
+<h2 id="generic-api">Generic API</h2>
+<p>pyjelly includes its own <a href="../generic-sink/">generic API</a> for working with RDF data (no RDFLib or other external RDF libraries required).<br />
+It provides simple, built-in types for triples and quads, allowing you to create, read, and write data directly in the Jelly format.</p>
 
 
 
@@ -882,7 +929,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 11, 2025 11:37:28">August 11, 2025</span>
   </span>
 
     
