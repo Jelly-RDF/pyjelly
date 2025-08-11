@@ -79,5 +79,5 @@ Data is transmitted and kept ordered and simple.
 
 ### See also
 
-If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. See: [getting-started.md](getting-started.md).
+If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. [See the dedicated guide](getting-started.md).
 
