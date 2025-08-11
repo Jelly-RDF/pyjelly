@@ -75,4 +75,9 @@ Serializing a generator object of statements to `.jelly` file through generic AP
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
-Data is transmitted and kept ordered and simple. See also [RDFLib serialization formats](https://rdflib.readthedocs.io/en/stable/intro_to_parsing.html?utm_source=chatgpt.com).
+Data is transmitted and kept ordered and simple. 
+
+### See also
+
+If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. See: [getting-started.md](getting-started.md).
+
