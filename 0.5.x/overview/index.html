@@ -16,7 +16,7 @@
         <link rel="prev" href="../getting-started/">
       
       
-        <link rel="next" href="../rdflib-neo4j-integration/">
+        <link rel="next" href="../generic-sink/">
       
       
       <link rel="icon" href="../assets/jelly_color.png">
@@ -53,8 +53,6 @@
       <link rel="stylesheet" href="../assets/_markdown_exec_pyodide.css">
     
       <link rel="stylesheet" href="../assets/_mkdocstrings.css">
-    
-      <link rel="stylesheet" href="../stylesheets/extra.css">
     
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -315,6 +313,8 @@
       
         
       
+        
+      
     
     
     
@@ -481,10 +481,42 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic API
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../generic-sink/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Generic API (no RDFLib)
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -800,6 +832,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#generic-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Generic API
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -833,6 +874,7 @@
 <ul>
 <li>Full support for reading and writing Jelly-encoded RDF data</li>
 <li>Seamless integration with <a href="https://rdflib.readthedocs.io/">RDFLib</a> (<em>"works just like Turtle"</em>)</li>
+<li>Standalone generic API with no third-party dependencies <a href="../generic-sink/">Generic API</a></li>
 <li>Support for all Jelly stream types</li>
 <li>Tools for working with delimited and non-delimited Jelly streams</li>
 <li>Fine-grained control over serialization options, compression, and framing</li>
@@ -843,7 +885,7 @@
 <p>See the full <a href="https://w3id.org/jelly/1.1.2/specification/serialization/#consistency-with-physical-stream-types">stream type matrix</a> for an overview of valid combinations.</p>
 <h3 id="conformance-to-the-jelly-specification">Conformance to the Jelly specification</h3>
 <p>pyjelly is continuously tested for conformance to <a href="https://w3id.org/jelly/1.1.2/specification/">the Jelly specification</a>. While the vast majority of features are implemented, there are a few edge cases left to resolve.</p>
-<p>You can track the progress in <a href="https://github.com/Jelly-RDF/pyjelly/blob/v0.5.2/tests/utils/rdf_test_cases.py">the conformance test suite definition</a>.</p>
+<p>You can track the progress in <a href="https://github.com/Jelly-RDF/pyjelly/blob/v0.5.3/tests/utils/rdf_test_cases.py">the conformance test suite definition</a>.</p>
 <h2 id="use-cases">Use cases</h2>
 <p>Use cases for pyjelly include:</p>
 <ul>
@@ -862,6 +904,9 @@
 <li><strong><a href="../rdflib-neo4j-integration/">RDFLib-Neo4j integration</a></strong></li>
 <li><strong><a href="../networkx-integration/">NetworkX integration</a></strong></li>
 </ul>
+<h2 id="generic-api">Generic API</h2>
+<p>pyjelly includes its own <a href="../generic-sink/">generic API</a> for working with RDF data (no RDFLib or other external RDF libraries required).<br />
+It provides simple, built-in types for triples and quads, allowing you to create, read, and write data directly in the Jelly format.</p>
 
 
 
@@ -884,7 +929,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 25, 2025 16:38:36">July 25, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 11, 2025 11:37:28">August 11, 2025</span>
   </span>
 
     
