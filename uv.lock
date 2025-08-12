@@ -1409,7 +1409,7 @@ wheels = [
 
 [[package]]
 name = "pyjelly"
-version = "0.0.0"
+version = "0.5.3"
 source = { editable = "." }
 dependencies = [
     { name = "protobuf" },
