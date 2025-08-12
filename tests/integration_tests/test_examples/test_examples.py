@@ -38,7 +38,6 @@ def test_examples(
     set_name: str, script: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     temp_dir = pathlib.Path(__file__, "..", "temp").resolve()
-    temp_dir.mkdir(exist_ok=True)
 
     if f"{set_name}/{script.name}" in SCRIPTS_RDFLIB_CASE:
         # required to mock __init__ for 03_parse_autodetect in order to work
