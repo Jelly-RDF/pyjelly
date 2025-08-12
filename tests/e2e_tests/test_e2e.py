@@ -99,14 +99,14 @@ class End2EndOptionSetupGeneric:
 class End2EndOptionSetupCross:
     """Set up stream options, file size and file name for cross E2E tests."""
 
-    std_root: Path = Path("tests/e2e_test_cases/")
+    rdf_root: Path = Path("tests/e2e_test_cases/")
     gen_root: Path = Path("tests/e2e_test_cases/generic")
 
     def pair_triples(self) -> list[tuple[Path, Path]]:
         left = {
             p.stem: p for p in (self.gen_root / "triples_generic_1_1").glob("*.jelly")
         }
-        right = {p.stem: p for p in (self.std_root / "triples_rdf_1_1").glob("*.nt")}
+        right = {p.stem: p for p in (self.rdf_root / "triples_rdf_1_1").glob("*.nt")}
         keys = sorted(set(left) & set(right))
         return [(left[k], right[k]) for k in keys]
 
@@ -114,7 +114,7 @@ class End2EndOptionSetupCross:
         left = {
             p.stem: p for p in (self.gen_root / "quads_generic_1_1").glob("*.jelly")
         }
-        right = {p.stem: p for p in (self.std_root / "quads_rdf_1_1").glob("*.nq")}
+        right = {p.stem: p for p in (self.rdf_root / "quads_rdf_1_1").glob("*.nq")}
         keys = sorted(set(left) & set(right))
         return [(left[k], right[k]) for k in keys]
 
