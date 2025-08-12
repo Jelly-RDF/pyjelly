@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import tempfile
 from dataclasses import replace
+from functools import partial
 from itertools import chain, product
 from pathlib import Path
 
@@ -10,10 +12,18 @@ from pyjelly.options import LookupPreset
 from tests.e2e_tests.ser_des.base_ser_des import BaseSerDes
 from tests.e2e_tests.ser_des.generic_ser_des import GenericSerDes
 from tests.e2e_tests.ser_des.rdflib_ser_des import RdflibSerDes
+from tests.utils.rdf_test_cases import jelly_cli, needs_jelly_cli
+
+DEFAULT_PRESET = replace(LookupPreset.small(), max_prefixes=0)
+DEFAULT_FRAME_SIZE = 200
+
+jelly_validate = partial(jelly_cli, "rdf", "validate")
+jelly_from_jelly = partial(jelly_cli, "rdf", "from-jelly")
+jelly_to_jelly = partial(jelly_cli, "rdf", "to-jelly")
 
 
 class End2EndOptionSetup:
-    """Set up stream options, file size and file name for E2E tests."""
+    """Set up stream options, file size and file name for rdf E2E tests."""
 
     test_root: Path = Path("tests/e2e_test_cases/")
 
@@ -52,6 +62,8 @@ class End2EndOptionSetup:
 
 
 class End2EndOptionSetupGeneric:
+    """Set up stream options, file size and file name for generic sink E2E tests."""
+
     test_root: Path = Path("tests/e2e_test_cases/generic")
 
     def setup_ser_des(
@@ -82,6 +94,29 @@ class End2EndOptionSetupGeneric:
         files = test_dir.glob("*.jelly")
         options = self.setup_ser_des()
         return list(chain(*[[(*o, f) for o in options] for f in files]))
+
+
+class End2EndOptionSetupCross:
+    """Set up stream options, file size and file name for cross E2E tests."""
+
+    std_root: Path = Path("tests/e2e_test_cases/")
+    gen_root: Path = Path("tests/e2e_test_cases/generic")
+
+    def pair_triples(self) -> list[tuple[Path, Path]]:
+        left = {
+            p.stem: p for p in (self.gen_root / "triples_generic_1_1").glob("*.jelly")
+        }
+        right = {p.stem: p for p in (self.std_root / "triples_rdf_1_1").glob("*.nt")}
+        keys = sorted(set(left) & set(right))
+        return [(left[k], right[k]) for k in keys]
+
+    def pair_quads(self) -> list[tuple[Path, Path]]:
+        left = {
+            p.stem: p for p in (self.gen_root / "quads_generic_1_1").glob("*.jelly")
+        }
+        right = {p.stem: p for p in (self.std_root / "quads_rdf_1_1").glob("*.nq")}
+        keys = sorted(set(left) & set(right))
+        return [(left[k], right[k]) for k in keys]
 
 
 class TestEnd2End:
@@ -162,3 +197,55 @@ class TestEnd2EndGeneric:
             jelly = ser.write_quads_jelly(quads, preset, frame_size)
             new_g = des.read_quads_jelly(jelly)
             assert set(quads) == set(new_g)
+
+
+class TestEnd2EndCross:
+    setup = End2EndOptionSetupCross()
+    triples_pairs = setup.pair_triples()
+    quads_pairs = setup.pair_quads()
+
+    @needs_jelly_cli
+    @pytest.mark.parametrize(
+        ("g_path", "r_path"),
+        triples_pairs,
+        ids=[f"triples:{g.name}=={r.name}" for g, r in triples_pairs],
+    )
+    def test_cross_generic_rdf_triple(self, g_path: Path, r_path: Path) -> None:
+        gen = GenericSerDes()
+        rdf = RdflibSerDes()
+        with g_path.open("rb") as file_gen:
+            g_triples = gen.read_triples_jelly(file_gen.read())
+            g_jelly = gen.write_triples(g_triples)
+        with r_path.open("rb") as file_rdf:
+            r_triples = rdf.read_triples(file_rdf.read())
+            r_jelly = rdf.write_triples_jelly(
+                r_triples, DEFAULT_PRESET, DEFAULT_FRAME_SIZE
+            )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_gen = Path(temp_dir) / "gen.jelly"
+            temp_rdf = Path(temp_dir) / "rdf.jelly"
+            temp_gen.write_bytes(g_jelly)
+            temp_rdf.write_bytes(r_jelly)
+            jelly_validate(temp_gen, "--compare-to-rdf-file", temp_rdf)
+
+    @needs_jelly_cli
+    @pytest.mark.parametrize(
+        ("g_path", "r_path"),
+        quads_pairs,
+        ids=[f"quads:{g.name}=={r.name}" for g, r in quads_pairs],
+    )
+    def test_cross_generic_rdf_quad(self, g_path: Path, r_path: Path) -> None:
+        gen = GenericSerDes()
+        rdf = RdflibSerDes()
+        with g_path.open("rb") as file_gen:
+            g_quads = gen.read_quads_jelly(file_gen.read())
+            g_jelly = gen.write_quads(g_quads)
+        with r_path.open("rb") as file_rdf:
+            r_quads = rdf.read_quads(file_rdf.read())
+            r_jelly = rdf.write_quads_jelly(r_quads, DEFAULT_PRESET, DEFAULT_FRAME_SIZE)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_gen = Path(temp_dir) / "gen.jelly"
+            temp_rdf = Path(temp_dir) / "rdf.jelly"
+            temp_gen.write_bytes(g_jelly)
+            temp_rdf.write_bytes(r_jelly)
+            jelly_validate(temp_gen, "--compare-to-rdf-file", temp_rdf)
