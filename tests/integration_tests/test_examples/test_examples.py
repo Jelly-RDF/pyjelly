@@ -1,7 +1,9 @@
+import importlib
 import pathlib
 import runpy
 import urllib.request
 from typing import IO
+
 import pytest
 
 BASE_DIR = pathlib.Path(__file__).parent
@@ -11,15 +13,14 @@ def resolve_scripts_dir(name: str) -> pathlib.Path:
     path = BASE_DIR / name
     if path.is_file():
         return (BASE_DIR / pathlib.Path(path.read_text().strip())).resolve()
-    elif path.is_dir():
+    if path.is_dir():
         return path.resolve()
-    else:
-        raise FileNotFoundError(path)
+    raise FileNotFoundError(path)
 
 
 SCRIPTS_RDFLIB = resolve_scripts_dir("examples/examples_rdflib")
 SCRIPTS_GENERIC = resolve_scripts_dir("examples/examples_generic")
-SCRIPTS_SKIP = ["rdflib/03_parse_autodetect.py"]
+SCRIPTS_RDFLIB_CASE = ["rdflib/03_parse_autodetect.py"]
 
 example_scripts = [
     pytest.param("rdflib", p, id=f"rdflib/{p.name}")
@@ -31,16 +32,26 @@ example_scripts = [
 
 
 @pytest.mark.parametrize(
-    "set_name, script", example_scripts, ids=lambda p: f"{p[0]}/{p[1].name}"
+    ("set_name", "script"), example_scripts, ids=lambda p: f"{p[0]}/{p[1].name}"
 )
 def test_examples(
     set_name: str, script: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # Tests to skip
-    if f"{set_name}/{script.name}" in SCRIPTS_SKIP:
-        pytest.skip(f"Skipping test {set_name}/{script.name}")
+    temp_dir = pathlib.Path(__file__, "..", "temp").resolve()
+    temp_dir.mkdir(exist_ok=True)
+
+    if f"{set_name}/{script.name}" in SCRIPTS_RDFLIB_CASE:
+        # required to mock __init__ for 03_parse_autodetect in order to work
+        import pyjelly.options as _opts
+
+        monkeypatch.setattr(_opts, "INTEGRATION_SIDE_EFFECTS", True, raising=False)
+        pytest.importorskip("pyjelly.integrations.rdflib")
+        import pyjelly.integrations.rdflib as _integration
+
+        importlib.reload(_integration)
+
     # Run the examples in a temporary directory to avoid polluting the repository
-    monkeypatch.chdir(pathlib.Path(__file__, "..", "temp").resolve())
+    monkeypatch.chdir(temp_dir)
     # Mock HTTP requests to avoid network calls during tests
     monkeypatch.setattr(urllib.request, "urlopen", urlopen_mock)
     runpy.run_path(str(script))
