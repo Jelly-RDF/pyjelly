@@ -46,13 +46,10 @@ class GenericSerDes:
         sink = parse_jelly_to_graph(io.BytesIO(in_bytes))
         if len(sink) == 0 or sink.is_triples_sink:
             return sink
-        t_only = GenericStatementSink()
-        for st in sink.store:
-            if isinstance(st, Triple):
-                t_only.add(st)
-            elif isinstance(st, Quad) and st.g == DEFAULT_GRAPH_IDENTIFIER:
-                t_only.add(Triple(st.s, st.p, st.o))
-        return t_only
+        triple_sink = GenericStatementSink()
+        for st in triple_sink.store:
+            triple_sink.add(st)
+        return triple_sink
 
     def write_triples(self, in_graph: GenericStatementSink) -> bytes:
         out = io.BytesIO()
