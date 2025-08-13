@@ -17,7 +17,7 @@ from tests.utils.rdf_test_cases import jelly_cli, needs_jelly_cli
 DEFAULT_PRESET = replace(LookupPreset.small(), max_prefixes=0)
 DEFAULT_FRAME_SIZE = 200
 
-jelly_validate = partial(jelly_cli, "rdf", "validate")
+jelly_validate = partial(jelly_cli, "rdf", "validate", "--compare-ordered")
 jelly_from_jelly = partial(jelly_cli, "rdf", "from-jelly")
 jelly_to_jelly = partial(jelly_cli, "rdf", "to-jelly")
 
