@@ -25,7 +25,8 @@ jobs:
     permissions:
       id-token: write
       contents: write
-
+    env:
+      UV_LOCKED: 0
     steps:
       - uses: actions/checkout@v4
         with:
