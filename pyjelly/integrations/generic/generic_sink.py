@@ -19,6 +19,14 @@ class BlankNode:
     def __repr__(self) -> str:
         return f"BlankNode(identifier={self._identifier})"
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, BlankNode):
+            return self._identifier == other._identifier
+        return False
+
+    def __hash__(self) -> int:
+        return hash(self._identifier)
+
 
 class IRI:
     """Class for IRIs, storing IRI as a string."""
@@ -36,6 +44,9 @@ class IRI:
         if isinstance(other, IRI):
             return self._iri == other._iri
         return False
+
+    def __hash__(self) -> int:
+        return hash(self._iri)
 
 
 class Literal:
@@ -68,6 +79,18 @@ class Literal:
             f"Literal({self._lex!r}, langtag={self._langtag!r}, "
             f"datatype={self._datatype!r})"
         )
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Literal):
+            return (
+                self._lex == other._lex
+                and self._langtag == other._langtag
+                and self._datatype == other._datatype
+            )
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self._lex, self._langtag, self._datatype))
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple", str]
