@@ -115,6 +115,7 @@ extra:
 
 nav:
   - Home : "index.md"
+  - Compatibility: "compatibility.md"
   - User guide:
       - Getting started (RDFLib): "getting-started.md"
       - Overview and supported features: "overview.md"
