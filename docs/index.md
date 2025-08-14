@@ -10,6 +10,18 @@
 - **Seamless integration with [RDFLib](https://rdflib.readthedocs.io/)**
 - **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
+## Compatibility
+
+PyJelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in CI and are guaranteed to work.
+
+The following table shows the compatibility of the PyJelly implementation with other libraries:
+
+| PyJelly | Python     | RDFLib         |
+|---------|------------|----------------|
+| latest  | 3.9 – 3.13 | 7.x (>= 7.1.4) |
+
+See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.
+
 ## Documentation
 
 - **[Getting started](getting-started.md)**
