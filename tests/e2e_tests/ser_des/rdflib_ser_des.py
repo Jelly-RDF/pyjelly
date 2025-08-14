@@ -36,7 +36,7 @@ class RdflibSerDes(BaseSerDes):
         super().__init__(name=self.name)
 
     def read_quads(self, in_bytes: bytes) -> QuadGraphType:
-        g = Dataset()
+        g = Dataset(store=OrderedMemory())
         g.parse(data=in_bytes, format="nquads")
         fixup_graph(g)
         return g
