@@ -36,9 +36,6 @@ class GenericSerDes:
         flat_stream_to_file(in_graph.store, out, options=options)
         return out.getvalue()
 
-    def read_quads_jelly(self, in_bytes: bytes) -> GenericStatementSink:
-        return self.read_quads(in_bytes)
-
     def write_quads_jelly(
         self, in_graph: GenericStatementSink, preset: LookupPreset, frame_size: int
     ) -> bytes:
@@ -67,9 +64,6 @@ class GenericSerDes:
         options = SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES)
         flat_stream_to_file(in_graph.store, out, options=options)
         return out.getvalue()
-
-    def read_triples_jelly(self, in_bytes: bytes) -> GenericStatementSink:
-        return self.read_triples(in_bytes)
 
     def write_triples_jelly(
         self, in_graph: GenericStatementSink, preset: LookupPreset, frame_size: int

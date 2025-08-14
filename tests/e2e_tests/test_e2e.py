@@ -166,7 +166,7 @@ class TestEnd2EndGeneric:
         with file.open("rb") as f:
             triples = reader.read_triples(f.read())
             jelly = ser.write_triples_jelly(triples, preset, frame_size)
-            new_g = des.read_triples_jelly(jelly)
+            new_g = des.read_triples(jelly)
             assert set(triples) == set(new_g)
 
     @pytest.mark.parametrize(
@@ -184,7 +184,7 @@ class TestEnd2EndGeneric:
         with file.open("rb") as f:
             quads = reader.read_quads(f.read())
             jelly = ser.write_quads_jelly(quads, preset, frame_size)
-            new_g = des.read_quads_jelly(jelly)
+            new_g = des.read_quads(jelly)
             assert set(quads) == set(new_g)
 
 
@@ -203,7 +203,7 @@ class TestEnd2EndCross:
         gen = GenericSerDes()
         rdf = RdflibSerDes()
         gen_input_jelly = jelly_to_jelly(r_path)
-        g_triples = gen.read_triples_jelly(gen_input_jelly)
+        g_triples = gen.read_triples(gen_input_jelly)
         g_jelly = gen.write_triples(g_triples)
         with r_path.open("rb") as file_rdf:
             r_triples = rdf.read_triples(file_rdf.read())
@@ -227,7 +227,7 @@ class TestEnd2EndCross:
         gen = GenericSerDes()
         rdf = RdflibSerDes()
         gen_input_jelly = jelly_to_jelly(r_path)
-        g_quads = gen.read_quads_jelly(gen_input_jelly)
+        g_quads = gen.read_quads(gen_input_jelly)
         g_jelly = gen.write_quads(g_quads)
         with r_path.open("rb") as file_rdf:
             r_quads = rdf.read_quads(file_rdf.read())
