@@ -19,7 +19,7 @@ DEFAULT_FRAME_SIZE = 200
 
 jelly_validate = partial(jelly_cli, "rdf", "validate", "--compare-ordered")
 jelly_from_jelly = partial(jelly_cli, "rdf", "from-jelly")
-jelly_to_jelly = partial(jelly_cli, "rdf", "to-jelly")
+rdf_to_jelly = partial(jelly_cli, "rdf", "to-jelly")
 
 
 class End2EndOptionSetup:
@@ -82,16 +82,16 @@ class End2EndOptionSetupGeneric:
     def setup_triple_files(
         self,
     ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
-        test_dir: Path = self.test_root / "triples_jelly_1_1"
-        files = test_dir.glob("*.jelly")
+        test_dir: Path = self.test_root / "triples_rdf_1_1"
+        files = test_dir.glob("*.nt")
         options = self.setup_ser_des()
         return list(chain(*[[(*o, f) for o in options] for f in files]))
 
     def setup_quad_files(
         self,
     ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
-        test_dir: Path = self.test_root / "quads_jelly_1_1"
-        files = test_dir.glob("*.jelly")
+        test_dir: Path = self.test_root / "quads_rdf_1_1"
+        files = test_dir.glob("*.nq")
         options = self.setup_ser_des()
         return list(chain(*[[(*o, f) for o in options] for f in files]))
 
@@ -151,6 +151,7 @@ class TestEnd2End:
 class TestEnd2EndGeneric:
     setup = End2EndOptionSetupGeneric()
 
+    @needs_jelly_cli
     @pytest.mark.parametrize(
         ("ser", "des", "preset", "frame_size", "file"), setup.setup_triple_files()
     )
@@ -163,12 +164,13 @@ class TestEnd2EndGeneric:
         file: Path,
     ) -> None:
         reader = GenericSerDes()
-        with file.open("rb") as f:
-            triples = reader.read_triples(f.read())
-            jelly = ser.write_triples_jelly(triples, preset, frame_size)
-            new_g = des.read_triples(jelly)
-            assert set(triples) == set(new_g)
+        gen_input_jelly = rdf_to_jelly(file)
+        triples = reader.read_triples(gen_input_jelly)
+        jelly = ser.write_triples_jelly(triples, preset, frame_size)
+        new_g = des.read_triples(jelly)
+        assert set(triples) == set(new_g)
 
+    @needs_jelly_cli
     @pytest.mark.parametrize(
         ("ser", "des", "preset", "frame_size", "file"), setup.setup_quad_files()
     )
@@ -181,11 +183,11 @@ class TestEnd2EndGeneric:
         file: Path,
     ) -> None:
         reader = GenericSerDes()
-        with file.open("rb") as f:
-            quads = reader.read_quads(f.read())
-            jelly = ser.write_quads_jelly(quads, preset, frame_size)
-            new_g = des.read_quads(jelly)
-            assert set(quads) == set(new_g)
+        gen_input_jelly = rdf_to_jelly(file)
+        quads = reader.read_quads(gen_input_jelly)
+        jelly = ser.write_quads_jelly(quads, preset, frame_size)
+        new_g = des.read_quads(jelly)
+        assert set(quads) == set(new_g)
 
 
 class TestEnd2EndCross:
@@ -202,7 +204,7 @@ class TestEnd2EndCross:
     def test_cross_generic_rdf_triple(self, r_path: Path) -> None:
         gen = GenericSerDes()
         rdf = RdflibSerDes()
-        gen_input_jelly = jelly_to_jelly(r_path)
+        gen_input_jelly = rdf_to_jelly(r_path)
         g_triples = gen.read_triples(gen_input_jelly)
         g_jelly = gen.write_triples(g_triples)
         with r_path.open("rb") as file_rdf:
@@ -226,7 +228,7 @@ class TestEnd2EndCross:
     def test_cross_generic_rdf_quad(self, r_path: Path) -> None:
         gen = GenericSerDes()
         rdf = RdflibSerDes()
-        gen_input_jelly = jelly_to_jelly(r_path)
+        gen_input_jelly = rdf_to_jelly(r_path)
         g_quads = gen.read_quads(gen_input_jelly)
         g_jelly = gen.write_quads(g_quads)
         with r_path.open("rb") as file_rdf:
