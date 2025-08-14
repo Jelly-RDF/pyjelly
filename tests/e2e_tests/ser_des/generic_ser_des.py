@@ -6,7 +6,7 @@ from pyjelly import jelly
 from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
     Prefix,
-    )
+)
 from pyjelly.integrations.generic.parse import parse_jelly_flat
 from pyjelly.integrations.generic.serialize import flat_stream_to_file
 from pyjelly.options import LookupPreset
