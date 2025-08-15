@@ -24,9 +24,9 @@ PyJelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in
 
 The following table shows the compatibility of the PyJelly implementation with other libraries:
 
-| PyJelly                                                               | Python     | RDFLib         |
-|-----------------------------------------------------------------------|------------|----------------|
-| {{ python_package_version_minor() }} – {{ python_package_version() }} | 3.9 – 3.13 | 7.x (>= 7.1.4) |
+| pyjelly                              | Python     | RDFLib         |
+|--------------------------------------|------------|----------------|
+| 0.1.0–{{ python_package_version() }} | 3.9 – 3.13 | 7.x (>= 7.1.4) |
 
 
 See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.
