@@ -20,9 +20,9 @@
 
 ## Compatibility
 
-PyJelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in CI and are guaranteed to work.
+pyjelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in CI and are guaranteed to work.
 
-The following table shows the compatibility of the PyJelly implementation with other libraries:
+The following table shows the compatibility of the pyjelly implementation with other libraries:
 
 | pyjelly                              | Python     | RDFLib         |
 |--------------------------------------|------------|----------------|
