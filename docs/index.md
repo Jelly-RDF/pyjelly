@@ -18,6 +18,19 @@
 - **[API reference](api.md)**
 - **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
+## Compatibility
+
+pyjelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in CI and are guaranteed to work.
+
+The following table shows the compatibility of the pyjelly implementation with other libraries:
+
+| pyjelly                              | Python     | RDFLib         |
+|--------------------------------------|------------|----------------|
+| 0.1.0–{{ python_package_version() }} | 3.9 – 3.13 | 7.x (>= 7.1.4) |
+
+
+See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.
+
 ## Commercial and community support
 
 **[NeverBlink](https://neverblink.eu)** provides commercial support services for Jelly, including implementing custom features, system integrations, implementations for new frameworks, benchmarking, and more.
