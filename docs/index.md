@@ -10,6 +10,14 @@
 - **Seamless integration with [RDFLib](https://rdflib.readthedocs.io/)**
 - **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
+## Documentation
+
+- **[Getting started](getting-started.md)**
+- **[Overview and supported features](overview.md)**
+- **[Generic interface (usage without RDFLib)](generic-sink.md)**
+- **[API reference](api.md)**
+- **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
+
 ## Compatibility
 
 PyJelly is compatible with Python 3.9 and newer. Python 3.9–3.13 are tested in CI and are guaranteed to work.
@@ -21,14 +29,6 @@ The following table shows the compatibility of the PyJelly implementation with o
 | [{{ python_package_version_minor() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version_minor() }}) – [**{{ python_package_version() }}**](https://w3id.org/jelly/pyjelly/{{ python_package_version() }}) | 3.9 – 3.13 | 7.x (>= 7.1.4) |
 
 See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.
-
-## Documentation
-
-- **[Getting started](getting-started.md)**
-- **[Overview and supported features](overview.md)**
-- **[Generic interface (usage without RDFLib)](generic-sink.md)**
-- **[API reference](api.md)**
-- **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
 ## Commercial and community support
 
