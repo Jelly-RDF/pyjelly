@@ -3,6 +3,7 @@ from pyjelly.integrations.rdflib.serialize import grouped_stream_to_file
 from rdflib import Graph, Literal, Namespace
 import random
 
+
 def generate_sample_graphs():
     ex = Namespace("http://example.org/")
     for _ in range(10):
