@@ -1,4 +1,4 @@
-from pyjelly.integrations.generic.generic_sink import GenericStatementSink
+from pyjelly.integrations.generic.generic_sink import *
 
 
 # Helper generator that streams statements from a Jelly file path

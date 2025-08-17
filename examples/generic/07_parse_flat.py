@@ -1,10 +1,7 @@
 import gzip
 import urllib.request
 
-from pyjelly.integrations.generic.generic_sink import (
-    IRI,
-    Triple,
-)
+from pyjelly.integrations.generic.generic_sink import *
 from pyjelly.integrations.generic.parse import parse_jelly_flat
 
 # Dataset: OpenStreetMap data for Denmark (first 10k objects)

@@ -1,10 +1,4 @@
-from pyjelly.integrations.generic.generic_sink import (
-    IRI,
-    BlankNode,
-    GenericStatementSink,
-    Literal,
-    Triple,
-)
+from pyjelly.integrations.generic.generic_sink import *
 
 # Create a generic sink object, identifier is optional
 generic_sink = GenericStatementSink(identifier="my_graph")

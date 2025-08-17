@@ -2,7 +2,6 @@ from pyjelly.integrations.rdflib.serialize import flat_stream_to_file
 from rdflib import Literal, Namespace
 import random
 
-
 # example generator with triples statements
 def generate_sample_triples():
     ex = Namespace("http://example.org/")
