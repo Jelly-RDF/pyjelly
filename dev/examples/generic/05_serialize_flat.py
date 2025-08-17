@@ -1,5 +1,5 @@
 from pyjelly.integrations.generic.serialize import flat_stream_to_file
-from pyjelly.integrations.generic.generic_sink import Triple, IRI
+from pyjelly.integrations.generic.generic_sink import *
 import random
 
 
