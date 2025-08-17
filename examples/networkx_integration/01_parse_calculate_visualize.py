@@ -1,9 +1,9 @@
 import urllib.request, gzip, tempfile, shutil, os
-from rdflib import Graph
-from rdflib.extras.external_graph_libs import rdflib_to_networkx_graph
+
 import networkx as nx
 import matplotlib.pyplot as plt
 from rdflib import Graph, URIRef, BNode, Literal
+from rdflib.extras.external_graph_libs import rdflib_to_networkx_graph
 
 # Filter predicates for people
 TARGET_PREDICATES = {

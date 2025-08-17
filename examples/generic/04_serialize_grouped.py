@@ -1,8 +1,4 @@
-from pyjelly.integrations.generic.generic_sink import (
-    GenericStatementSink,
-    IRI,
-    Triple,
-)
+from pyjelly.integrations.generic.generic_sink import *
 from pyjelly.integrations.generic.serialize import grouped_stream_to_file
 import random
 
