@@ -37,7 +37,7 @@ def define_env(env):
 
     try:
         python_tag_raw = subprocess.check_output(
-            ["uv", "version", "--short"], encoding="utf-8"
+            ["git", "describe", "--tags"], encoding="utf-8"
         ).strip()
     except subprocess.CalledProcessError as e:
         print("Failed to call git: ", e.returncode, e.stderr)
