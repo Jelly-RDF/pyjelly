@@ -17,7 +17,7 @@ with io.BytesIO() as write_buffer:
     g1.serialize(write_buffer)
     data = write_buffer.getvalue()
 
-print(f'Serialized data size: {len(data)} bytes')
+print(f"Serialized data size: {len(data)} bytes")
 
 # Parse the data back
 g2 = GenericStatementSink()
