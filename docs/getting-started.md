@@ -82,3 +82,9 @@ You can generally omit the `format="jelly"` parameter if the file ends in `.jell
 !!! warning 
 
     Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in the `serialize()` or `parse()` call before.
+
+## See also
+
+- [Working with byte buffers and Kafka](generic-sink.md#working-with-byte-buffers-and-kafka)
+- [Usage without RDFLib](generic-sink.md)
+- [API reference](api.md)

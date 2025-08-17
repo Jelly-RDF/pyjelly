@@ -75,7 +75,17 @@ Serializing a generator object of statements to `.jelly` file through generic AP
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
-Data is transmitted and kept ordered and simple. 
+Data is transmitted and kept ordered and simple.
+
+### Working with byte buffers and Kafka
+
+When working with Kafka or other message brokers, you may want to write Jelly data to a byte buffer instead of a file. You can do this by using the `BytesIO` class from the `io` module:
+
+{{ code_example('generic/08_byte_buffer.py')}}
+
+The `data` variable is of type `bytes`, and can be passed to Kafka with [`KafkaProducer.send(value=data)`](https://kafka-python.readthedocs.io/en/master/), or any other API that accepts byte buffers. Same trick may be used when working with the [RDFLib integration](getting-started.md).
+
+When working with Kafka, you should be aware of the broker's offset management and partitioning strategies. Data within one Jelly stream must be strictly ordered and no frames may be dropped. If you have less strict ordering guarantees, you should split up the stream into multiple Jelly streams, each with guaranteed consistency.
 
 ### See also
 
