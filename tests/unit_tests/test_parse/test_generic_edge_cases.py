@@ -33,7 +33,10 @@ from pyjelly.integrations.generic.parse import (
 from pyjelly.integrations.generic.serialize import grouped_stream_to_file
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import ParserOptions
-from pyjelly.serialize.flows import FlatQuadsFrameFlow, FlatTriplesFrameFlow
+from pyjelly.serialize.flows import (
+    DatasetsFrameFlow,
+    GraphsFrameFlow,
+)
 from pyjelly.serialize.streams import SerializerOptions
 
 
@@ -73,8 +76,8 @@ def test_parse_grouped_from_flat_triples() -> None:
     sink = _triple_sink()
     out = io.BytesIO()
     opts = SerializerOptions(
-        flow=FlatTriplesFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        flow=GraphsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
     )
     grouped_stream_to_file((x for x in [sink]), out, options=opts)
     back_sinks = list(parse_jelly_grouped(io.BytesIO(out.getvalue())))
@@ -86,8 +89,7 @@ def test_parse_grouped_from_flat_quads() -> None:
     sink = _quad_sink()
     out = io.BytesIO()
     opts = SerializerOptions(
-        flow=FlatQuadsFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+        flow=DatasetsFrameFlow(), logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS
     )
     grouped_stream_to_file((x for x in [sink]), out, options=opts)
     back_sinks = list(parse_jelly_grouped(io.BytesIO(out.getvalue())))
@@ -99,8 +101,8 @@ def test_parse_jelly_grouped() -> None:
     sink = _triple_sink()
     out = io.BytesIO()
     opts = SerializerOptions(
-        flow=FlatTriplesFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        flow=GraphsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
     )
     grouped_stream_to_file((x for x in [sink]), out, options=opts)
     back = parse_jelly_to_graph(io.BytesIO(out.getvalue()))
