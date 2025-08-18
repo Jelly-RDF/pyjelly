@@ -29,13 +29,15 @@ This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-
 
 ### Including namespace declarations (prefixes)
 
-Jelly uses RDFLib’s namespace manager. Prefix declarations are written only if the graph has prefixes bound to it. Bind the prefixes you need before serializing:
+Jelly uses RDFLib’s namespace manager. When you parse a `.ttl` that defines prefixes, those prefixes are preserved on round-trip (TTL → Jelly → RDFLib).  
+If you build a graph programmatically, bind any prefixes you want to include before serializing.
 
 {{ code_example('rdflib/08_namespaces.py') }}
 
 !!! tip
     For an existing graph you can (re)bind a prefix just before saving:
     `g.namespace_manager.bind("ex", EX, replace=True)`.
+
 
 ### Parsing a graph
 
