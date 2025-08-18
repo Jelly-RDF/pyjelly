@@ -27,6 +27,16 @@ To serialize a graph to the Jelly format see:
 
 This creates a [delimited Jelly stream]({{ proto_link("user-guide/#delimited-vs-non-delimited-jelly") }}) using default options.
 
+### Including namespace declarations (prefixes)
+
+Jelly uses RDFLib’s namespace manager. Prefix declarations are written only if the graph has prefixes bound to it. Bind the prefixes you need before serializing:
+
+{{ code_example('rdflib/08_namespaces.py') }}
+
+!!! tip
+    For an existing graph you can (re)bind a prefix just before saving:
+    `g.namespace_manager.bind("ex", EX, replace=True)`.
+
 ### Parsing a graph
 
 To load RDF data from a `.jelly` file see:
