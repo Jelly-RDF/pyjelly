@@ -10,8 +10,8 @@ def generate_sample_sinks():
         IRI("http://example.com/humidity"),
         IRI(f"http://example.com/{random.random()}"),
     )
-    for i in range(10):
-        sink = GenericStatementSink(identifier=f"graph_{i}")
+    for _ in range(10):
+        sink = GenericStatementSink()
         sink.add(Triple(*content))
         yield sink
 
