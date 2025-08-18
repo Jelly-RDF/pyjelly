@@ -1,7 +1,7 @@
 from pyjelly.integrations.generic.generic_sink import *
 
-# Create a generic sink object, identifier is optional
-generic_sink = GenericStatementSink(identifier="my_graph")
+# Create a generic sink object
+generic_sink = GenericStatementSink()
 
 # Load triples from the Jelly file
 with open("output.jelly", "rb") as in_file:
