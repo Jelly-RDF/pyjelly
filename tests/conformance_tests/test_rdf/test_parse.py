@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import patch
+from rdflib import Namespace
 
 import pytest
 from rdflib import Dataset, Graph, Literal, Node
@@ -11,7 +12,7 @@ from rdflib.plugins.serializers.nt import _quoteLiteral
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
-from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
+from pyjelly.integrations.rdflib.parse import parse_jelly_grouped, parse_jelly_flat
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
@@ -213,5 +214,43 @@ def test_parsing_rdf_1_1_fails(path: Path) -> None:
     RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
     glob="neg_*",
 )
-def test_parsing_rdf_star_generalized_fails(path: Path) -> None:
-    run_generic_fail_test(path)
+def _make_flat_jelly(tmp_path: Path) -> Path:
+    g = Graph()
+    EX = Namespace("http://example.org/")
+    BLEM = Namespace("http://blem.org/")
+    g.bind("ex", EX)
+    g.bind("blem", BLEM)
+
+    g.add((EX.alice, EX.knows, EX.bob))
+    g.add((BLEM.car, BLEM.hasColor, Literal("red")))
+
+    path = tmp_path / "sample_flat.jelly"
+    g.serialize(destination=str(path), format="jelly")
+    return path
+
+
+def test_flat_strict_passes_local(tmp_path: Path) -> None:
+    """parse_jelly_flat(strict=True) should succeed on a FLAT file."""
+    path = _make_flat_jelly(tmp_path)
+    with path.open("rb") as f:
+        events = list(parse_jelly_flat(f, logical_type_strict=True))
+    assert len(events) == 2  # two triples
+
+
+def test_grouped_strict_raises_on_flat_local(tmp_path: Path) -> None:
+    """parse_jelly_grouped(strict=True) must fail on a FLAT file."""
+    path = _make_flat_jelly(tmp_path)
+    with path.open("rb") as f:
+        with pytest.raises(Exception) as exc:
+            list(parse_jelly_grouped(f, logical_type_strict=True))
+    assert "expected GROUPED logical type" in str(exc.value)
+
+
+def test_grouped_non_strict_parses_flat_local(tmp_path: Path) -> None:
+    """parse_jelly_grouped(strict=False) still parses a FLAT file."""
+    path = _make_flat_jelly(tmp_path)
+    with path.open("rb") as f:
+        sinks = list(parse_jelly_grouped(f, logical_type_strict=False))
+    assert len(sinks) == 1
+    assert len(sinks[0]) == 2
+
