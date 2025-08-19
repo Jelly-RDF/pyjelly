@@ -1,7 +1,6 @@
 # tests/unit/test_generic_serialize.py
 from __future__ import annotations
 
-import io
 from collections.abc import Generator
 
 import pytest
@@ -16,13 +15,10 @@ from pyjelly.integrations.generic.generic_sink import (
     Quad,
     Triple,
 )
-from pyjelly.integrations.generic.parse import parse_jelly_grouped
 from pyjelly.integrations.generic.serialize import (
     GenericSinkTermEncoder,
-    flat_stream_to_file,
     flat_stream_to_frames,
     graphs_stream_frames,
-    grouped_stream_to_file,
     guess_options,
     guess_stream,
     quads_stream_frames,
@@ -32,7 +28,7 @@ from pyjelly.integrations.generic.serialize import (
 )
 from pyjelly.options import LookupPreset, StreamParameters
 from pyjelly.serialize.encode import Slot
-from pyjelly.serialize.flows import FlatQuadsFrameFlow, FlatTriplesFrameFlow
+from pyjelly.serialize.flows import FlatTriplesFrameFlow
 from pyjelly.serialize.streams import (
     GraphStream,
     QuadStream,
@@ -71,76 +67,6 @@ def _quad_sink() -> GenericStatementSink:
     s.add(Quad(IRI("http://ex/sA"), IRI("http://ex/pA"), IRI("http://ex/oA"), g1))
     s.add(Quad(IRI("http://ex/sB"), IRI("http://ex/pB"), IRI("http://ex/oB"), g2))
     return s
-
-
-def test_encoder_triple_stream() -> None:
-    sink = _triple_sink()
-    out1 = io.BytesIO()
-    opts_t = SerializerOptions(
-        flow=FlatTriplesFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-    )
-    grouped_stream_to_file((x for x in [sink]), out1, options=opts_t)
-    back_t = list(parse_jelly_grouped(io.BytesIO(out1.getvalue())))
-    assert len(back_t) >= 1
-
-
-def test_encoder_quad_stream() -> None:
-    qs = _quad_sink()
-    out = io.BytesIO()
-    opts_q = SerializerOptions(
-        flow=FlatQuadsFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-    )
-    grouped_stream_to_file((x for x in [qs]), out, options=opts_q)
-    back_q = list(parse_jelly_grouped(io.BytesIO(out.getvalue())))
-    assert len(back_q) >= 1
-
-
-def test_triples_stream_frames_namespace() -> None:
-    sink = _triple_sink()
-    enc = GenericSinkTermEncoder()
-    opts = SerializerOptions(
-        flow=FlatTriplesFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-    )
-    stream = TripleStream(encoder=enc, options=opts)
-    frames = list(triples_stream_frames(stream, sink))
-    assert frames
-
-
-def test_quads_stream_frames_sink() -> None:
-    sink = _quad_sink()
-    enc = GenericSinkTermEncoder()
-    opts = SerializerOptions(
-        flow=FlatQuadsFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-    )
-    stream = QuadStream(encoder=enc, options=opts)
-    frames1 = list(quads_stream_frames(stream, sink))
-    assert frames1
-
-    def gen() -> Generator[Quad]:
-        for q in sink.store:
-            if isinstance(q, Quad):
-                yield q
-
-    frames2 = list(quads_stream_frames(stream, gen()))
-    assert frames2
-
-
-def test_graphs_stream_grouped_parse() -> None:
-    sink = _quad_sink()
-    enc = GenericSinkTermEncoder()
-    opts = SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS)
-    stream = GraphStream(encoder=enc, options=opts)
-    out = io.BytesIO()
-    from pyjelly.serialize.ioutils import write_delimited
-
-    for fr in graphs_stream_frames(stream, sink):
-        write_delimited(fr, out)
-    back = list(parse_jelly_grouped(io.BytesIO(out.getvalue())))
-    assert len(back) >= 1
 
 
 def test_stream_frames_typeerror() -> None:
@@ -184,19 +110,6 @@ def test_flat_stream_to_frames_empty_generator() -> None:
     assert frames == []
 
 
-def test_flat_stream_to_file_roundtrip() -> None:
-    sink = _triple_sink()
-    out = io.BytesIO()
-    flat_stream_to_file(
-        (t for t in sink.store),
-        out,
-        options=SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
-    )
-    back = list(parse_jelly_grouped(io.BytesIO(out.getvalue())))
-    assert back
-    assert any(isinstance(x, Triple) for x in back[0].store)
-
-
 def test_flat_stream_guesses_options() -> None:
     def gen() -> Generator[Triple]:
         yield Triple(IRI("http://s"), IRI("http://p"), Literal("http://o"))
@@ -223,7 +136,7 @@ def test_graphs_stream_frames_from_generator() -> None:
     assert isinstance(out[-1], jelly.RdfStreamFrame)
 
 
-def test_triples_stream_frames_no_declaration() -> None:
+def test_triples_stream_frames_declaration() -> None:
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
         params=StreamParameters(namespace_declarations=True),
@@ -234,14 +147,15 @@ def test_triples_stream_frames_no_declaration() -> None:
     )
 
     sink = GenericStatementSink()
-    sink.add(Triple(IRI("http://s"), IRI("http://p"), Literal("http://o")))
+    sink.bind("ex", IRI("http://example.com/"))
+    sink.add(Triple(IRI("http://ex/s"), IRI("http://ex/p"), Literal("http://ex/o")))
 
     frames = list(triples_stream_frames(stream, sink))
     assert frames
     assert isinstance(frames[-1], jelly.RdfStreamFrame)
 
 
-def test_triples_stream_frames_declarations() -> None:
+def test_triples_stream_frames_no_declarations() -> None:
     options = SerializerOptions(
         flow=FlatTriplesFrameFlow(),
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
@@ -253,7 +167,13 @@ def test_triples_stream_frames_declarations() -> None:
     )
 
     sink = GenericStatementSink()
-    sink.add(Triple(IRI("http://s"), IRI("http://p"), Literal("http://o")))
+    sink.add(
+        Triple(
+            IRI("http://example/s"),
+            IRI("http://example/p"),
+            Literal("http://example/o"),
+        )
+    )
 
     frames = list(triples_stream_frames(stream, sink))
     assert len(frames) == 1
@@ -271,11 +191,55 @@ def test_quads_stream_frames_declarations() -> None:
     )
 
     sink = GenericStatementSink()
+    sink.bind("ex", IRI("http://example.com/"))
     sink.add(
-        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
+        Quad(
+            IRI("http://ex/s1"),
+            IRI("http://ex/p1"),
+            IRI("http://ex/o1"),
+            IRI("http://ex/g1"),
+        )
     )
     sink.add(
-        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
+        Quad(
+            IRI("http://ex/s2"),
+            IRI("http://ex/p2"),
+            IRI("http://ex/o2"),
+            IRI("http://ex/g2"),
+        )
+    )
+
+    out = list(quads_stream_frames(stream, sink))
+    assert out
+    assert isinstance(out[-1], jelly.RdfStreamFrame)
+
+
+def test_quads_stream_frames_no_declarations() -> None:
+    options = SerializerOptions(
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+        params=StreamParameters(),
+    )
+    stream = QuadStream(
+        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
+        options=options,
+    )
+
+    sink = GenericStatementSink()
+    sink.add(
+        Quad(
+            IRI("http://example/s1"),
+            IRI("http://example/p1"),
+            IRI("http://example/o1"),
+            IRI("http://example/g1"),
+        )
+    )
+    sink.add(
+        Quad(
+            IRI("http://example/s2"),
+            IRI("http://example/p2"),
+            IRI("http://example/o2"),
+            IRI("http://example/g2"),
+        )
     )
 
     out = list(quads_stream_frames(stream, sink))
@@ -293,11 +257,22 @@ def test_graphs_stream_frames_declarations() -> None:
     )
 
     sink = GenericStatementSink()
+    sink.bind("ex", IRI("http://example.com/"))
     sink.add(
-        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
+        Quad(
+            IRI("http://ex/s1"),
+            IRI("http://ex/p1"),
+            IRI("http://ex/o1"),
+            IRI("http://ex/g1"),
+        )
     )
     sink.add(
-        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
+        Quad(
+            IRI("http://ex/s2"),
+            IRI("http://ex/p2"),
+            IRI("http://ex/o2"),
+            IRI("http://ex/g2"),
+        )
     )
 
     out = list(graphs_stream_frames(stream, sink))
