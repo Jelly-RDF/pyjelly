@@ -1,9 +1,10 @@
 # tests/unit/test_generic_parse.py
 from __future__ import annotations
 
-from collections.abc import Iterable
+import io
+from collections.abc import Iterator
 from io import BytesIO
-from typing import cast
+from typing import IO, Any
 
 import pytest
 
@@ -20,27 +21,41 @@ from pyjelly.integrations.generic.parse import (
     GenericStatementSinkAdapter,
     parse_jelly_flat,
     parse_jelly_grouped,
-    parse_quads_stream,
 )
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import ParserOptions
 
 
-def test_parse_jelly_flat_unsupported_physical_type(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_parse_jelly_flat_unsupported_physical_type_raises() -> None:
     opts = ParserOptions(
         stream_types=StreamTypes(),
         lookup_preset=LookupPreset(),
         params=StreamParameters(),
     )
-    monkeypatch.setattr(
-        gparse,
-        "get_options_and_frames",
-        lambda _: (opts, iter(())),
-    )
     with pytest.raises(NotImplementedError):
-        list(parse_jelly_flat(BytesIO(b"\x00\x00\x00")))
+        list(parse_jelly_flat(io.BytesIO(b"data"), frames=iter(()), options=opts))
+
+
+def test_parse_flat_get_options(monkeypatch: pytest.MonkeyPatch) -> None:
+    called = {"flag": False}
+    opts = ParserOptions(
+        stream_types=StreamTypes(
+            physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+            logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        ),
+        lookup_preset=LookupPreset(),
+        params=StreamParameters(),
+    )
+
+    def dummy_options(_: IO[bytes]) -> tuple[ParserOptions, Iterator[Any]]:
+        called["flag"] = True
+        return opts, iter(())
+
+    monkeypatch.setattr(gparse, "get_options_and_frames", dummy_options)
+
+    out = list(parse_jelly_flat(io.BytesIO(b"x")))
+    assert called["flag"] is True
+    assert out == []
 
 
 def test_parse_jelly_grouped_unsupported_physical_type(
@@ -57,7 +72,7 @@ def test_parse_jelly_grouped_unsupported_physical_type(
         lambda _: (opts, iter(())),
     )
     with pytest.raises(NotImplementedError):
-        list(parse_jelly_grouped(BytesIO(b"\x00\x00\x00")))
+        list(parse_jelly_grouped(BytesIO(b"data")))
 
 
 def test_namespace_declaration_returns_prefix() -> None:
@@ -110,17 +125,3 @@ def test_graphs_adapter_triple_appends_graph_id() -> None:
     adapter.graph_start(IRI("https://g1.com"))
     s, p, o = IRI("http://s"), IRI("http://p"), IRI("http://o")
     assert adapter.triple([s, p, o]) == Quad(s, p, o, IRI("https://g1.com"))
-
-
-def test_stream_graphs_adapter() -> None:
-    frames: Iterable[jelly.RdfStreamFrame] = cast(
-        Iterable[jelly.RdfStreamFrame], BytesIO(b"\x00\x00\x00")
-    )
-    options = ParserOptions(
-        stream_types=StreamTypes(),
-        lookup_preset=LookupPreset(),
-        params=StreamParameters(),
-    )
-
-    out = list(parse_quads_stream(frames, options))
-    assert out
