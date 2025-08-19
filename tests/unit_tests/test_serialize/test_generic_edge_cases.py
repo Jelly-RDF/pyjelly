@@ -7,9 +7,7 @@ import pytest
 
 from pyjelly import jelly
 from pyjelly.integrations.generic.generic_sink import (
-    DEFAULT_GRAPH_IDENTIFIER,
     IRI,
-    BlankNode,
     GenericStatementSink,
     Literal,
     Quad,
@@ -37,38 +35,6 @@ from pyjelly.serialize.streams import (
 )
 
 
-def _triple_sink() -> GenericStatementSink:
-    s = GenericStatementSink()
-    s.bind("ex", IRI("http://example.com/"))
-    t = Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), IRI("http://ex/o1"))
-    s.add(Triple(IRI("http://ex/s"), IRI("http://ex/p"), Literal("x", "en")))
-    s.add(
-        Triple(
-            BlankNode("b"), IRI("http://ex/p"), Literal("2000", datatype="http://date")
-        )
-    )
-    s.add(Triple(IRI("http://ex/s2"), IRI("http://ex/p2"), t))
-    return s
-
-
-def _quad_sink() -> GenericStatementSink:
-    s = GenericStatementSink()
-    s.bind("ex", IRI("http://example.com/"))
-    g1 = IRI("http://ex/g1")
-    g2 = IRI("http://ex/g2")
-    s.add(
-        Quad(
-            IRI("http://ex/s"),
-            IRI("http://ex/p"),
-            IRI("http://ex/o"),
-            DEFAULT_GRAPH_IDENTIFIER,
-        )
-    )
-    s.add(Quad(IRI("http://ex/sA"), IRI("http://ex/pA"), IRI("http://ex/oA"), g1))
-    s.add(Quad(IRI("http://ex/sB"), IRI("http://ex/pB"), IRI("http://ex/oB"), g2))
-    return s
-
-
 def test_stream_frames_typeerror() -> None:
     with pytest.raises(TypeError):
         list(stream_frames(object(), GenericStatementSink()))  # type: ignore[arg-type]
@@ -90,6 +56,28 @@ def test_split_to_graphs() -> None:
 
 
 def test_guess_options_and_stream() -> None:
+    def _triple_sink() -> GenericStatementSink:
+        s = GenericStatementSink()
+        s.bind("ex", IRI("http://example.com/"))
+        s.add(Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), IRI("http://ex/o1")))
+        s.add(
+            Triple(IRI("http://ex/s2"), IRI("http://ex/p2"), Literal("example_value"))
+        )
+        return s
+
+    def _quad_sink() -> GenericStatementSink:
+        s = GenericStatementSink()
+        s.bind("ex", IRI("http://example.com/"))
+        g1 = IRI("http://ex/g1")
+        g2 = IRI("http://ex/g2")
+        s.add(
+            Quad(IRI("http://ex/sg1"), IRI("http://ex/pg1"), IRI("http://ex/og1"), g1)
+        )
+        s.add(
+            Quad(IRI("http://ex/sg2"), IRI("http://ex/pg2"), IRI("http://ex/og2"), g2)
+        )
+        return s
+
     t_sink = _triple_sink()
     q_sink = _quad_sink()
     t_opts = guess_options(t_sink)
