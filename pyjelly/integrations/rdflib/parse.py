@@ -313,6 +313,8 @@ def parse_jelly_grouped(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = lambda: Graph(),
     dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
+    *,
+    logical_type_strict: bool = False,
 ) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected physical type.
@@ -337,6 +339,14 @@ def parse_jelly_grouped(
 
     """
     options, frames = get_options_and_frames(inp)
+
+    if logical_type_strict:
+        if options is None or options.stream_types is None:
+            raise JellyConformanceError("strict logical type check requires options.stream_types")
+        if options.stream_types.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS:
+            lt_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+            raise JellyConformanceError(f"expected GROUPED logical type (GRAPHS), got {lt_name}")
+
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for graph in parse_triples_stream(
             frames=frames,
@@ -424,6 +434,8 @@ def parse_jelly_flat(
     inp: IO[bytes],
     frames: Iterable[jelly.RdfStreamFrame] | None = None,
     options: ParserOptions | None = None,
+    *,
+    logical_type_strict: bool = False,
 ) -> Generator[Statement | Prefix]:
     """
     Parse jelly file with FLAT logical type into a Generator of stream events.
@@ -444,6 +456,13 @@ def parse_jelly_flat(
     """
     if not frames or not options:
         options, frames = get_options_and_frames(inp)
+
+    if logical_type_strict:
+        if options is None or options.stream_types is None:
+            raise JellyConformanceError("strict logical type check requires options.stream_types")
+        if not options.stream_types.flat:
+            lt_name = jelly.LogicalStreamType.Name(options.stream_types.logical_type)
+            raise JellyConformanceError(f"expected FLAT logical type (TRIPLES/QUADS), got {lt_name}")
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for triples in parse_triples_stream(frames=frames, options=options):
