@@ -1488,7 +1488,7 @@ docs = [
     { name = "mkdocstrings", specifier = ">=0.29.1" },
     { name = "mkdocstrings-python", specifier = ">=1.16.10" },
 ]
-extras = [{ name = "pyjelly", extras = ["rdflib"] }]
+extras = [{ name = "pyjelly", extras = ["rdflib", "kgtk"] }]
 profiling = [
     { name = "memray", specifier = ">=1.16.0" },
     { name = "scalene", specifier = ">=1.5.51" },

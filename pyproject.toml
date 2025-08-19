@@ -45,6 +45,7 @@ Changelog = "https://github.com/Jelly-RDF/pyjelly/releases"
 
 [project.optional-dependencies]
 rdflib = ["rdflib>=7.1.4"]
+kgtk = ["kgtk>=1.0.0"]
 
 [project.entry-points."rdf.plugins.parser"]
 jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
@@ -53,6 +54,9 @@ jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
 [project.entry-points."rdf.plugins.serializer"]
 jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
+
+[project.entry-points."kgtk.plugins.parser"]
+"application/x-jelly-kgtk" = "pyjelly.integrations.kgtk.parse:KGTKJellyParser"
 
 [dependency-groups]
 dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
@@ -70,7 +74,7 @@ test = [
     "pytest-subtests>=0.14.1",
     "pytest-sugar>=1.0.0",
 ]
-extras = ["pyjelly[rdflib]"] # workaround for astral-sh/uv#8607
+extras = ["pyjelly[rdflib, kgtk]"] # workaround for astral-sh/uv#8607
 types = ["types-protobuf>=5.29.1.20250315"]
 docs = [
     "markdown-exec>=1.10.3",
