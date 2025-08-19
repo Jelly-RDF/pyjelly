@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ from rdflib import Dataset, Graph, Literal, Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
+from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
@@ -240,3 +242,69 @@ def test_grouped_non_strict_parses_flat_local(tmp_path: Path) -> None:
         sinks = list(parse_jelly_grouped(f, logical_type_strict=False))
     assert len(sinks) == 1
     assert len(sinks[0]) == expected_len
+
+
+def test_flat_strict_raises_when_no_stream_types() -> None:
+    dummy = b"x"
+    options = type("Opt", (), {"stream_types": None})()
+    frames: list[object] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(JellyConformanceError, match="requires options.stream_types"),
+    ):
+        list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=True))
+
+
+def test_grouped_strict_raises_when_no_stream_types() -> None:
+    dummy = b"x"
+    options = type("Opt", (), {"stream_types": None})()
+    frames: list[object] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(JellyConformanceError, match="requires options.stream_types"),
+    ):
+        list(parse_jelly_grouped(io.BytesIO(dummy), logical_type_strict=True))
+
+
+def test_grouped_strict_raises_when_unspecified_logical() -> None:
+    class ST:
+        flat = False
+        logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+        physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+
+    dummy = b"x"
+    options = type("Opt", (), {"stream_types": ST()})()
+    frames: list[object] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(JellyConformanceError, match="expected GROUPED logical type"),
+    ):
+        list(parse_jelly_grouped(io.BytesIO(dummy), logical_type_strict=True))
+
+
+def test_flat_not_implemented_physical_raises() -> None:
+    class ST:
+        flat = True
+        logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        physical_type = jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED
+
+    dummy = b"x"
+    options = type("Opt", (), {"stream_types": ST()})()
+    frames: list[object] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(NotImplementedError, match="is not supported"),
+    ):
+        list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=False))
