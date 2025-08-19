@@ -164,8 +164,8 @@ def test_graph_start_end_id() -> None:
             params=StreamParameters(),
         )
     )
-    adapter.graph_start("g1")
-    assert adapter._graph_id == "g1"
+    adapter.graph_start(IRI("https://g1.com"))
+    assert adapter._graph_id == IRI("https://g1.com")
     adapter.graph_end()
     assert adapter._graph_id is None
 
@@ -190,9 +190,9 @@ def test_graphs_adapter_triple_appends_graph_id() -> None:
             params=StreamParameters(),
         )
     )
-    adapter.graph_start("g1")
+    adapter.graph_start(IRI("https://g1.com"))
     s, p, o = IRI("http://s"), IRI("http://p"), IRI("http://o")
-    assert adapter.triple([s, p, o]) == Quad(s, p, o, "g1")
+    assert adapter.triple([s, p, o]) == Quad(s, p, o, IRI("https://g1.com"))
 
 
 def test_stream_graphs_adapter() -> None:
@@ -206,4 +206,4 @@ def test_stream_graphs_adapter() -> None:
     )
 
     out = list(parse_quads_stream(frames, options))
-    assert isinstance(out, list)
+    assert out

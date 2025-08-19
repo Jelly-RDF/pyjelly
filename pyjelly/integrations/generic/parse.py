@@ -122,7 +122,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
 
     """
 
-    _graph_id: str | None
+    _graph_id: str | IRI | None
 
     def __init__(
         self,
@@ -138,7 +138,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
             raise JellyConformanceError(msg)
 
     @override
-    def graph_start(self, graph_id: str) -> None:
+    def graph_start(self, graph_id: str | IRI) -> None:
         self._graph_id = graph_id
 
     @override
