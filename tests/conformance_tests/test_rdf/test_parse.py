@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import io
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -31,7 +33,6 @@ from tests.utils.rdf_test_cases import (
 )
 
 EXPECTED_TRIPLES_IN_SAMPLE = 2
-
 
 
 def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
@@ -217,8 +218,6 @@ def test_parsing_rdf_1_1_fails(path: Path) -> None:
     RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
     glob="neg_*",
 )
-
-
 def _make_flat_jelly(tmp_path: Path) -> Path:
     g = Graph()
     ex = Namespace("http://example.org/")
@@ -243,8 +242,9 @@ def test_flat_strict_passes_local(tmp_path: Path) -> None:
 
 def test_grouped_strict_raises_on_flat_local(tmp_path: Path) -> None:
     path = _make_flat_jelly(tmp_path)
-    with path.open("rb") as f, pytest.raises(
-        JellyConformanceError, match="expected GROUPED logical type"
+    with (
+        path.open("rb") as f,
+        pytest.raises(JellyConformanceError, match="expected GROUPED logical type"),
     ):
         list(parse_jelly_grouped(f, logical_type_strict=True))
 
@@ -257,3 +257,35 @@ def test_grouped_non_strict_parses_flat_local(tmp_path: Path) -> None:
     assert len(sinks[0]) == EXPECTED_TRIPLES_IN_SAMPLE
 
 
+def test_flat_strict_raises_when_no_stream_types() -> None:
+    dummy_bytes = b"fake-jelly-data"
+    options = type("Options", (), {"stream_types": None})()
+    frames: list[Any] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(
+            JellyConformanceError,
+            match="strict logical type check requires options.stream_types",
+        ),
+    ):
+        list(parse_jelly_flat(io.BytesIO(dummy_bytes), logical_type_strict=True))
+
+
+def test_grouped_strict_raises_when_no_stream_types() -> None:
+    dummy_bytes = b"fake-jelly-data"
+    options = type("Options", (), {"stream_types": None})()
+    frames: list[Any] = []
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
+        pytest.raises(
+            JellyConformanceError,
+            match="strict logical type check requires options.stream_types",
+        ),
+    ):
+        list(parse_jelly_grouped(io.BytesIO(dummy_bytes), logical_type_strict=True))
