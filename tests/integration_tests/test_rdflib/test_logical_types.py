@@ -5,6 +5,8 @@ from rdflib import Dataset, Graph
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 
 from pyjelly import jelly
+from pyjelly.errors import JellyConformanceError
+from pyjelly.integrations.rdflib.parse import parse_jelly_flat, parse_jelly_grouped
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions, Stream
 
@@ -87,3 +89,54 @@ def test_graphs() -> None:
     for g_out, g_in in zip(graphs_out, graphs_in):
         assert len(g_out) == len(g_in)
         assert set(g_out) == set(g_in)
+
+
+def _make_flat_triples_bytes() -> bytes:
+    g_out = Graph()
+    g_out.parse(source="tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
+    return g_out.serialize(encoding="jelly", format="jelly")
+
+
+def _make_grouped_graphs_bytes() -> bytes:
+    ds_out = Dataset()
+    g1 = Graph(identifier="g1")
+    g1.parse(source="tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
+    g2 = Graph(identifier="g2")
+    g2.parse(source="tests/e2e_test_cases/triples_rdf_1_1/p2_ontology.nt")
+    ds_out.add_graph(g1)
+    ds_out.add_graph(g2)
+
+    opts = SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS)
+    return ds_out.serialize(options=opts, encoding="jelly", format="jelly")
+
+
+def test_grouped_strict_raises_on_flat_triples() -> None:
+    out = _make_flat_triples_bytes()
+    with pytest.raises(JellyConformanceError, match="expected GROUPED logical type"):
+        list(parse_jelly_grouped(io.BytesIO(out), logical_type_strict=True))
+
+
+def test_grouped_non_strict_parses_flat_triples() -> None:
+    out = _make_flat_triples_bytes()
+    sinks = list(parse_jelly_grouped(io.BytesIO(out), logical_type_strict=False))
+    assert len(sinks) == 1
+    g_check = Graph()
+    g_check.parse(source="tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
+    assert len(sinks[0]) == len(g_check)
+
+
+def test_flat_strict_raises_on_grouped_graphs() -> None:
+    out = _make_grouped_graphs_bytes()
+    with pytest.raises(JellyConformanceError, match="expected FLAT logical type"):
+        list(parse_jelly_flat(io.BytesIO(out), logical_type_strict=True))
+
+
+def test_flat_strict_passes_on_flat_quads() -> None:
+    ds_out = Dataset()
+    ds_out.parse(source="tests/e2e_test_cases/quads_rdf_1_1/weather-quads.nq")
+
+    stream = QuadStream.for_rdflib()
+    out = ds_out.serialize(encoding="jelly", format="jelly", stream=stream)
+
+    events = list(parse_jelly_flat(io.BytesIO(out), logical_type_strict=True))
+    assert len(events) == len(set(ds_out))

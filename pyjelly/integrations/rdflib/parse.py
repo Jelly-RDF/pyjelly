@@ -330,8 +330,9 @@ def parse_jelly_grouped(
             By default creates an empty in-memory Dataset,
             but you can pass something else here.
         logical_type_strict (bool): If True, validate the *logical* type in
-            stream options and require GRAPHS. Otherwise, only the physical type
-            is used to route parsing.
+            stream options and require a grouped logical type. Otherwise, only the
+            physical type is used to route parsing.
+
 
 
     Raises:
@@ -346,15 +347,18 @@ def parse_jelly_grouped(
 
     st = getattr(options, "stream_types", None)
     if logical_type_strict and (
-        st is None or st.logical_type != jelly.LOGICAL_STREAM_TYPE_GRAPHS
+        st is None
+        or st.logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+        or st.flat
     ):
         lt_name = (
             "UNKNOWN" if st is None else jelly.LogicalStreamType.Name(st.logical_type)
         )
+
         msg = (
             "strict logical type check requires options.stream_types"
             if st is None
-            else f"expected GROUPED logical type (GRAPHS), got {lt_name}"
+            else f"expected GROUPED logical type, got {lt_name}"
         )
         raise JellyConformanceError(msg)
 
@@ -469,7 +473,7 @@ def parse_jelly_flat(
         Generator[Statement | Prefix]: Generator of stream events
 
     """
-    if not frames or not options:
+    if frames is None or options is None:
         options, frames = get_options_and_frames(inp)
 
     st = getattr(options, "stream_types", None)

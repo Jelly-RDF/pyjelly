@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import io
 from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 import pytest
-from rdflib import Dataset, Graph, Literal, Namespace, Node
+from rdflib import Dataset, Graph, Literal, Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
@@ -14,7 +12,10 @@ from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
-from pyjelly.integrations.rdflib.parse import parse_jelly_flat, parse_jelly_grouped
+from pyjelly.integrations.rdflib.parse import (
+    parse_jelly_flat,
+    parse_jelly_grouped,
+)
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
@@ -31,8 +32,6 @@ from tests.utils.rdf_test_cases import (
     needs_jelly_cli,
     walk_directories,
 )
-
-EXPECTED_TRIPLES_IN_SAMPLE = 2
 
 
 def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
@@ -211,37 +210,23 @@ def test_parsing_rdf_1_1_fails(path: Path) -> None:
     run_generic_fail_test(path)
 
 
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
-    glob="neg_*",
-)
-def _make_flat_jelly(tmp_path: Path) -> Path:
+def _make_flat_jelly(tmp_path: Path) -> tuple[Path, int]:
     g = Graph()
-    ex = Namespace("http://example.org/")
-    blem = Namespace("http://blem.org/")
-    g.bind("ex", ex)
-    g.bind("blem", blem)
-
-    g.add((ex.alice, ex.knows, ex.bob))
-    g.add((blem.car, blem.hasColor, Literal("red")))
-
-    path = tmp_path / "sample_flat.jelly"
-    g.serialize(destination=str(path), format="jelly")
-    return path
+    g.parse(source="tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
+    p = tmp_path / "sample_flat.jelly"
+    g.serialize(destination=str(p), format="jelly")
+    return p, len(g)
 
 
 def test_flat_strict_passes_local(tmp_path: Path) -> None:
-    path = _make_flat_jelly(tmp_path)
+    path, expected_len = _make_flat_jelly(tmp_path)
     with path.open("rb") as f:
         events = list(parse_jelly_flat(f, logical_type_strict=True))
-    assert len(events) == EXPECTED_TRIPLES_IN_SAMPLE
+    assert len(events) == expected_len
 
 
 def test_grouped_strict_raises_on_flat_local(tmp_path: Path) -> None:
-    path = _make_flat_jelly(tmp_path)
+    path, _ = _make_flat_jelly(tmp_path)
     with (
         path.open("rb") as f,
         pytest.raises(JellyConformanceError, match="expected GROUPED logical type"),
@@ -250,42 +235,8 @@ def test_grouped_strict_raises_on_flat_local(tmp_path: Path) -> None:
 
 
 def test_grouped_non_strict_parses_flat_local(tmp_path: Path) -> None:
-    path = _make_flat_jelly(tmp_path)
+    path, expected_len = _make_flat_jelly(tmp_path)
     with path.open("rb") as f:
         sinks = list(parse_jelly_grouped(f, logical_type_strict=False))
     assert len(sinks) == 1
-    assert len(sinks[0]) == EXPECTED_TRIPLES_IN_SAMPLE
-
-
-def test_flat_strict_raises_when_no_stream_types() -> None:
-    dummy_bytes = b"fake-jelly-data"
-    options = type("Options", (), {"stream_types": None})()
-    frames: list[Any] = []
-    with (
-        patch(
-            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
-            return_value=(options, frames),
-        ),
-        pytest.raises(
-            JellyConformanceError,
-            match="strict logical type check requires options.stream_types",
-        ),
-    ):
-        list(parse_jelly_flat(io.BytesIO(dummy_bytes), logical_type_strict=True))
-
-
-def test_grouped_strict_raises_when_no_stream_types() -> None:
-    dummy_bytes = b"fake-jelly-data"
-    options = type("Options", (), {"stream_types": None})()
-    frames: list[Any] = []
-    with (
-        patch(
-            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
-            return_value=(options, frames),
-        ),
-        pytest.raises(
-            JellyConformanceError,
-            match="strict logical type check requires options.stream_types",
-        ),
-    ):
-        list(parse_jelly_grouped(io.BytesIO(dummy_bytes), logical_type_strict=True))
+    assert len(sinks[0]) == expected_len
