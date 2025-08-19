@@ -45,9 +45,9 @@ def test_split_to_graphs() -> None:
     g2 = IRI("http://g2")
 
     def gen() -> Generator[Quad]:
-        yield Quad(IRI("s1"), IRI("p1"), IRI("o1"), g1)
-        yield Quad(IRI("s2"), IRI("p2"), IRI("o2"), g1)
-        yield Quad(IRI("s3"), IRI("p3"), IRI("o3"), g2)
+        yield Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), g1)
+        yield Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), g1)
+        yield Quad(IRI("http://s3"), IRI("http://p3"), IRI("http://o3"), g2)
 
     graphs = list(split_to_graphs(gen()))
     assert len(graphs) == 2
