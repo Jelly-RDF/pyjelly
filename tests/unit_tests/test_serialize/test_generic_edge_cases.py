@@ -17,6 +17,7 @@ from pyjelly.integrations.generic.serialize import (
     GenericSinkTermEncoder,
     flat_stream_to_frames,
     graphs_stream_frames,
+    grouped_stream_to_frames,
     guess_options,
     guess_stream,
     quads_stream_frames,
@@ -26,6 +27,10 @@ from pyjelly.integrations.generic.serialize import (
 )
 from pyjelly.options import LookupPreset, StreamParameters
 from pyjelly.serialize.encode import Slot
+from pyjelly.serialize.flows import (
+    DatasetsFrameFlow,
+    FlatQuadsFrameFlow,
+)
 from pyjelly.serialize.streams import (
     GraphStream,
     QuadStream,
@@ -219,3 +224,62 @@ def test_encoder_unsupported_raises() -> None:
     enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
     with pytest.raises(NotImplementedError, match="unsupported term type"):
         enc.encode_any(object(), Slot.subject)
+
+
+def test_graphs_stream_frames_emit_dataset() -> None:
+    opts = SerializerOptions(
+        flow=DatasetsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
+    )
+    stream = GraphStream(
+        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
+        options=opts,
+    )
+
+    sink = GenericStatementSink()
+    sink.add(
+        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
+    )
+    sink.add(
+        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
+    )
+    frames = list(graphs_stream_frames(stream, sink))
+    assert frames
+    assert isinstance(frames[-1], jelly.RdfStreamFrame)
+
+
+def test_graphs_stream_frames_emit_flat() -> None:
+    sink = GenericStatementSink()
+    sink.add(
+        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
+    )
+    sink.add(
+        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
+    )
+
+    opts = SerializerOptions(
+        flow=FlatQuadsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+    )
+    stream = GraphStream(
+        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
+        options=opts,
+    )
+    frames = list(graphs_stream_frames(stream, sink))
+    assert frames
+    assert isinstance(frames[-1], jelly.RdfStreamFrame)
+
+
+def test_grouped_stream_to_frames_init_stream_guess_options() -> None:
+    s1 = GenericStatementSink()
+    s1.add(Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), Literal("http://ex/o1")))
+    s2 = GenericStatementSink()
+    s2.add(Triple(IRI("http://ex/s2"), IRI("http://ex/p2"), Literal("http://ex/o2")))
+
+    def gen() -> Generator[GenericStatementSink, None, None]:
+        yield s1
+        yield s2
+
+    frames = list(grouped_stream_to_frames(gen(), options=None))
+    expected = 2
+    assert len(frames) == expected

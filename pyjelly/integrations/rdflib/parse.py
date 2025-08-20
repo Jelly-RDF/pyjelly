@@ -313,6 +313,8 @@ def parse_jelly_grouped(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = lambda: Graph(),
     dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
+    *,
+    logical_type_strict: bool = False,
 ) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected physical type.
@@ -327,6 +329,11 @@ def parse_jelly_grouped(
         dataset_factory (Callable): lambda to construct a Dataset.
             By default creates an empty in-memory Dataset,
             but you can pass something else here.
+        logical_type_strict (bool): If True, validate the *logical* type in
+            stream options and require a grouped logical type. Otherwise, only the
+            physical type is used to route parsing.
+
+
 
     Raises:
         NotImplementedError: is raised if a physical type is not implemented
@@ -337,6 +344,26 @@ def parse_jelly_grouped(
 
     """
     options, frames = get_options_and_frames(inp)
+
+    st = getattr(options, "stream_types", None)
+    if logical_type_strict and (
+        st is None
+        or st.logical_type == jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+        or st.flat
+    ):
+        lt_name = (
+            "UNSPECIFIED"
+            if st is None
+            else jelly.LogicalStreamType.Name(st.logical_type)
+        )
+
+        msg = (
+            "strict logical type check requires options.stream_types"
+            if st is None
+            else f"expected GROUPED logical type, got {lt_name}"
+        )
+        raise JellyConformanceError(msg)
+
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for graph in parse_triples_stream(
             frames=frames,
@@ -424,6 +451,8 @@ def parse_jelly_flat(
     inp: IO[bytes],
     frames: Iterable[jelly.RdfStreamFrame] | None = None,
     options: ParserOptions | None = None,
+    *,
+    logical_type_strict: bool = False,
 ) -> Generator[Statement | Prefix]:
     """
     Parse jelly file with FLAT logical type into a Generator of stream events.
@@ -434,6 +463,10 @@ def parse_jelly_flat(
             jelly frames if read before.
         options (ParserOptions | None): stream options
             if read before.
+        logical_type_strict (bool): If True, validate the *logical* type in
+            stream options and require FLAT_(TRIPLES|QUADS). Otherwise, only the
+            physical type is used to route parsing.
+
 
     Raises:
         NotImplementedError: if physical type is not supported
@@ -442,8 +475,22 @@ def parse_jelly_flat(
         Generator[Statement | Prefix]: Generator of stream events
 
     """
-    if not frames or not options:
+    if frames is None or options is None:
         options, frames = get_options_and_frames(inp)
+
+    st = getattr(options, "stream_types", None)
+    if logical_type_strict and (st is None or not st.flat):
+        lt_name = (
+            "UNSPECIFIED"
+            if st is None
+            else jelly.LogicalStreamType.Name(st.logical_type)
+        )
+        msg = (
+            "strict logical type check requires options.stream_types"
+            if st is None
+            else f"expected FLAT logical type (TRIPLES/QUADS), got {lt_name}"
+        )
+        raise JellyConformanceError(msg)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for triples in parse_triples_stream(frames=frames, options=options):
