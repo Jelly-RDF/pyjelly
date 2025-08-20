@@ -1,8 +1,10 @@
+import io
 import unittest
 from pathlib import Path
 
 import pytest
 
+from pyjelly import jelly
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
     BlankNode,
@@ -10,6 +12,12 @@ from pyjelly.integrations.generic.generic_sink import (
     Literal,
     Triple,
 )
+from pyjelly.integrations.generic.parse import parse_jelly_grouped, parse_jelly_to_graph
+from pyjelly.integrations.generic.serialize import (
+    SerializerOptions,
+    grouped_stream_to_file,
+)
+from pyjelly.serialize.flows import DatasetsFrameFlow, GraphsFrameFlow
 
 
 class TestGenericStatementSink(unittest.TestCase):
@@ -339,7 +347,7 @@ def test_iri_repr(iri: str, expected_repr: str) -> None:
     assert repr(iri_obj) == expected_repr
 
 
-def test_parse_serialize() -> None:
+def test_parse_serialize_flat() -> None:
     sink = GenericStatementSink()
     input_file_path = Path(
         "./tests/integration_tests/test_examples/temp/flat_output.jelly"
@@ -359,3 +367,56 @@ def test_parse_serialize() -> None:
     assert len(new_sink) == len(sink)
     for s_in, s_out in zip(sink.store, new_sink.store):
         assert repr(s_in) == repr(s_out)
+
+
+def test_parse_serialize_grouped_triples() -> None:
+    input_file_path = Path(
+        "./tests/integration_tests/test_examples/temp/temp_grouped_triples_input.jelly"
+    )
+    output_file_path = Path(
+        "./tests/integration_tests/test_examples/temp/grouped_triples_output.jelly"
+    )
+
+    data = input_file_path.read_bytes()
+    sinks_in = list(parse_jelly_grouped(io.BytesIO(data)))
+    assert len(sinks_in) == 1
+    sink = sinks_in[0]
+
+    opts = SerializerOptions(
+        flow=GraphsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+    )
+
+    with output_file_path.open("wb") as out_f:
+        grouped_stream_to_file((x for x in [sink]), out_f, options=opts)
+
+    with output_file_path.open("rb") as in_f:
+        back = parse_jelly_to_graph(in_f)
+
+    assert set(back) == set(sink)
+
+
+def test_parse_serialize_grouped_quads() -> None:
+    input_file_path = Path(
+        "./tests/integration_tests/test_examples/temp/temp_grouped_quads_input.jelly"
+    )
+    output_file_path = Path(
+        "./tests/integration_tests/test_examples/temp/grouped_quads_output.jelly"
+    )
+
+    data = input_file_path.read_bytes()
+    sinks_in = list(parse_jelly_grouped(io.BytesIO(data)))
+    assert len(sinks_in) == 1
+    sink = sinks_in[0]
+    opts = SerializerOptions(
+        flow=DatasetsFrameFlow(),
+        logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
+    )
+
+    with output_file_path.open("wb") as out_file:
+        grouped_stream_to_file((s for s in sinks_in), out_file, options=opts)
+
+    with output_file_path.open("rb") as in_file:
+        back = parse_jelly_to_graph(in_file)
+
+    assert set(back) == set(sink)
