@@ -390,8 +390,8 @@ def test_parse_serialize_grouped_triples() -> None:
     with output_file_path.open("wb") as out_f:
         grouped_stream_to_file((x for x in [sink]), out_f, options=opts)
 
-    with output_file_path.open("rb") as in_f:
-        back = parse_jelly_to_graph(in_f)
+    with output_file_path.open("rb") as in_file:
+        back = parse_jelly_to_graph(in_file)
 
     assert set(back) == set(sink)
 
