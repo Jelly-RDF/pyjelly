@@ -138,7 +138,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
             raise JellyConformanceError(msg)
 
     @override
-    def graph_start(self, graph_id: str | IRI) -> None:
+    def graph_start(self, graph_id: BlankNode) -> None:
         self._graph_id = graph_id
 
     @override
