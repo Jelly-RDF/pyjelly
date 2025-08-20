@@ -122,7 +122,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
 
     """
 
-    _graph_id: str | IRI | None
+    _graph_id: BlankNode | None
 
     def __init__(
         self,
