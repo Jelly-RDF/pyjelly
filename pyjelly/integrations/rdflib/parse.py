@@ -352,7 +352,9 @@ def parse_jelly_grouped(
         or st.flat
     ):
         lt_name = (
-            "UNKNOWN" if st is None else jelly.LogicalStreamType.Name(st.logical_type)
+            "UNSPECIFIED"
+            if st is None
+            else jelly.LogicalStreamType.Name(st.logical_type)
         )
 
         msg = (
@@ -479,7 +481,9 @@ def parse_jelly_flat(
     st = getattr(options, "stream_types", None)
     if logical_type_strict and (st is None or not st.flat):
         lt_name = (
-            "UNKNOWN" if st is None else jelly.LogicalStreamType.Name(st.logical_type)
+            "UNSPECIFIED"
+            if st is None
+            else jelly.LogicalStreamType.Name(st.logical_type)
         )
         msg = (
             "strict logical type check requires options.stream_types"
