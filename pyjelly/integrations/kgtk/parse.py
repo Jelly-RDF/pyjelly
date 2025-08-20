@@ -68,7 +68,7 @@ def _rdflib_term_to_kgtk_node(term: Any) -> KGTKNode:
     pass
 
 
-class _KgtkAdapter(Adapter):
+class KgtkAdapter(Adapter):
     def iri(self, iri: str) -> IRI:
         pass
     def bnode(self, bnode: str) -> BNode:
