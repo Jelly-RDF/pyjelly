@@ -26,7 +26,6 @@ from pyjelly.integrations.generic.serialize import (
 )
 from pyjelly.options import LookupPreset, StreamParameters
 from pyjelly.serialize.encode import Slot
-from pyjelly.serialize.flows import FlatTriplesFrameFlow
 from pyjelly.serialize.streams import (
     GraphStream,
     QuadStream,
@@ -124,10 +123,11 @@ def test_graphs_stream_frames_from_generator() -> None:
     assert isinstance(out[-1], jelly.RdfStreamFrame)
 
 
-def test_triples_stream_frames_declaration() -> None:
+@pytest.mark.parametrize("with_namespace", [True, False])
+def test_triples_stream_frames_parametrized(*, with_namespace: bool) -> None:
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-        params=StreamParameters(namespace_declarations=True),
+        params=StreamParameters(namespace_declarations=with_namespace),
     )
     stream = TripleStream(
         encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
@@ -135,7 +135,8 @@ def test_triples_stream_frames_declaration() -> None:
     )
 
     sink = GenericStatementSink()
-    sink.bind("ex", IRI("http://example.com/"))
+    if with_namespace:
+        sink.bind("ex", IRI("http://example.com/"))
     sink.add(Triple(IRI("http://ex/s"), IRI("http://ex/p"), Literal("http://ex/o")))
 
     frames = list(triples_stream_frames(stream, sink))
@@ -143,35 +144,11 @@ def test_triples_stream_frames_declaration() -> None:
     assert isinstance(frames[-1], jelly.RdfStreamFrame)
 
 
-def test_triples_stream_frames_no_declarations() -> None:
-    options = SerializerOptions(
-        flow=FlatTriplesFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-        params=StreamParameters(namespace_declarations=False),
-    )
-    stream = TripleStream(
-        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
-        options=options,
-    )
-
-    sink = GenericStatementSink()
-    sink.add(
-        Triple(
-            IRI("http://example/s"),
-            IRI("http://example/p"),
-            Literal("http://example/o"),
-        )
-    )
-
-    frames = list(triples_stream_frames(stream, sink))
-    assert len(frames) == 1
-    assert isinstance(frames[-1], jelly.RdfStreamFrame)
-
-
-def test_quads_stream_frames_declarations() -> None:
+@pytest.mark.parametrize("with_namespace", [True, False])
+def test_quads_stream_frames_parametrized(*, with_namespace: bool) -> None:
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-        params=StreamParameters(namespace_declarations=True),
+        params=StreamParameters(namespace_declarations=with_namespace),
     )
     stream = QuadStream(
         encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
@@ -179,7 +156,8 @@ def test_quads_stream_frames_declarations() -> None:
     )
 
     sink = GenericStatementSink()
-    sink.bind("ex", IRI("http://example.com/"))
+    if with_namespace:
+        sink.bind("ex", IRI("http://example.com/"))
     sink.add(
         Quad(
             IRI("http://ex/s1"),
@@ -202,42 +180,10 @@ def test_quads_stream_frames_declarations() -> None:
     assert isinstance(out[-1], jelly.RdfStreamFrame)
 
 
-def test_quads_stream_frames_no_declarations() -> None:
+@pytest.mark.parametrize("with_namespace", [True, False])
+def test_graphs_stream_frames_parametrized(*, with_namespace: bool) -> None:
     options = SerializerOptions(
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-        params=StreamParameters(),
-    )
-    stream = QuadStream(
-        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
-        options=options,
-    )
-
-    sink = GenericStatementSink()
-    sink.add(
-        Quad(
-            IRI("http://example/s1"),
-            IRI("http://example/p1"),
-            IRI("http://example/o1"),
-            IRI("http://example/g1"),
-        )
-    )
-    sink.add(
-        Quad(
-            IRI("http://example/s2"),
-            IRI("http://example/p2"),
-            IRI("http://example/o2"),
-            IRI("http://example/g2"),
-        )
-    )
-
-    out = list(quads_stream_frames(stream, sink))
-    assert out
-    assert isinstance(out[-1], jelly.RdfStreamFrame)
-
-
-def test_graphs_stream_frames_declarations() -> None:
-    options = SerializerOptions(
-        params=StreamParameters(namespace_declarations=True),
+        params=StreamParameters(namespace_declarations=with_namespace),
     )
     stream = GraphStream(
         encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
@@ -245,7 +191,8 @@ def test_graphs_stream_frames_declarations() -> None:
     )
 
     sink = GenericStatementSink()
-    sink.bind("ex", IRI("http://example.com/"))
+    if with_namespace:
+        sink.bind("ex", IRI("http://example.com/"))
     sink.add(
         Quad(
             IRI("http://ex/s1"),
