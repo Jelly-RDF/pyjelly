@@ -13,11 +13,9 @@ from pyjelly.integrations.generic.generic_sink import (
     Triple,
 )
 from pyjelly.integrations.generic.parse import parse_jelly_grouped, parse_jelly_to_graph
-from pyjelly.integrations.generic.serialize import (
-    SerializerOptions,
-    grouped_stream_to_file,
-)
+from pyjelly.integrations.generic.serialize import grouped_stream_to_file
 from pyjelly.serialize.flows import DatasetsFrameFlow, GraphsFrameFlow
+from pyjelly.serialize.streams import SerializerOptions
 
 
 class TestGenericStatementSink(unittest.TestCase):
