@@ -15,6 +15,7 @@ from pyjelly.integrations.generic.generic_sink import (
     Prefix,
     Quad,
     Triple,
+    Node
 )
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
@@ -122,7 +123,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
 
     """
 
-    _graph_id: BlankNode | None
+    _graph_id: Node | None
 
     def __init__(
         self,
@@ -138,7 +139,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
             raise JellyConformanceError(msg)
 
     @override
-    def graph_start(self, graph_id: BlankNode) -> None:
+    def graph_start(self, graph_id: Node) -> None:
         self._graph_id = graph_id
 
     @override
