@@ -6,49 +6,79 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 import pytest
-from rdflib import Dataset, Graph
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
+from pyjelly.integrations.generic.generic_sink import (
+    DEFAULT_GRAPH_IDENTIFIER,
+    IRI,
+    GenericStatementSink,
+    Literal,
+    Quad,
+    Triple,
+)
 from pyjelly.integrations.generic.parse import (
     parse_jelly_flat as generic_parse_jelly_flat,
 )
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
+from pyjelly.integrations.generic.serialize import (
+    flat_stream_to_file,
+    grouped_stream_to_file,
+)
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.streams import QuadStream, SerializerOptions
+from pyjelly.serialize.streams import SerializerOptions
 
 
 def _make_flat_triples_bytes() -> bytes:
-    g = Graph()
-    g.parse("tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
-    return g.serialize(encoding="jelly", format="jelly")
+    sink = GenericStatementSink()
+
+    subject = IRI("http://example.org/subject")
+    predicate = IRI("http://example.org/predicate")
+    object1 = Literal("value1")
+    object2 = IRI("http://example.org/object")
+
+    sink.add(Triple(subject, predicate, object1))
+    sink.add(Triple(subject, predicate, object2))
+
+    output = io.BytesIO()
+    flat_stream_to_file(sink.store, output)
+    return output.getvalue()
 
 
 def _make_flat_quads_bytes() -> bytes:
-    ds = Dataset()
-    ds.parse("tests/e2e_test_cases/quads_rdf_1_1/weather-quads.nq")
-    return ds.serialize(
-        encoding="jelly",
-        format="jelly",
-        stream=QuadStream.for_rdflib(),
-    )
+    sink = GenericStatementSink()
+
+    subject = IRI("http://example.org/subject")
+    predicate = IRI("http://example.org/predicate")
+    object1 = Literal("value1")
+    graph = IRI("http://example.org/graph")
+
+    sink.add(Quad(subject, predicate, object1, graph))
+    sink.add(Quad(subject, predicate, object1, DEFAULT_GRAPH_IDENTIFIER))
+
+    output = io.BytesIO()
+    flat_stream_to_file(sink.store, output)
+    return output.getvalue()
 
 
 def _make_grouped_graphs_bytes() -> bytes:
-    ds = Dataset()
-    g1 = Graph(identifier="g1")
-    g1.parse("tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
-    g2 = Graph(identifier="g2")
-    g2.parse("tests/e2e_test_cases/triples_rdf_1_1/p2_ontology.nt")
-    ds.add_graph(g1)
-    ds.add_graph(g2)
-    return ds.serialize(
-        options=SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS),
-        encoding="jelly",
-        format="jelly",
+    graph1 = GenericStatementSink(IRI("http://example.org/graph1"))
+    graph2 = GenericStatementSink(IRI("http://example.org/graph2"))
+
+    subject = IRI("http://example.org/subject")
+    predicate = IRI("http://example.org/predicate")
+
+    graph1.add(Triple(subject, predicate, Literal("graph1_value")))
+    graph2.add(Triple(subject, predicate, Literal("graph2_value")))
+
+    output = io.BytesIO()
+    options = SerializerOptions(
+        logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
     )
+    grouped_stream_to_file((g for g in [graph1, graph2]), output, options=options)
+    return output.getvalue()
 
 
 @dataclass(frozen=True)

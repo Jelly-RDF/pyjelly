@@ -113,6 +113,20 @@ def _make_flat_quads_bytes() -> bytes:
     )
 
 
+def _make_physical_graphs_bytes() -> bytes:
+    ds = Dataset()
+    g1 = Graph(identifier="g1")
+    g1.parse("tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
+    g2 = Graph(identifier="g2")
+    g2.parse("tests/e2e_test_cases/triples_rdf_1_1/p2_ontology.nt")
+    ds.add_graph(g1)
+    ds.add_graph(g2)
+
+    return ds.serialize(
+        encoding="jelly", format="jelly", stream=GraphStream.for_rdflib()
+    )
+
+
 def _make_grouped_graphs_bytes() -> bytes:
     ds = Dataset()
     g1 = Graph(identifier="g1")
@@ -195,6 +209,51 @@ class Case:
             strict=True,
             should_raise=False,
             msg=None,
+        ),
+        Case(
+            make_bytes=_make_flat_quads_bytes,
+            expected_physical=jelly.PHYSICAL_STREAM_TYPE_QUADS,
+            expected_logical=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            parser=parse_jelly_grouped,
+            strict=True,
+            should_raise=True,
+            msg="expected GROUPED",
+        ),
+        Case(
+            make_bytes=_make_flat_quads_bytes,
+            expected_physical=jelly.PHYSICAL_STREAM_TYPE_QUADS,
+            expected_logical=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            parser=parse_jelly_grouped,
+            strict=False,
+            should_raise=False,
+            msg=None,
+        ),
+        Case(
+            make_bytes=_make_physical_graphs_bytes,
+            expected_physical=jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+            expected_logical=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            parser=parse_jelly_flat,
+            strict=True,
+            should_raise=False,
+            msg=None,
+        ),
+        Case(
+            make_bytes=_make_physical_graphs_bytes,
+            expected_physical=jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+            expected_logical=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            parser=parse_jelly_flat,
+            strict=False,
+            should_raise=False,
+            msg=None,
+        ),
+        Case(
+            make_bytes=_make_physical_graphs_bytes,
+            expected_physical=jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+            expected_logical=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            parser=parse_jelly_grouped,
+            strict=True,
+            should_raise=True,
+            msg="expected GROUPED",
         ),
     ],
 )

@@ -11,9 +11,7 @@ from rdflib.plugins.serializers.nt import _quoteLiteral
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
-from pyjelly.integrations.rdflib.parse import (
-    parse_jelly_grouped,
-)
+from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
@@ -205,4 +203,15 @@ def test_parsing_rdf_star_fails(path: Path) -> None:
     glob="neg_*",
 )
 def test_parsing_rdf_1_1_fails(path: Path) -> None:
+    run_generic_fail_test(path)
+
+
+@needs_jelly_cli
+@walk_directories(
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
+    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
+    glob="neg_*",
+)
+def test_parsing_rdf_star_generalized_fails(path: Path) -> None:
     run_generic_fail_test(path)
