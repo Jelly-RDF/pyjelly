@@ -235,6 +235,8 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         if sink.is_triples_sink
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
+    # Generic sink supports both RDF-star and generalized statements by default
+    # as it can handle any term types including quoted triples and generalized RDF terms
     params = StreamParameters(
         generalized_statements=True,
         rdf_star=True,

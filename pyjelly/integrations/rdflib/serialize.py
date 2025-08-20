@@ -206,6 +206,8 @@ def guess_options(sink: Graph | Dataset) -> SerializerOptions:
         if isinstance(sink, Dataset)
         else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
     )
+    # RDFLib doesn't support RDF-star and generalized statements by default
+    # as it requires specific handling for quoted triples and non-standard RDF terms
     params = StreamParameters(
         generalized_statements=False,
         rdf_star=False,

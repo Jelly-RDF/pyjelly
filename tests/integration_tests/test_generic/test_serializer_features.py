@@ -28,7 +28,6 @@ def test_defaults_generic(
 ) -> None:
     opts = guess_options(cast(Any, sink))
     assert opts.logical_type == expected_logical
-    # generic supports both by default
     assert opts.params.rdf_star is True
     assert opts.params.generalized_statements is True
 
@@ -36,7 +35,6 @@ def test_defaults_generic(
 @pytest.mark.parametrize(
     ("sink", "logical", "expected_physical"),
     [
-        # Совместимые комбинации
         (
             _Sink(is_triples_sink=True),
             jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
@@ -72,7 +70,6 @@ def test_override_generic_compatible(
 @pytest.mark.parametrize(
     ("sink", "logical"),
     [
-        # Несовместимые комбинации (должны вызывать ошибку)
         (_Sink(is_triples_sink=True), jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
         (_Sink(is_triples_sink=False), jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
     ],
