@@ -1,5 +1,4 @@
 import unittest
-from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -10,9 +9,6 @@ from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
     Literal,
     Triple,
-)
-from pyjelly.integrations.generic.serialize import (
-    grouped_stream_to_frames,
 )
 
 
@@ -343,7 +339,7 @@ def test_iri_repr(iri: str, expected_repr: str) -> None:
     assert repr(iri_obj) == expected_repr
 
 
-def test_parse_serialize_flat() -> None:
+def test_parse_serialize() -> None:
     sink = GenericStatementSink()
     input_file_path = Path(
         "./tests/integration_tests/test_examples/temp/flat_output.jelly"
@@ -363,18 +359,3 @@ def test_parse_serialize_flat() -> None:
     assert len(new_sink) == len(sink)
     for s_in, s_out in zip(sink.store, new_sink.store):
         assert repr(s_in) == repr(s_out)
-
-
-def test_grouped_stream_to_frames_init_stream_guess_options() -> None:
-    s1 = GenericStatementSink()
-    s1.add(Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), Literal("http://ex/o1")))
-    s2 = GenericStatementSink()
-    s2.add(Triple(IRI("http://ex/s2"), IRI("http://ex/p2"), Literal("http://ex/o2")))
-
-    def gen() -> Generator[GenericStatementSink, None, None]:
-        yield s1
-        yield s2
-
-    frames = list(grouped_stream_to_frames(gen(), options=None))
-    expected = 2
-    assert len(frames) == expected

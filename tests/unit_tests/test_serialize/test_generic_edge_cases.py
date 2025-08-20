@@ -17,6 +17,7 @@ from pyjelly.integrations.generic.serialize import (
     GenericSinkTermEncoder,
     flat_stream_to_frames,
     graphs_stream_frames,
+    grouped_stream_to_frames,
     guess_options,
     guess_stream,
     quads_stream_frames,
@@ -267,3 +268,18 @@ def test_graphs_stream_frames_emit_flat() -> None:
     frames = list(graphs_stream_frames(stream, sink))
     assert frames
     assert isinstance(frames[-1], jelly.RdfStreamFrame)
+
+
+def test_grouped_stream_to_frames_init_stream_guess_options() -> None:
+    s1 = GenericStatementSink()
+    s1.add(Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), Literal("http://ex/o1")))
+    s2 = GenericStatementSink()
+    s2.add(Triple(IRI("http://ex/s2"), IRI("http://ex/p2"), Literal("http://ex/o2")))
+
+    def gen() -> Generator[GenericStatementSink, None, None]:
+        yield s1
+        yield s2
+
+    frames = list(grouped_stream_to_frames(gen(), options=None))
+    expected = 2
+    assert len(frames) == expected
