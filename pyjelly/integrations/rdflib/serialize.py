@@ -7,6 +7,7 @@ from typing import Any, IO
 from typing_extensions import override
 from itertools import chain
 from pyjelly.integrations.rdflib.parse import Quad, Triple
+from pyjelly.options import StreamParameters
 
 import rdflib
 from rdflib import Graph
@@ -205,7 +206,13 @@ def guess_options(sink: Graph | Dataset) -> SerializerOptions:
         if isinstance(sink, Dataset)
         else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
     )
-    return SerializerOptions(logical_type=logical_type)
+    # RDFLib doesn't support RDF-star and generalized statements by default
+    # as it requires specific handling for quoted triples and non-standard RDF terms
+    params = StreamParameters(
+        generalized_statements=False,
+        rdf_star=False,
+    )
+    return SerializerOptions(logical_type=logical_type, params=params)
 
 
 def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:

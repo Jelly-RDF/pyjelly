@@ -5,6 +5,7 @@ from collections.abc import Generator
 from functools import singledispatch
 from typing import Any, IO
 from itertools import chain
+from pyjelly.options import StreamParameters
 from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
     Quad,
@@ -234,7 +235,13 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         if sink.is_triples_sink
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
-    return SerializerOptions(logical_type=logical_type)
+    # Generic sink supports both RDF-star and generalized statements by default
+    # as it can handle any term types including quoted triples and generalized RDF terms
+    params = StreamParameters(
+        generalized_statements=True,
+        rdf_star=True,
+    )
+    return SerializerOptions(logical_type=logical_type, params=params)
 
 
 def guess_stream(options: SerializerOptions, sink: GenericStatementSink) -> Stream:
