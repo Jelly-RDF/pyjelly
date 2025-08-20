@@ -12,10 +12,10 @@ from pyjelly.integrations.generic.generic_sink import (
     BlankNode,
     GenericStatementSink,
     Literal,
+    Node,
     Prefix,
     Quad,
     Triple,
-    Node
 )
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
