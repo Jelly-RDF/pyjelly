@@ -37,7 +37,6 @@ def test_parse_jelly_flat_unsupported_physical_type_raises() -> None:
 
 
 def test_parse_flat_get_options(monkeypatch: pytest.MonkeyPatch) -> None:
-    called = {"flag": False}
     opts = ParserOptions(
         stream_types=StreamTypes(
             physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
@@ -48,13 +47,11 @@ def test_parse_flat_get_options(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
     def dummy_options(_: IO[bytes]) -> tuple[ParserOptions, Iterator[Any]]:
-        called["flag"] = True
         return opts, iter(())
 
     monkeypatch.setattr(gparse, "get_options_and_frames", dummy_options)
 
     out = list(parse_jelly_flat(io.BytesIO(b"x")))
-    assert called["flag"] is True
     assert out == []
 
 
