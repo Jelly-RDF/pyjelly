@@ -1,10 +1,8 @@
-import mimetypes
 from pyjelly import options
 
 
-def register_extension_to_kgtk(extension: str = ".jelly", mimetype: str = "application/x-jelly-kgtk") -> None:
-    ext = extension if extension.startswith(".") else f".{extension}"
-    mimetypes.add_type(mimetype, ext, strict=False)
+def register_extension_to_kgtk(extension: str = ".jelly") -> None:
+    pass
 
 
 def _side_effects() -> None:
