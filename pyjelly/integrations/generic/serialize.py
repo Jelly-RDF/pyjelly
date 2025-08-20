@@ -236,8 +236,8 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
     params = StreamParameters(
-        generalized_statements=False,
-        rdf_star=False,
+        generalized_statements=True,
+        rdf_star=True,
     )
     return SerializerOptions(logical_type=logical_type, params=params)
 
