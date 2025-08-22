@@ -35,7 +35,7 @@ class GenericSinkParser:
     _split_tokens = re.compile(  # matches str to quoted triple/literal, IRI, or BN
         r"""
         <<.+?>>         |
-        "[^"]+"(?:@\S+|\^\^\S+)?  |
+        "[^"]*"(?:@\S+|\^\^\S+)?  |
         <[^>]+>         |
         _:\S+           |
         """,
@@ -77,7 +77,7 @@ class GenericSinkParser:
         match_literal = self._literal_re.match(term)
         if match_literal:
             lex, langtag, datatype = match_literal.groups()
-            if not lex or (langtag is not None and datatype is not None):
+            if langtag is not None and datatype is not None:
                 msg = "invalid literal encountered"
                 raise TypeError(msg)
             return Literal(lex, langtag, datatype)
