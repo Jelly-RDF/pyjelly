@@ -1,9 +1,9 @@
 import pytest
 
 from pyjelly.integrations.generic.generic_sink import (
+    GenericStatementSink,
     Literal,
     Triple,
-    GenericStatementSink,
 )
 from tests.utils.generic_sink_test_parser import GenericSinkParser
 
@@ -73,7 +73,9 @@ from tests.utils.generic_sink_test_parser import GenericSinkParser
         ),
     ],
 )
-def test_literal_str(lex: str, langtag: str, datatype: str, expected_str: str) -> None:
+def test_literal_parsing(
+    lex: str, langtag: str, datatype: str, expected_str: str
+) -> None:
     """Test literals parsing."""
     literal = str(Literal(lex, langtag, datatype))
     test_statement = f"_:bn <http://www.examples.org/predicate> {literal} ."
