@@ -6,8 +6,6 @@ from typing import IO, NamedTuple, Union
 
 
 class _DefaultGraph:
-    __slots__ = ()
-
     def __repr__(self) -> str:
         return ""
 
