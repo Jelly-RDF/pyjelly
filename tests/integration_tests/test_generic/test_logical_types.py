@@ -10,8 +10,8 @@ import pytest
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.generic_sink import (
-    DEFAULT_GRAPH_IDENTIFIER,
     IRI,
+    DefaultGraph,
     GenericStatementSink,
     Literal,
     Quad,
@@ -57,7 +57,7 @@ def _make_flat_quads_bytes() -> bytes:
     graph = IRI("http://example.org/graph")
 
     sink.add(Quad(subject, predicate, object1, graph))
-    sink.add(Quad(subject, predicate, object1, DEFAULT_GRAPH_IDENTIFIER))
+    sink.add(Quad(subject, predicate, object1, DefaultGraph))
 
     output = io.BytesIO()
     flat_stream_to_file(sink.store, output)
