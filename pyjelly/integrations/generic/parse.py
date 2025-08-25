@@ -10,9 +10,10 @@ from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
     BlankNode,
+    DefaultGraph,
     GenericStatementSink,
+    GraphName,
     Literal,
-    Node,
     Prefix,
     Quad,
     Triple,
@@ -45,8 +46,8 @@ class GenericStatementSinkAdapter(Adapter):
         return BlankNode(bnode)
 
     @override
-    def default_graph(self) -> str:
-        return ""
+    def default_graph(self) -> GraphName:
+        return DefaultGraph
 
     @override
     def literal(
@@ -123,7 +124,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
 
     """
 
-    _graph_id: Node | None
+    _graph_id: GraphName | None
 
     def __init__(
         self,
@@ -139,7 +140,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
             raise JellyConformanceError(msg)
 
     @override
-    def graph_start(self, graph_id: Node) -> None:
+    def graph_start(self, graph_id: GraphName) -> None:
         self._graph_id = graph_id
 
     @override

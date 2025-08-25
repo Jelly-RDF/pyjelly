@@ -4,7 +4,15 @@ from collections import deque
 from collections.abc import Generator
 from typing import IO, NamedTuple, Union
 
-DEFAULT_GRAPH_IDENTIFIER = ""
+
+class _DefaultGraph:
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        return ""
+
+
+DefaultGraph = _DefaultGraph()
 
 
 class BlankNode:
@@ -93,7 +101,8 @@ class Literal:
         return hash((self._lex, self._langtag, self._datatype))
 
 
-Node = Union[BlankNode, IRI, Literal, "Triple", str]
+Node = Union[BlankNode, IRI, Literal, "Triple"]
+GraphName = Union[Node, _DefaultGraph]
 
 
 TRIPLE_ARITY = 3
@@ -113,7 +122,7 @@ class Quad(NamedTuple):
     s: Node
     p: Node
     o: Node
-    g: Node
+    g: GraphName
 
 
 class Prefix(NamedTuple):
@@ -126,7 +135,7 @@ class Prefix(NamedTuple):
 class GenericStatementSink:
     _store: deque[Triple | Quad]
 
-    def __init__(self, identifier: Node = DEFAULT_GRAPH_IDENTIFIER) -> None:
+    def __init__(self, identifier: GraphName = DefaultGraph) -> None:
         """
         Initialize statements storage, namespaces dictionary, and parser.
 
@@ -135,7 +144,7 @@ class GenericStatementSink:
 
         Args:
             identifier (str, optional): Identifier for a sink.
-                Defaults to DEFAULT_GRAPH_IDENTIFIER.
+                Defaults to DefaultGraph.
 
         """
         self._store: deque[Triple | Quad] = deque()
@@ -159,7 +168,7 @@ class GenericStatementSink:
         yield from self._namespaces.items()
 
     @property
-    def identifier(self) -> Node:
+    def identifier(self) -> GraphName:
         return self._identifier
 
     @property

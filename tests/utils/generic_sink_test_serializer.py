@@ -4,6 +4,7 @@ from pathlib import Path
 
 from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
+    GraphName,
     Node,
     Triple,
 )
@@ -13,15 +14,15 @@ class GenericSinkSerializer:
     def __init__(self, sink: GenericStatementSink) -> None:
         self._sink = sink
 
-    def _serialize_node(self, node: Node) -> str:
+    def _serialize_node(self, node: Node | GraphName) -> str:
         """
         Serialize node to its string representation.
 
         Args:
-            node (Node): Node to convert - RDF term, str, or Triple.
+            node (Node | GraphName): RDF term, DefaultGraph, or Triple.
 
         Returns:
-            str: string representation of Node.
+            str: string representation of node.
 
         """
         if isinstance(node, Triple):

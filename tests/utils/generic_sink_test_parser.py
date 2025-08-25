@@ -5,12 +5,13 @@ import warnings
 from pathlib import Path
 
 from pyjelly.integrations.generic.generic_sink import (
-    DEFAULT_GRAPH_IDENTIFIER,
     IRI,
     TRIPLE_ARITY,
     BlankNode,
+    DefaultGraph,
     GenericStatementSink,
     Literal,
+    Node,
     Prefix,
     Quad,
     Triple,
@@ -45,9 +46,7 @@ class GenericSinkParser:
     def __init__(self, sink: GenericStatementSink) -> None:
         self._sink = sink
 
-    def process_term(
-        self, term: str, slot: str
-    ) -> IRI | BlankNode | Literal | Triple | str:
+    def process_term(self, term: str) -> Node:
         """
         Process one term.
 
@@ -56,7 +55,6 @@ class GenericSinkParser:
 
         Args:
             term (str): term to process
-            slot (str): data structure to associate with terms
 
         Raises:
             TypeError: if literal decoded has multiple parts except for lex, i.e.,
@@ -65,7 +63,7 @@ class GenericSinkParser:
             TypeError: if term did not match any pattern
 
         Returns:
-            IRI | BlankNode | Literal | Triple | str: processed term
+            Node: processed term
 
         """
         match_bn = self._bn_re.match(term)
@@ -87,12 +85,10 @@ class GenericSinkParser:
             triple_tokens = self.split_statement(term.strip())
             return Triple(
                 *(
-                    self.process_term(group, slot)
-                    for slot, group in zip(Triple._fields, triple_tokens)
+                    self.process_term(group)
+                    for _, group in zip(Triple._fields, triple_tokens)
                 )
             )
-        if term == "" and slot == "g":
-            return DEFAULT_GRAPH_IDENTIFIER
 
         msg = "failed to parse input file"
         raise TypeError(msg)
@@ -232,12 +228,13 @@ class GenericSinkParser:
 
         """
         terms = self.split_statement(statement)
-        if len(terms) == TRIPLE_ARITY and statement_structure == Quad:
-            terms.append("")  # append default graph identificator
-        generic_terms = (
-            self.process_term(term.strip(), slot)
-            for slot, term in zip(statement_structure._fields, terms)
-        )
+        generic_terms = [
+            self.process_term(term.strip())
+            for _, term in zip(statement_structure._fields, terms)
+        ]
+        if statement_structure == Quad and len(terms) == TRIPLE_ARITY:
+            s, p, o = generic_terms
+            return Quad(s, p, o, DefaultGraph)
         return statement_structure(*generic_terms)
 
     def parse_prefix(self, namespace: str) -> Prefix:
