@@ -1,42 +1,112 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
-from rdflib import Dataset, Graph, Literal, Node
+from rdflib import RDF, Dataset, Graph, Literal
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
+from rdflib.namespace import Namespace
 from rdflib.plugins.serializers.nt import _quoteLiteral
+from rdflib.term import Node
 
-from pyjelly.integrations.generic.parse import (
-    parse_jelly_grouped as generic_parse_jelly_grouped,
-)
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 from tests.meta import (
     RDF_FROM_JELLY_TESTS_DIR,
     TEST_OUTPUTS_DIR,
 )
-from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import (
-    GeneralizedTestCasesDir,
-    PhysicalTypeTestCasesDir,
-    RDFStarGeneralizedTestCasesDir,
-    RDFStarTestCasesDir,
-    id_from_path,
     jelly_validate,
     needs_jelly_cli,
-    walk_directories,
 )
 
+MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
+JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
+RDFT = Namespace("http://www.w3.org/ns/rdftest#")
 
-def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
-    template = "%s " * (3 + (context != DATASET_DEFAULT_GRAPH_ID)) + ".\n"
+
+def _load_manifest_tests(manifest_path: Path) -> list[dict[str, Any]]:
+    graph = Graph()
+    graph.parse(manifest_path, format="turtle")
+
+    tests = []
+    for s in graph.subjects(RDF.type, MF.Manifest):
+        entries_list = graph.value(s, MF.entries)
+        if entries_list is None:
+            continue
+        for test_entry in graph.items(entries_list):
+            test_type_pos = (test_entry, RDF.type, JELLYT.TestPositive) in graph
+            test_type_neg = (test_entry, RDF.type, JELLYT.TestNegative) in graph
+            test_action = graph.value(test_entry, MF.action)
+            test_name_node = graph.value(test_entry, MF.name)
+            test_name = (
+                str(test_name_node)
+                if test_name_node is not None
+                else f"Test from {manifest_path.name}"
+            )
+
+            result_list = graph.value(test_entry, MF.result)
+            expected_results: list[Node] = []
+            if result_list:
+                expected_results.extend(graph.items(result_list))
+
+            test_entry_str = str(test_entry)
+            test_id_parts = test_entry_str.split("/")
+            test_id = (
+                f"{manifest_path.parent.name}_{test_id_parts[-2]}_{test_id_parts[-1]}"
+            )
+
+            tests.append(
+                {
+                    "id": test_id,
+                    "name": str(test_name),
+                    "action": cast(Node, test_action),
+                    "expected_results": expected_results,
+                    "is_positive": test_type_pos,
+                    "is_negative": test_type_neg,
+                    "manifest_path": manifest_path,
+                }
+            )
+    return tests
+
+
+def _get_full_path(manifest_path: Path, relative_path_str: str) -> Path:
+    relative_path = Path(relative_path_str)
+    if relative_path.parts and relative_path.parts[0] == ".":
+        relative_path = Path(*relative_path.parts[1:])
+    return (manifest_path.parent / relative_path).resolve()
+
+
+def _collect_all_manifest_tests() -> list[dict[str, Any]]:
+    all_tests = []
+    manifests = [
+        RDF_FROM_JELLY_TESTS_DIR / "manifest.ttl",
+    ]
+
+    for manifest_path in manifests:
+        if manifest_path.exists():
+            all_tests.extend(_load_manifest_tests(manifest_path))
+    return all_tests
+
+
+_all_manifest_test_cases = _collect_all_manifest_tests()
+_test_ids = [test_case["id"] for test_case in _all_manifest_test_cases]
+
+
+def _new_nq_row(triple: tuple[Any, Any, Any], context: Any) -> str:
+    has_graph = context is not None and context.identifier != DATASET_DEFAULT_GRAPH_ID
+    template = "%s " * (3 + has_graph) + ".\n"
+    literal_val = (
+        _quoteLiteral(triple[2]) if isinstance(triple[2], Literal) else triple[2].n3()
+    )
+    graph_part = (context.identifier.n3(),) if has_graph else ()
     args = (
         triple[0].n3(),
         triple[1].n3(),
-        _quoteLiteral(triple[2]) if isinstance(triple[2], Literal) else triple[2].n3(),
-        *((context.n3(),) if context != DATASET_DEFAULT_GRAPH_ID else ()),
+        literal_val,
+        *graph_part,
     )
     return template % args
 
@@ -45,173 +115,62 @@ workaround_rdflib_serializes_default_graph_id = patch(
     "rdflib.plugins.serializers.nquads._nq_row",
     new=_new_nq_row,
 )
-
-
 workaround_rdflib_serializes_default_graph_id.start()
 
 
 @needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
-    glob="pos_*",
-)
-def test_parses(path: Path) -> None:
-    input_filename = path / "in.jelly"
-    test_id = id_from_path(path)
+@pytest.mark.parametrize("test_case", _all_manifest_test_cases, ids=_test_ids)
+def test_parses_from_manifest(test_case: dict[str, Any]) -> None:
+    if not test_case["is_positive"]:
+        pytest.skip("Negative test case, handled in another test function")
+
+    input_path = _get_full_path(test_case["manifest_path"], test_case["action"])
+    test_id = test_case["id"]
     output_dir = TEST_OUTPUTS_DIR / test_id
-    output_dir.mkdir(exist_ok=True)
-    with input_filename.open("rb") as input_file:
-        for frame_no, graph in enumerate(
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with input_path.open("rb") as input_file:
+        frames = list(
             parse_jelly_grouped(
                 input_file,
                 graph_factory=lambda: Graph(store=OrderedMemory()),
                 dataset_factory=lambda: Dataset(store=OrderedMemory()),
             )
-        ):
-            extension = f"n{'quads' if isinstance(graph, Dataset) else 'triples'}"
-            output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
-            graph.serialize(
-                destination=output_filename, encoding="utf-8", format=extension
-            )
+        )
+
+    for frame_no, graph in enumerate(frames):
+        extension = "nquads" if isinstance(graph, Dataset) else "ntriples"
+        output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
+        graph.serialize(destination=output_filename, encoding="utf-8", format=extension)
+
+        expected_results = test_case["expected_results"]
+        expected_result_paths = [
+            _get_full_path(test_case["manifest_path"], res) for res in expected_results
+        ]
+        if frame_no < len(expected_result_paths):
+            expected_result_path = expected_result_paths[frame_no]
             jelly_validate(
-                input_filename,
+                input_path,
                 "--compare-ordered",
                 "--compare-frame-indices",
                 frame_no,
                 "--compare-to-rdf-file",
-                output_filename,
+                expected_result_path,
                 hint=f"Test ID: {test_id}, output file: {output_filename}",
             )
 
 
 @needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
-    glob="pos_*",
-)
-def test_1_1_parses(path: Path) -> None:
-    run_generic_test(path)
+@pytest.mark.parametrize("test_case", _all_manifest_test_cases, ids=_test_ids)
+def test_parsing_fails_from_manifest(test_case: dict[str, Any]) -> None:
+    if not test_case["is_negative"]:
+        pytest.skip("Positive test case, handled in another test function")
 
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.QUADS,
-    RDF_FROM_JELLY_TESTS_DIR / GeneralizedTestCasesDir.GRAPHS,
-    glob="pos_*",
-)
-def test_generalized_parses(path: Path) -> None:
-    run_generic_test(path)
-
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.QUADS,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.GRAPHS,
-    glob="pos_*",
-)
-def test_rdf_star_parses(path: Path) -> None:
-    run_generic_test(path)
-
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
-    glob="pos_*",
-)
-def test_rdf_star_generalized_parses(path: Path) -> None:
-    run_generic_test(path)
-
-
-@needs_jelly_cli
-def run_generic_test(path: Path) -> None:
-    input_filename = path / "in.jelly"
-    test_id = id_from_path(path)
+    input_path = _get_full_path(test_case["manifest_path"], test_case["action"])
+    test_id = test_case["id"]
     output_dir = TEST_OUTPUTS_DIR / test_id
-    output_dir.mkdir(exist_ok=True)
-    with input_filename.open("rb") as input_file:
-        for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
-            extension = f"n{'triples' if 'triples' in test_id else 'quads'}"
-            output_filename = output_dir / f"out_{frame_no:03}.{extension[:2]}"
-            serializer = GenericSinkSerializer(graph)
-            serializer.serialize(output_filename=output_filename, encoding="utf-8")
-            jelly_validate(
-                input_filename,
-                "--compare-ordered",
-                "--compare-frame-indices",
-                frame_no,
-                "--compare-to-rdf-file",
-                output_filename,
-                hint=f"Test ID: {test_id}, output file: {output_filename}",
-            )
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
-    glob="neg_*",
-)
-def test_parsing_fails(path: Path) -> None:
-    input_filename = str(path / "in.jelly")
-    test_id = id_from_path(path)
-    output_dir = TEST_OUTPUTS_DIR / test_id
-    output_dir.mkdir(exist_ok=True)
     dataset = Dataset(store=OrderedMemory())
-    with pytest.raises(Exception):  # TODO: more specific  # noqa: PT011, B017, TD002
-        dataset.parse(location=input_filename, format="jelly")
-
-
-@needs_jelly_cli
-def run_generic_fail_test(path: Path) -> None:
-    input_filename = path / "in.jelly"
-    test_id = id_from_path(path)
-    output_dir = TEST_OUTPUTS_DIR / test_id
-    output_dir.mkdir(exist_ok=True)
-
-    with (
-        pytest.raises(Exception),  # TODO: more specific  # noqa: PT011, B017, TD002
-        input_filename.open("rb") as input_file,
-    ):
-        list(generic_parse_jelly_grouped(input_file))
-
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.GRAPHS,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarTestCasesDir.QUADS,
-    glob="neg_*",
-)
-def test_parsing_rdf_star_fails(path: Path) -> None:
-    run_generic_fail_test(path)
-
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.GRAPHS,
-    RDF_FROM_JELLY_TESTS_DIR / PhysicalTypeTestCasesDir.QUADS,
-    glob="neg_*",
-)
-def test_parsing_rdf_1_1_fails(path: Path) -> None:
-    run_generic_fail_test(path)
-
-
-@needs_jelly_cli
-@walk_directories(
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.TRIPLES,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.GRAPHS,
-    RDF_FROM_JELLY_TESTS_DIR / RDFStarGeneralizedTestCasesDir.QUADS,
-    glob="neg_*",
-)
-def test_parsing_rdf_star_generalized_fails(path: Path) -> None:
-    run_generic_fail_test(path)
+    with pytest.raises((ValueError, SyntaxError), match=r".*"):
+        dataset.parse(location=str(input_path), format="jelly")
