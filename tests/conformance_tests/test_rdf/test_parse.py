@@ -73,9 +73,16 @@ def _load_manifest_tests(manifest_path: Path) -> list[dict[str, Any]]:
 
 
 def _get_full_path(manifest_path: Path, relative_path_str: str) -> Path:
-    relative_path = Path(relative_path_str)
+    if relative_path_str.startswith('http'):
+        from urllib.parse import urlparse
+        parsed = urlparse(relative_path_str)
+        relative_path = Path(parsed.path.lstrip('/'))
+    else:
+        relative_path = Path(relative_path_str)
+
     if relative_path.parts and relative_path.parts[0] == ".":
         relative_path = Path(*relative_path.parts[1:])
+
     return (manifest_path.parent / relative_path).resolve()
 
 
