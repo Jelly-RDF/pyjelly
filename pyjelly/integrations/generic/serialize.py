@@ -17,6 +17,7 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 
 from pyjelly import jelly
+from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
@@ -97,10 +98,7 @@ def triples_stream_frames(
 
     """
     stream.enroll()
-    if (
-        isinstance(data, GenericStatementSink)
-        and stream.options.params.namespace_declarations
-    ):
+    if isinstance(data, GenericStatementSink):
         namespace_declarations(data, stream)
 
     graphs = (data,)
@@ -131,8 +129,7 @@ def quads_stream_frames(
 
     """
     stream.enroll()
-    if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
+    namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     iterator: Generator[Quad]
     if isinstance(data, GenericStatementSink):
@@ -173,8 +170,7 @@ def graphs_stream_frames(
 
     """
     stream.enroll()
-    if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
+    namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     statements: Generator[Quad]
     if isinstance(data, GenericStatementSink):
@@ -234,7 +230,12 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         if sink.is_triples_sink
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
-    return SerializerOptions(logical_type=logical_type)
+    params = StreamParameters(
+        generalized_statements=False,
+        rdf_star=False,
+        namespace_declarations=True
+    )
+    return SerializerOptions(logical_type=logical_type, params=params)
 
 
 def guess_stream(options: SerializerOptions, sink: GenericStatementSink) -> Stream:

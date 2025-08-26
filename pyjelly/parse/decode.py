@@ -70,6 +70,7 @@ def options_from_frame(
             rdf_star=options.rdf_star,
             version=options.version,
             delimited=delimited,
+            namespace_declarations=True
         ),
     )
 

@@ -14,6 +14,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
+from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
@@ -203,7 +204,12 @@ def guess_options(sink: Graph | Dataset) -> SerializerOptions:
         if isinstance(sink, Dataset)
         else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
     )
-    return SerializerOptions(logical_type=logical_type)
+    params = StreamParameters(
+        generalized_statements=False,
+        rdf_star=False,
+        namespace_declarations=True
+    )
+    return SerializerOptions(logical_type=logical_type, params=params)
 
 
 def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
