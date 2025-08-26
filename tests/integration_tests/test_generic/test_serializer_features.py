@@ -30,6 +30,7 @@ def test_defaults_generic(
     assert opts.logical_type == expected_logical
     assert opts.params.rdf_star is True
     assert opts.params.generalized_statements is True
+    assert opts.params.namespace_declarations is True
 
 
 @pytest.mark.parametrize(
@@ -56,8 +57,7 @@ def test_override_generic_compatible(
     user_opts = SerializerOptions(
         logical_type=cast(jelly.LogicalStreamType, logical),
         params=StreamParameters(
-            rdf_star=False,
-            generalized_statements=False,
+            rdf_star=False, generalized_statements=False, namespace_declarations=False
         ),
     )
     stream = guess_stream(user_opts, cast(Any, sink))
@@ -82,8 +82,7 @@ def test_override_generic_incompatible(
     user_opts = SerializerOptions(
         logical_type=cast(jelly.LogicalStreamType, logical),
         params=StreamParameters(
-            rdf_star=False,
-            generalized_statements=False,
+            rdf_star=False, generalized_statements=False, namespace_declarations=False
         ),
     )
     with pytest.raises(
