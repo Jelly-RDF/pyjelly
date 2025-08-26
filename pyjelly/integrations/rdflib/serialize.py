@@ -7,6 +7,7 @@ from typing import Any, IO
 from typing_extensions import override
 from itertools import chain
 from pyjelly.integrations.rdflib.parse import Quad, Triple
+from pyjelly.options import StreamParameters
 
 import rdflib
 from rdflib import Graph

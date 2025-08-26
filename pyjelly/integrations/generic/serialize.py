@@ -5,15 +5,16 @@ from collections.abc import Generator
 from functools import singledispatch
 from typing import Any, IO
 from itertools import chain
+from pyjelly.options import StreamParameters
 from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
     Quad,
     Triple,
-    DEFAULT_GRAPH_IDENTIFIER,
+    DefaultGraph,
+    GraphName,
     IRI,
     BlankNode,
     Literal,
-    Node,
 )
 
 from pyjelly import jelly
@@ -44,7 +45,7 @@ class GenericSinkTermEncoder(TermEncoder):
             RowsAndTerm: encoded extra rows and a jelly term to encode
 
         """
-        if slot is Slot.graph and term == DEFAULT_GRAPH_IDENTIFIER:
+        if slot is Slot.graph and term == DefaultGraph:
             return self.encode_default_graph()
 
         if isinstance(term, IRI):
@@ -206,7 +207,7 @@ def split_to_graphs(data: Generator[Quad]) -> Generator[GenericStatementSink]:
         each having triples in store and identifier set.
 
     """
-    current_g: Node | None = None
+    current_g: GraphName | None = None
     current_sink: GenericStatementSink | None = None
     for statement in data:
         if current_g != statement.g:
