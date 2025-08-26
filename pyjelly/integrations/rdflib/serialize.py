@@ -15,7 +15,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
+from pyjelly.serialize.encode import Rows, Slot, TermEncoder, Statement
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
     GraphStream,
@@ -29,23 +29,28 @@ QUAD_ARITY = 4
 
 
 class RDFLibTermEncoder(TermEncoder):
-    def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+    def encode_any(self, term: object, slot: Slot, statement: Statement) -> Rows:
         """
         Encode term based on its RDFLib object.
 
         Args:
             term (object): term to encode
             slot (Slot): its place in statement.
+            statement (Statement): Triple/Quad/GraphStart message to fill with terms.
 
         Returns:
-            RowsAndTerm: encoded extra rows and a jelly term to encode
+            Rows: encoded extra rows
 
         """
-        if slot is Slot.graph and term == DATASET_DEFAULT_GRAPH_ID:
-            return self.encode_default_graph()
+        if (
+            slot is Slot.graph
+            and term == DATASET_DEFAULT_GRAPH_ID
+            and isinstance(statement, (jelly.RdfQuad, jelly.RdfGraphStart))
+        ):
+            return self.encode_default_graph(statement)
 
         if isinstance(term, rdflib.URIRef):
-            return self.encode_iri(term)
+            return self.encode_iri(term, slot, statement)
 
         if isinstance(term, rdflib.Literal):
             return self.encode_literal(
@@ -54,12 +59,14 @@ class RDFLibTermEncoder(TermEncoder):
                 # `datatype` is cast to `str` explicitly because
                 # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
                 datatype=term.datatype and str(term.datatype),
+                slot=slot,
+                statement=statement,
             )
 
         if isinstance(term, rdflib.BNode):
-            return self.encode_bnode(str(term))
+            return self.encode_bnode(str(term), slot, statement)
 
-        return super().encode_any(term, slot)  # error if not handled
+        return super().encode_any(term, slot, statement)  # error if not handled
 
 
 def namespace_declarations(store: Graph, stream: Stream) -> None:

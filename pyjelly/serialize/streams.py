@@ -249,10 +249,9 @@ class GraphStream(TripleStream):
             Generator[jelly.RdfStreamFrame]: jelly frames.
 
         """
-        [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
-        kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
-        kws: dict[Any, Any] = {kw_name: graph_node}
-        start_row = jelly.RdfStreamRow(graph_start=jelly.RdfGraphStart(**kws))
+        graph_start = jelly.RdfGraphStart()
+        [*graph_rows] = self.encoder.encode_any(graph_id, Slot.graph, graph_start)
+        start_row = jelly.RdfStreamRow(graph_start=graph_start)
         graph_rows.append(start_row)
         self.flow.extend(graph_rows)
         for triple in graph:

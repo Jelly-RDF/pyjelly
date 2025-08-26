@@ -18,7 +18,7 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
+from pyjelly.serialize.encode import Rows, Slot, TermEncoder, Statement
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
     GraphStream,
@@ -32,38 +32,44 @@ QUAD_ARITY = 4
 
 
 class GenericSinkTermEncoder(TermEncoder):
-    def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+    def encode_any(self, term: object, slot: Slot, statement: Statement) -> Rows:
         """
         Encode term based on its GenericSink object.
 
         Args:
             term (object): term to encode
             slot (Slot): its place in statement.
+            statement (Statement): Triple/Quad/GraphStart message to fill with terms.
 
         Returns:
-            RowsAndTerm: encoded extra rows and a jelly term to encode
+            Rows: encoded extra rows
 
         """
-        if slot is Slot.graph and term == DefaultGraph:
-            return self.encode_default_graph()
-
+        if (
+            slot is Slot.graph
+            and term == DefaultGraph
+            and isinstance(statement, (jelly.RdfQuad, jelly.RdfGraphStart))
+        ):
+            return self.encode_default_graph(statement)
         if isinstance(term, IRI):
-            return self.encode_iri(term._iri)
+            return self.encode_iri(term._iri, slot, statement)
 
         if isinstance(term, Literal):
             return self.encode_literal(
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
+                slot=slot,
+                statement=statement,
             )
 
         if isinstance(term, BlankNode):
-            return self.encode_bnode(term._identifier)
+            return self.encode_bnode(term._identifier, slot, statement)
 
         if isinstance(term, Triple):
-            return self.encode_quoted_triple(term)
+            return self.encode_quoted_triple(term, slot, statement)
 
-        return super().encode_any(term, slot)  # error if not handled
+        return super().encode_any(term, slot, statement)  # error if not handled
 
 
 def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:
