@@ -8,7 +8,6 @@ from typing import Any, Callable
 import pytest
 
 from pyjelly import jelly
-from pyjelly.options import StreamParameters
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
@@ -29,6 +28,7 @@ from pyjelly.integrations.generic.serialize import (
     graphs_stream_frames,
     grouped_stream_to_file,
 )
+from pyjelly.options import StreamParameters
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.streams import SerializerOptions
 
