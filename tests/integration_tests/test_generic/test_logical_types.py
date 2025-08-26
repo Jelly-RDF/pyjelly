@@ -8,6 +8,7 @@ from typing import Any, Callable
 import pytest
 
 from pyjelly import jelly
+from pyjelly.options import StreamParameters
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
@@ -44,7 +45,15 @@ def _make_flat_triples_bytes() -> bytes:
     sink.add(Triple(subject, predicate, object2))
 
     output = io.BytesIO()
-    flat_stream_to_file(sink.store, output)
+    options = SerializerOptions(
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+        params=StreamParameters(
+            generalized_statements=True,
+            rdf_star=True,
+            namespace_declarations=False,
+        ),
+    )
+    flat_stream_to_file(sink.store, output, options=options)
     return output.getvalue()
 
 
@@ -60,7 +69,15 @@ def _make_flat_quads_bytes() -> bytes:
     sink.add(Quad(subject, predicate, object1, DefaultGraph))
 
     output = io.BytesIO()
-    flat_stream_to_file(sink.store, output)
+    options = SerializerOptions(
+        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+        params=StreamParameters(
+            generalized_statements=True,
+            rdf_star=True,
+            namespace_declarations=False,
+        ),
+    )
+    flat_stream_to_file(sink.store, output, options=options)
     return output.getvalue()
 
 
@@ -70,6 +87,11 @@ def _make_physical_graphs_bytes() -> bytes:
 
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+        params=StreamParameters(
+            generalized_statements=True,
+            rdf_star=True,
+            namespace_declarations=False,
+        ),
     )
 
     stream = GraphStream(
@@ -119,6 +141,11 @@ def _make_grouped_graphs_bytes() -> bytes:
     output = io.BytesIO()
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS,
+        params=StreamParameters(
+            generalized_statements=True,
+            rdf_star=True,
+            namespace_declarations=False,
+        ),
     )
     grouped_stream_to_file((g for g in [graph1, graph2]), output, options=options)
     return output.getvalue()
