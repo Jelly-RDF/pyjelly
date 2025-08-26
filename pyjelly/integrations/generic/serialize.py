@@ -18,7 +18,6 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 
 from pyjelly import jelly
-from pyjelly.options import StreamParameters
 from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
@@ -234,7 +233,9 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
     # RDFLib doesn't support RDF-star and generalized statements by default
     # as it requires specific handling for quoted triples and non-standard RDF terms
     params = StreamParameters(
-        generalized_statements=False, rdf_star=False, namespace_declarations=True
+        generalized_statements=True,
+        rdf_star=True,
+        namespace_declarations=True
     )
     return SerializerOptions(logical_type=logical_type, params=params)
 
