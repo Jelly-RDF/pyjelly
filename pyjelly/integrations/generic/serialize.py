@@ -98,7 +98,10 @@ def triples_stream_frames(
 
     """
     stream.enroll()
-    if isinstance(data, GenericStatementSink):
+    if (
+        isinstance(data, GenericStatementSink)
+        and stream.options.params.namespace_declarations
+    ):
         namespace_declarations(data, stream)
 
     graphs = (data,)
@@ -129,7 +132,8 @@ def quads_stream_frames(
 
     """
     stream.enroll()
-    namespace_declarations(data, stream)  # type: ignore[arg-type]
+    if stream.options.params.namespace_declarations:
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     iterator: Generator[Quad]
     if isinstance(data, GenericStatementSink):
@@ -170,7 +174,8 @@ def graphs_stream_frames(
 
     """
     stream.enroll()
-    namespace_declarations(data, stream)  # type: ignore[arg-type]
+    if stream.options.params.namespace_declarations:
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     statements: Generator[Quad]
     if isinstance(data, GenericStatementSink):
@@ -230,8 +235,8 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         if sink.is_triples_sink
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
-    # RDFLib doesn't support RDF-star and generalized statements by default
-    # as it requires specific handling for quoted triples and non-standard RDF terms
+    # Generic sink supports both RDF-star and generalized statements by default
+    # as it can handle any term types including quoted triples and generalized RDF terms
     params = StreamParameters(
         generalized_statements=True, rdf_star=True, namespace_declarations=True
     )

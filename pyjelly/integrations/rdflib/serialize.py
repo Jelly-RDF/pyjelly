@@ -98,7 +98,7 @@ def triples_stream_frames(
 
     """
     stream.enroll()
-    if isinstance(data, Graph):
+    if isinstance(data, Graph) and stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)
 
     graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
@@ -132,7 +132,8 @@ def quads_stream_frames(
 
     """
     stream.enroll()
-    namespace_declarations(data, stream)  # type: ignore[arg-type]
+    if stream.options.params.namespace_declarations:
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     iterator: Generator[Quad, None, None]
     if isinstance(data, Dataset):
@@ -170,7 +171,8 @@ def graphs_stream_frames(
 
     """
     stream.enroll()
-    namespace_declarations(data, stream)  # type: ignore[arg-type]
+    if stream.options.params.namespace_declarations:
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     if isinstance(data, Dataset):
         graphs = data.graphs()
