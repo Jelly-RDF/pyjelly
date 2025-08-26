@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
