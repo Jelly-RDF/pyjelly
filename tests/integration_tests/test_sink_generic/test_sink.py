@@ -14,7 +14,7 @@ from pyjelly.integrations.generic.generic_sink import (
 
 class TestGenericStatementSink(unittest.TestCase):
     def setUp(self) -> None:
-        self.test_obj = GenericStatementSink("graph_id")
+        self.test_obj = GenericStatementSink(IRI("http://example.com/graph_id"))
         self.store_content = (
             IRI("http://example.com/s"),
             IRI("http://example.com/p"),
@@ -29,7 +29,7 @@ class TestGenericStatementSink(unittest.TestCase):
         assert repr(namespaces[0][1]) == repr(IRI("http://example.com/"))
 
     def test_identifier_property(self) -> None:
-        assert self.test_obj.identifier == "graph_id"
+        assert self.test_obj.identifier == IRI("http://example.com/graph_id")
 
     def test_store_property(self) -> None:
         for statement in self.test_obj.store:
