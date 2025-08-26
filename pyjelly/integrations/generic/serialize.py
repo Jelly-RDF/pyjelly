@@ -230,6 +230,8 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
         if sink.is_triples_sink
         else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
     )
+    # RDFLib doesn't support RDF-star and generalized statements by default
+    # as it requires specific handling for quoted triples and non-standard RDF terms
     params = StreamParameters(
         generalized_statements=False,
         rdf_star=False,
