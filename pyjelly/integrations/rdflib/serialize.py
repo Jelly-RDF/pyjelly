@@ -208,9 +208,7 @@ def guess_options(sink: Graph | Dataset) -> SerializerOptions:
     )
     # RDFLib doesn't support RDF-star and generalized statements by default
     # as it requires specific handling for quoted triples and non-standard RDF terms
-    params = StreamParameters(
-        generalized_statements=False, rdf_star=False
-    )
+    params = StreamParameters(generalized_statements=False, rdf_star=False)
     return SerializerOptions(logical_type=logical_type, params=params)
 
 

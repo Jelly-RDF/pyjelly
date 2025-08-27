@@ -12,9 +12,7 @@ print("IN  namespaces:", dict(g.namespaces()))
 # enable namespace declarations in jelly output
 options = SerializerOptions(
     params=StreamParameters(
-        generalized_statements=False,
-        rdf_star=False,
-        namespace_declarations=True
+        generalized_statements=False, rdf_star=False, namespace_declarations=True
     )
 )
 
