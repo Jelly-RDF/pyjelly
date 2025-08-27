@@ -1,10 +1,14 @@
-from typing import Optional
+from __future__ import annotations
 
 from pyjelly import jelly
-from pyjelly.parse.decode import options_from_frame, Decoder, Adapter
+from pyjelly.parse.decode import Adapter, Decoder, options_from_frame
+
+# Убираем импорт ParserOptions, так как он вызывает ошибку
 
 
-def _frame_with_options(*, version: int, set_nd: Optional[bool]):
+def _frame_with_options(
+    *, version: int, set_nd: bool | None
+) -> tuple[jelly.RdfStreamFrame, jelly.RdfStreamOptions]:
     frame = jelly.RdfStreamFrame()
 
     opts = jelly.RdfStreamOptions()
@@ -25,26 +29,30 @@ def _frame_with_options(*, version: int, set_nd: Optional[bool]):
 
 
 class _DummyAdapter(Adapter):
-    def iri(self, iri: str):
+    def iri(self, iri: str) -> str:
         return iri
-    def default_graph(self):
+
+    def default_graph(self) -> None:
         return None
-    def bnode(self, bnode: str):
+
+    def bnode(self, bnode: str) -> str:
         return bnode
-    def literal(self, lex, language=None, datatype=None):
+
+    def literal(
+        self, lex: str, language: str | None = None, datatype: str | None = None
+    ) -> tuple[str, str | None, str | None]:
         return (lex, language, datatype)
 
 
-def test_streamtypes_compat_with_v2_and_inferred_nd():
+def test_streamtypes_compat_with_v2_and_inferred_nd() -> None:
     frame, raw_opts = _frame_with_options(version=2, set_nd=None)
     parser_opts = options_from_frame(frame, delimited=True)
 
     dec = Decoder(_DummyAdapter(parser_opts))
-
     dec.validate_stream_options(raw_opts)
 
 
-def test_streamtypes_compat_with_v1_and_no_nd():
+def test_streamtypes_compat_with_v1_and_no_nd() -> None:
     frame, raw_opts = _frame_with_options(version=1, set_nd=None)
     parser_opts = options_from_frame(frame, delimited=True)
 

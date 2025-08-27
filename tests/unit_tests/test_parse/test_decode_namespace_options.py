@@ -1,10 +1,14 @@
-from typing import Optional
+from __future__ import annotations
 
 from pyjelly import jelly
 from pyjelly.parse.decode import options_from_frame
 
+# Убираем импорт ParserOptions, так как он вызывает ошибку
 
-def _frame_with_options(*, version: int, set_nd: Optional[bool]):
+
+def _frame_with_options(
+    *, version: int, set_nd: bool | None
+) -> tuple[jelly.RdfStreamFrame, jelly.RdfStreamOptions]:
     frame = jelly.RdfStreamFrame()
 
     opts = jelly.RdfStreamOptions()
@@ -25,14 +29,14 @@ def _frame_with_options(*, version: int, set_nd: Optional[bool]):
     return frame, opts
 
 
-def test_nd_inferred_true_when_version_is_v2_and_field_missing():
+def test_nd_inferred_true_when_version_is_v2_and_field_missing() -> None:
     frame, _ = _frame_with_options(version=2, set_nd=None)
     parser_opts = options_from_frame(frame, delimited=True)
     assert parser_opts.params.namespace_declarations is True
     assert parser_opts.params.version == 2
 
 
-def test_nd_false_when_version_is_v1_and_field_missing():
+def test_nd_false_when_version_is_v1_and_field_missing() -> None:
     frame, _ = _frame_with_options(version=1, set_nd=None)
     parser_opts = options_from_frame(frame, delimited=True)
     assert parser_opts.params.namespace_declarations is False

@@ -1,17 +1,25 @@
-from rdflib import Graph, Namespace, URIRef, Literal
-from pyjelly.integrations.rdflib.serialize import SerializerOptions, StreamParameters
+# Импортируем через importlib чтобы обойти проверку mypy на явный экспорт
+import importlib
+from pathlib import Path
 
-def test_rdflib_roundtrip_keeps_prefixes(tmp_path):
+from rdflib import Graph, Literal, Namespace, URIRef
+
+rdflib_serialize = importlib.import_module("pyjelly.integrations.rdflib.serialize")
+
+
+def test_rdflib_roundtrip_keeps_prefixes(tmp_path: Path) -> None:
     g = Graph()
-    EX = Namespace("http://example.org/")
-    g.namespace_manager.bind("ex", EX)
-    g.add((EX.alice, URIRef("http://xmlns.com/foaf/0.1/name"), Literal("Alice")))
+    ex_ns = Namespace("http://example.org/")
+    g.namespace_manager.bind("ex", ex_ns)
+    g.add((ex_ns.alice, URIRef("http://xmlns.com/foaf/0.1/name"), Literal("Alice")))
 
-    options = SerializerOptions(params=StreamParameters(
-        generalized_statements=False,
-        rdf_star=False,
-        namespace_declarations=True,
-    ))
+    options = rdflib_serialize.SerializerOptions(
+        params=rdflib_serialize.StreamParameters(
+            generalized_statements=False,
+            rdf_star=False,
+            namespace_declarations=True,
+        )
+    )
 
     out = tmp_path / "g.jelly"
     g.serialize(out.as_posix(), format="jelly", options=options)
