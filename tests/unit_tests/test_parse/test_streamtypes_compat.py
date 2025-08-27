@@ -4,7 +4,6 @@ from pyjelly import jelly
 from pyjelly.parse.decode import Adapter, Decoder, options_from_frame
 
 
-
 def _frame_with_options(
     *, version: int, set_nd: bool | None
 ) -> tuple[jelly.RdfStreamFrame, jelly.RdfStreamOptions]:
