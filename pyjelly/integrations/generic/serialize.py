@@ -18,7 +18,7 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import Rows, Slot, TermEncoder, Statement
+from pyjelly.serialize.encode import Rows, Slot, TermEncoder, HasGraph, Statement
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
     GraphStream,
@@ -32,7 +32,7 @@ QUAD_ARITY = 4
 
 
 class GenericSinkTermEncoder(TermEncoder):
-    def encode_any(self, term: object, slot: Slot, statement: Statement) -> Rows:
+    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
         """
         Encode term based on its GenericSink object.
 
@@ -45,31 +45,62 @@ class GenericSinkTermEncoder(TermEncoder):
             Rows: encoded extra rows
 
         """
-        if (
-            slot is Slot.graph
-            and term == DefaultGraph
-            and isinstance(statement, (jelly.RdfQuad, jelly.RdfGraphStart))
-        ):
-            return self.encode_default_graph(statement)
         if isinstance(term, IRI):
-            return self.encode_iri(term._iri, slot, statement)
+            iri = self.get_iri_field(statement, slot)
+            return self.encode_iri(term._iri, iri)
+
+        if isinstance(term, Literal):
+            literal = self.get_literal_field(statement, slot)
+            return self.encode_literal(
+                lex=term._lex,
+                language=term._langtag,
+                datatype=term._datatype,
+                literal=literal,
+            )
+
+        if isinstance(term, BlankNode):
+            self.set_bnode_field(
+                statement,
+                slot,
+                term._identifier,
+            )
+            return ()
+
+        if isinstance(term, Triple):
+            quoted_statement = self.get_triple_field(statement, slot)
+            return self.encode_quoted_triple(term, quoted_statement)
+
+        return super().encode_spo(term, slot, statement)  # error if not handled
+
+    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+        """
+        Encode graph term based on its GenericSink object.
+
+        Args:
+            term (object): term to encode
+            statement (HasGraph): Quad/GraphStart message to fill g_{} in.
+
+        Returns:
+            Rows: encoded extra rows
+
+        """
+        if term == DefaultGraph:
+            return self.encode_default_graph(statement.g_default_graph)
+        if isinstance(term, IRI):
+            return self.encode_iri(term._iri, statement.g_iri)
 
         if isinstance(term, Literal):
             return self.encode_literal(
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
-                slot=slot,
-                statement=statement,
+                literal=statement.g_literal,
             )
 
         if isinstance(term, BlankNode):
-            return self.encode_bnode(term._identifier, slot, statement)
-
-        if isinstance(term, Triple):
-            return self.encode_quoted_triple(term, slot, statement)
-
-        return super().encode_any(term, slot, statement)  # error if not handled
+            statement.g_bnode = term._identifier
+            return ()
+        return super().encode_graph(term, statement)  # error if not handled
 
 
 def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:

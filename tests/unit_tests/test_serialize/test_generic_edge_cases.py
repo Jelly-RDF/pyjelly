@@ -223,7 +223,7 @@ def test_graphs_stream_frames_parametrized(*, with_namespace: bool) -> None:
 def test_encoder_unsupported_raises() -> None:
     enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
     with pytest.raises(NotImplementedError, match="unsupported term type"):
-        enc.encode_any(object(), Slot.subject, jelly.RdfTriple())
+        enc.encode_spo(object(), Slot.subject, jelly.RdfTriple())
 
 
 def test_graphs_stream_frames_emit_dataset() -> None:

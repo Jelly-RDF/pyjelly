@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from enum import Enum
-from typing import Any, TypeVar
+from typing import TypeVar
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
@@ -32,8 +32,11 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 T = TypeVar("T")
 Rows: TypeAlias = Sequence[jelly.RdfStreamRow]
-Statement: TypeAlias = Any  # jelly.RdfTriple | jelly.RdfQuad | jelly.RdfGraphStart
-# commented bc of GraphStart being mutually exclusive with Triple in fields
+Statement: TypeAlias = jelly.RdfQuad | jelly.RdfTriple
+HasGraph: TypeAlias = jelly.RdfQuad | jelly.RdfGraphStart
+Terms: TypeAlias = (
+    jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph | jelly.RdfTriple
+)
 
 
 class TermEncoder:
@@ -82,42 +85,14 @@ class TermEncoder:
         name_index = self.names.encode_name_term_index(name)
         return term_rows, prefix_index, name_index
 
-    def encode_iri(self, iri_string: str, slot: Slot, statement: Statement) -> Rows:
+    def encode_iri(self, iri_string: str, iri: jelly.RdfIri) -> Rows:
         """
         Encode iri.
 
         Args:
             iri_string (str): full iri in string format.
             slot (Slot): iri's place in statement.
-            statement (Statement): statement itself (Triple/Quad/GraphStart)
-
-        Returns:
-            Rows: extra rows for prefix and name tables, if any.
-
-        """
-        term_rows, prefix_index, name_index = self.encode_iri_indices(iri_string)
-        if slot == Slot.subject:
-            iri = statement.s_iri
-        elif slot == Slot.predicate:
-            iri = statement.p_iri
-        elif slot == Slot.object:
-            iri = statement.o_iri
-        elif slot == Slot.graph and isinstance(
-            statement, (jelly.RdfQuad, jelly.RdfGraphStart)
-        ):
-            iri = statement.g_iri
-
-        iri.prefix_id = prefix_index
-        iri.name_id = name_index
-        return term_rows
-
-    def encode_iri_namespace(self, iri_string: str, iri: jelly.RdfIri) -> Rows:
-        """
-        Encode iri for namespace declaration message.
-
-        Args:
-            iri_string (str): full iri in string format.
-            iri (jelly.RdfIri): iri object to assign to.
+            iri (jelly.RdfIri): iri to fill
 
         Returns:
             Rows: extra rows for prefix and name tables, if any.
@@ -128,7 +103,7 @@ class TermEncoder:
         iri.name_id = name_index
         return term_rows
 
-    def encode_default_graph(self, statement: Statement) -> Rows:
+    def encode_default_graph(self, g_default_graph: jelly.RdfDefaultGraph) -> Rows:
         """
         Encode default graph.
 
@@ -136,33 +111,7 @@ class TermEncoder:
             Rows: empty row (for conformity)
 
         """
-        statement.g_default_graph.CopyFrom(jelly.RdfDefaultGraph())
-        return ()
-
-    def encode_bnode(self, bnode: str, slot: Slot, statement: Statement) -> Rows:
-        """
-        Encode blank node (BN).
-
-        Args:
-            bnode (str): BN internal identifier in string format.
-            slot (Slot): BN's place in statement (s/p/o/g).
-            statement (Statement): statement itself (Triple/Quad/GraphStart)
-
-        Returns:
-            Rows: empty row (for conformity)
-
-        """
-        if slot == Slot.subject:
-            statement.s_bnode = bnode
-        elif slot == Slot.object:
-            statement.o_bnode = bnode
-        elif slot == Slot.predicate:
-            statement.p_bnode = bnode
-        elif slot == Slot.graph and isinstance(
-            statement, (jelly.RdfQuad, jelly.RdfGraphStart)
-        ):
-            statement.g_bnode = bnode
-
+        g_default_graph.CopyFrom(jelly.RdfDefaultGraph())
         return ()
 
     def encode_literal(
@@ -171,8 +120,7 @@ class TermEncoder:
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
-        slot: Slot,
-        statement: Statement,
+        literal: jelly.RdfLiteral,
     ) -> Rows:
         """
         Encode literal.
@@ -182,8 +130,7 @@ class TermEncoder:
             language (str | None, optional): langtag. Defaults to None.
             datatype (str | None, optional): data type if
             it is a typed literal. Defaults to None.
-            slot (Slot): BN's place in statement (s/p/o/g).
-            statement (Statement): statement itself (Triple/Quad/GraphStart)
+            literal (jelly.RdfLiteral): literal to fill.
 
         Raises:
             JellyConformanceError: if datatype specified while
@@ -212,17 +159,6 @@ class TermEncoder:
 
             datatype_id = self.datatypes.encode_datatype_term_index(datatype)
 
-        if slot == Slot.subject:
-            literal = statement.s_literal
-        elif slot == Slot.object:
-            literal = statement.o_literal
-        elif slot == Slot.predicate:
-            literal = statement.p_literal
-        elif slot == Slot.graph and isinstance(
-            statement, (jelly.RdfQuad, jelly.RdfGraphStart)
-        ):
-            literal = statement.g_literal
-
         literal.lex = lex
         if language:
             literal.langtag = language
@@ -231,7 +167,7 @@ class TermEncoder:
         return term_rows
 
     def encode_quoted_triple(
-        self, terms: Iterable[object], original_slot: Slot, statement: Statement
+        self, terms: Iterable[object], quoted_statement: jelly.RdfTriple
     ) -> Rows:
         """
         Encode a quoted triple.
@@ -242,9 +178,7 @@ class TermEncoder:
 
         Args:
             terms (Iterable[object]): triple terms to encode.
-            original_slot (Slot): triple's place in statement
-                on the upper nesting level (s/p/o).
-            statement (Statement): statement itself (Triple/Quad)
+            quoted_statement (jelly.RdfTriple): quoted triple to fill.
 
         Returns:
             RowsAndTerm: additional stream rows with preceeding
@@ -252,21 +186,54 @@ class TermEncoder:
                 and the encoded triple row.
 
         """
-        if original_slot == Slot.subject:
-            quoted_statement = statement.s_triple_term
-        elif original_slot == Slot.object:
-            quoted_statement = statement.o_triple_term
-        elif original_slot == Slot.predicate:
-            quoted_statement = statement.p_triple_term
         rows: list[jelly.RdfStreamRow] = []
         for slot, term in zip(Slot, terms):
-            extra_rows = self.encode_any(term, slot, quoted_statement)
+            extra_rows = self.encode_spo(term, slot, quoted_statement)
             rows.extend(extra_rows)
         return rows
 
-    def encode_any(self, term: object, slot: Slot, statement: Statement) -> Rows:
+    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
         msg = f"unsupported term type: {type(term)}"
         raise NotImplementedError(msg)
+
+    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+        msg = f"unsupported term type: {type(term)}"
+        raise NotImplementedError(msg)
+
+    def get_iri_field(self, statement: Statement, slot: Slot) -> jelly.RdfIri:
+        """Get IRI field directly based on slot."""
+        if slot == Slot.subject:
+            return statement.s_iri
+        if slot == Slot.predicate:
+            return statement.p_iri
+        return statement.o_iri
+
+    def get_literal_field(self, statement: Statement, slot: Slot) -> jelly.RdfLiteral:
+        """Get literal field directly based on slot."""
+        if slot == Slot.subject:
+            return statement.s_literal
+        if slot == Slot.predicate:
+            return statement.p_literal
+        return statement.o_literal
+
+    def set_bnode_field(
+        self, statement: Statement, slot: Slot, identifier: str
+    ) -> None:
+        """Set bnode field directly based on slot."""
+        if slot == Slot.subject:
+            statement.s_bnode = identifier
+        elif slot == Slot.predicate:
+            statement.p_bnode = identifier
+        else:
+            statement.o_bnode = identifier
+
+    def get_triple_field(self, statement: Statement, slot: Slot) -> jelly.RdfTriple:
+        """Get triple term field directly based on slot."""
+        if slot == Slot.subject:
+            return statement.s_triple_term
+        if slot == Slot.predicate:
+            return statement.p_triple_term
+        return statement.o_triple_term
 
 
 class Slot(str, Enum):
@@ -301,11 +268,23 @@ def encode_statement(
 
     """
     rows: list[jelly.RdfStreamRow] = []
-    for slot, term in zip(Slot, terms):
-        if repeated_terms[slot] != term:
-            extra_rows = term_encoder.encode_any(term, slot, statement)
-            rows.extend(extra_rows)
-            repeated_terms[slot] = term
+    terms = list(terms)
+    if repeated_terms[Slot.subject] != terms[0]:
+        extra_rows = term_encoder.encode_spo(terms[0], Slot.subject, statement)
+        rows.extend(extra_rows)
+        repeated_terms[Slot.subject] = terms[0]
+    if repeated_terms[Slot.predicate] != terms[1]:
+        extra_rows = term_encoder.encode_spo(terms[1], Slot.predicate, statement)
+        rows.extend(extra_rows)
+        repeated_terms[Slot.predicate] = terms[1]
+    if repeated_terms[Slot.object] != terms[2]:
+        extra_rows = term_encoder.encode_spo(terms[2], Slot.object, statement)
+        rows.extend(extra_rows)
+        repeated_terms[Slot.object] = terms[2]
+    if isinstance(statement, jelly.RdfQuad) and repeated_terms[Slot.graph] != terms[3]:
+        extra_rows = term_encoder.encode_graph(terms[3], statement)
+        rows.extend(extra_rows)
+        repeated_terms[Slot.object] = terms[3]
     return rows
 
 
@@ -375,7 +354,7 @@ def encode_namespace_declaration(
 
     """
     iri = jelly.RdfIri()
-    [*rows] = term_encoder.encode_iri_namespace(value, iri=iri)
+    [*rows] = term_encoder.encode_iri(value, iri=iri)
     declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)
     row = jelly.RdfStreamRow(namespace=declaration)
     rows.append(row)

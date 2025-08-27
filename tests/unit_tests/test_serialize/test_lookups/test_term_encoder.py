@@ -27,15 +27,14 @@ def test_encode_literal_fails_with_disabled_datatype_lookup() -> None:
         encoder.encode_literal(
             lex="42",
             datatype="http://www.w3.org/2001/XMLSchema#integer",
-            slot=Slot.subject,
-            statement=jelly.RdfTriple,
+            literal=jelly.RdfTriple().s_literal,
         )
 
 
 def test_encode_any_raises_not_implemented() -> None:
     encoder = TermEncoder()
     with pytest.raises(NotImplementedError) as exc:
-        encoder.encode_any(123, Slot.subject, statement=jelly.RdfTriple)
+        encoder.encode_spo(123, Slot.subject, statement=jelly.RdfTriple())
     assert "unsupported term type: <class 'int'>" in str(exc.value)
 
 
@@ -53,8 +52,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
         _ = encoder.encode_literal(
             lex="foo",
             datatype="http://www.w3.org/2001/XMLSchema#string",
-            slot=Slot.subject,
-            statement=statement,
+            literal=statement.s_literal,
         )
         assert statement.s_literal.lex == snapshot("foo")
         assert statement.s_literal.datatype == snapshot(0)
@@ -64,8 +62,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
         statement = jelly.RdfTriple()
         _ = encoder.encode_literal(
             lex="bar",
-            slot=Slot.subject,
-            statement=statement,
+            literal=statement.s_literal,
         )
         assert statement.s_literal.lex == snapshot("bar")
         assert statement.s_literal.datatype == snapshot(0)
@@ -76,8 +73,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
         _ = encoder.encode_literal(
             lex="baz",
             language="en",
-            slot=Slot.subject,
-            statement=statement,
+            literal=statement.s_literal,
         )
         assert statement.s_literal.lex == snapshot("baz")
         assert statement.s_literal.langtag == snapshot("en")
