@@ -3,7 +3,6 @@ from __future__ import annotations
 from pyjelly import jelly
 from pyjelly.parse.decode import Adapter, Decoder, options_from_frame
 
-# Убираем импорт ParserOptions, так как он вызывает ошибку
 
 
 def _frame_with_options(

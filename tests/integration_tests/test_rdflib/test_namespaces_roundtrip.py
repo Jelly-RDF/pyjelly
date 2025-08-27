@@ -1,4 +1,3 @@
-# Импортируем через importlib чтобы обойти проверку mypy на явный экспорт
 import importlib
 from pathlib import Path
 
