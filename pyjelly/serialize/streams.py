@@ -37,6 +37,7 @@ class SerializerOptions:
 class Stream:
     physical_type: ClassVar[jelly.PhysicalStreamType]
     default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]]
+    repeated_terms: list[object | None]
 
     def __init__(
         self,
@@ -52,7 +53,7 @@ class Stream:
         if flow is None:
             flow = self.infer_flow()
         self.flow = flow
-        self.repeated_terms = dict.fromkeys(Slot)
+        self.repeated_terms = [None] * len(Slot)
         self.enrolled = False
         self.stream_types = StreamTypes(
             physical_type=self.physical_type,

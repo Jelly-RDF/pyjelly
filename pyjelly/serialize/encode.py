@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from enum import Enum
+from enum import IntEnum
 from typing import TypeVar, Union
 from typing_extensions import TypeAlias
 
@@ -181,15 +181,18 @@ class TermEncoder:
             quoted_statement (jelly.RdfTriple): quoted triple to fill.
 
         Returns:
-            RowsAndTerm: additional stream rows with preceeding
-                information (prefixes, names, datatypes rows, if any)
-                and the encoded triple row.
+            Rows: additional stream rows with preceeding
+                information (prefixes, names, datatypes rows, if any).
 
         """
         rows: list[jelly.RdfStreamRow] = []
-        for slot, term in zip(Slot, terms):
-            extra_rows = self.encode_spo(term, slot, quoted_statement)
-            rows.extend(extra_rows)
+        terms = iter(terms)
+        extra_rows = self.encode_spo(next(terms), Slot.subject, quoted_statement)
+        rows.extend(extra_rows)
+        extra_rows = self.encode_spo(next(terms), Slot.predicate, quoted_statement)
+        rows.extend(extra_rows)
+        extra_rows = self.encode_spo(next(terms), Slot.object, quoted_statement)
+        rows.extend(extra_rows)
         return rows
 
     def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
@@ -236,22 +239,17 @@ class TermEncoder:
         return statement.o_triple_term
 
 
-class Slot(str, Enum):
-    """Slots for encoding RDF terms."""
-
-    subject = "s"
-    predicate = "p"
-    object = "o"
-    graph = "g"
-
-    def __str__(self) -> str:
-        return self.value
+class Slot(IntEnum):
+    subject = 0
+    predicate = 1
+    object = 2
+    graph = 3
 
 
 def encode_statement(
     terms: Iterable[object],
     term_encoder: TermEncoder,
-    repeated_terms: dict[Slot, object],
+    repeated_terms: list[object | None],
     statement: Statement,
 ) -> list[jelly.RdfStreamRow]:
     """
@@ -268,30 +266,35 @@ def encode_statement(
 
     """
     rows: list[jelly.RdfStreamRow] = []
-    terms = list(terms)
-    if repeated_terms[Slot.subject] != terms[0]:
-        extra_rows = term_encoder.encode_spo(terms[0], Slot.subject, statement)
+    terms = iter(terms)
+    s = next(terms)
+    if repeated_terms[Slot.subject] != s:
+        extra_rows = term_encoder.encode_spo(s, Slot.subject, statement)
         rows.extend(extra_rows)
-        repeated_terms[Slot.subject] = terms[0]
-    if repeated_terms[Slot.predicate] != terms[1]:
-        extra_rows = term_encoder.encode_spo(terms[1], Slot.predicate, statement)
+        repeated_terms[Slot.subject] = s
+    p = next(terms)
+    if repeated_terms[Slot.predicate] != p:
+        extra_rows = term_encoder.encode_spo(p, Slot.predicate, statement)
         rows.extend(extra_rows)
-        repeated_terms[Slot.predicate] = terms[1]
-    if repeated_terms[Slot.object] != terms[2]:
-        extra_rows = term_encoder.encode_spo(terms[2], Slot.object, statement)
+        repeated_terms[Slot.predicate] = p
+    o = next(terms)
+    if repeated_terms[Slot.object] != o:
+        extra_rows = term_encoder.encode_spo(o, Slot.object, statement)
         rows.extend(extra_rows)
-        repeated_terms[Slot.object] = terms[2]
-    if isinstance(statement, jelly.RdfQuad) and repeated_terms[Slot.graph] != terms[3]:
-        extra_rows = term_encoder.encode_graph(terms[3], statement)
-        rows.extend(extra_rows)
-        repeated_terms[Slot.object] = terms[3]
+        repeated_terms[Slot.object] = o
+    if isinstance(statement, jelly.RdfQuad):
+        g = next(terms)
+        if repeated_terms[Slot.graph] != g:
+            extra_rows = term_encoder.encode_graph(g, statement)
+            rows.extend(extra_rows)
+            repeated_terms[Slot.object] = g
     return rows
 
 
 def encode_triple(
     terms: Iterable[object],
     term_encoder: TermEncoder,
-    repeated_terms: dict[Slot, object],
+    repeated_terms: list[object | None],
 ) -> list[jelly.RdfStreamRow]:
     """
     Encode one triple.
@@ -315,7 +318,7 @@ def encode_triple(
 def encode_quad(
     terms: Iterable[object],
     term_encoder: TermEncoder,
-    repeated_terms: dict[Slot, object],
+    repeated_terms: list[object | None],
 ) -> list[jelly.RdfStreamRow]:
     """
     Encode one quad.
