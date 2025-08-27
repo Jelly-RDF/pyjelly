@@ -1,10 +1,9 @@
 import pytest
+from rdflib import URIRef
 
 from pyjelly import jelly
 from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
 from pyjelly.options import LookupPreset
-
-from rdflib import URIRef
 
 
 def test_graph_not_implemented() -> None:
