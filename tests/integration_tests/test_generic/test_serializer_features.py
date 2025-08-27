@@ -30,7 +30,7 @@ def test_defaults_generic(
     assert opts.logical_type == expected_logical
     assert opts.params.rdf_star is True
     assert opts.params.generalized_statements is True
-    assert opts.params.namespace_declarations is True
+    assert opts.params.namespace_declarations is False
 
 
 @pytest.mark.parametrize(
