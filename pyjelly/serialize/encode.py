@@ -32,9 +32,9 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 T = TypeVar("T")
 Rows: TypeAlias = Sequence[jelly.RdfStreamRow]
-Statement: TypeAlias = Union[jelly.RdfQuad, jelly.RdfTriple]  # noqa: UP007
-HasGraph: TypeAlias = Union[jelly.RdfQuad, jelly.RdfGraphStart]  # noqa: UP007
-Terms: TypeAlias = Union[  # noqa: UP007
+Statement: TypeAlias = Union[jelly.RdfQuad, jelly.RdfTriple]
+HasGraph: TypeAlias = Union[jelly.RdfQuad, jelly.RdfGraphStart]
+Terms: TypeAlias = Union[
     jelly.RdfIri, jelly.RdfLiteral, str, jelly.RdfDefaultGraph, jelly.RdfTriple
 ]
 
