@@ -287,7 +287,7 @@ def encode_statement(
         if repeated_terms[Slot.graph] != g:
             extra_rows = term_encoder.encode_graph(g, statement)
             rows.extend(extra_rows)
-            repeated_terms[Slot.object] = g
+            repeated_terms[Slot.graph] = g
     return rows
 
 
