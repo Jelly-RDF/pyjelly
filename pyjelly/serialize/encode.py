@@ -108,7 +108,7 @@ class TermEncoder:
         Encode default graph.
 
         Returns:
-            Rows: empty row (for conformity)
+            Rows: empty extra rows (for API consistency)
 
         """
         g_default_graph.CopyFrom(jelly.RdfDefaultGraph())
