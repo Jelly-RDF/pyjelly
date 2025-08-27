@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
@@ -37,6 +37,7 @@ class SerializerOptions:
 class Stream:
     physical_type: ClassVar[jelly.PhysicalStreamType]
     default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]]
+    repeated_terms: list[object | None]
 
     def __init__(
         self,
@@ -52,7 +53,7 @@ class Stream:
         if flow is None:
             flow = self.infer_flow()
         self.flow = flow
-        self.repeated_terms = dict.fromkeys(Slot)
+        self.repeated_terms = [None] * len(Slot)
         self.enrolled = False
         self.stream_types = StreamTypes(
             physical_type=self.physical_type,
@@ -249,10 +250,9 @@ class GraphStream(TripleStream):
             Generator[jelly.RdfStreamFrame]: jelly frames.
 
         """
-        [*graph_rows], graph_node = self.encoder.encode_any(graph_id, Slot.graph)
-        kw_name = f"{Slot.graph}_{self.encoder.TERM_ONEOF_NAMES[type(graph_node)]}"
-        kws: dict[Any, Any] = {kw_name: graph_node}
-        start_row = jelly.RdfStreamRow(graph_start=jelly.RdfGraphStart(**kws))
+        graph_start = jelly.RdfGraphStart()
+        [*graph_rows] = self.encoder.encode_graph(graph_id, graph_start)
+        start_row = jelly.RdfStreamRow(graph_start=graph_start)
         graph_rows.append(start_row)
         self.flow.extend(graph_rows)
         for triple in graph:
