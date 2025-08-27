@@ -81,16 +81,6 @@ class RDFLibTermEncoder(TermEncoder):
         if isinstance(term, rdflib.URIRef):
             return self.encode_iri(term, statement.g_iri)
 
-        if isinstance(term, rdflib.Literal):
-            return self.encode_literal(
-                lex=str(term),
-                language=term.language,
-                # `datatype` is cast to `str` explicitly because
-                # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
-                datatype=term.datatype and str(term.datatype),
-                literal=statement.g_literal,
-            )
-
         if isinstance(term, rdflib.BNode):
             statement.g_bnode = str(term)
             return ()
