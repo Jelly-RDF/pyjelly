@@ -7,7 +7,7 @@ from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
 
 from pyjelly import jelly
-from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
+from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
 
@@ -54,6 +54,9 @@ def options_from_frame(
     """
     row = frame.rows[0]
     options = row.options
+    nd = getattr(options, "namespace_declarations", False) or (
+        options.version >= MAX_VERSION
+    )
     return ParserOptions(
         stream_types=StreamTypes(
             physical_type=options.physical_type,
@@ -70,7 +73,7 @@ def options_from_frame(
             rdf_star=options.rdf_star,
             version=options.version,
             delimited=delimited,
-            namespace_declarations=False,
+            namespace_declarations=nd,
         ),
     )
 
