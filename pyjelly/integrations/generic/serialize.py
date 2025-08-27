@@ -238,7 +238,7 @@ def guess_options(sink: GenericStatementSink) -> SerializerOptions:
     # Generic sink supports both RDF-star and generalized statements by default
     # as it can handle any term types including quoted triples and generalized RDF terms
     params = StreamParameters(
-        generalized_statements=True, rdf_star=True, namespace_declarations=False
+        generalized_statements=True, rdf_star=True
     )
     return SerializerOptions(logical_type=logical_type, params=params)
 
