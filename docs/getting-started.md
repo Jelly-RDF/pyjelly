@@ -35,8 +35,12 @@ Prefixes bound in RDFLib's namespace manager will then be written into the Jelly
 {{ code_example('rdflib/08_namespaces.py') }}
 
 !!! tip
+    
     For an existing graph you can (re)bind a prefix just before saving:
-    `g.namespace_manager.bind("ex", EX, replace=True)`.
+    
+    ```python
+    g.namespace_manager.bind("ex", EX, replace=True)
+    ```
 
 
 ### Parsing a graph
