@@ -10,11 +10,7 @@ g.add((EX.alice, URIRef("http://xmlns.com/foaf/0.1/name"), Literal("Alice")))
 print("IN  namespaces:", dict(g.namespaces()))
 
 # Enable namespace declarations in Jelly output
-options = SerializerOptions(
-    params=StreamParameters(
-        namespace_declarations=True
-    )
-)
+options = SerializerOptions(params=StreamParameters(namespace_declarations=True))
 
 # Serialize with options
 g.serialize("sample_test.jelly", format="jelly", options=options)
