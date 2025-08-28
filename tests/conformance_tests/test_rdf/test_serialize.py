@@ -151,7 +151,7 @@ def test_serializes_physical_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
-    input_paths = [p for p in case.action_paths if p.suffix.lower() in {".ttl", ".nt", ".trig", ".nq"}]
+    input_paths = [p for p in case.action_paths if p.name.startswith("in_")]
 
     write_graph_or_dataset(
         *[str(p) for p in input_paths],
