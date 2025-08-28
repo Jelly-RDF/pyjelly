@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import urllib.parse
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, List
 from unittest.mock import patch
 
 import pytest
-from rdflib import Dataset, Graph, Literal, Namespace, Node, URIRef
+from rdflib import Dataset, Graph, Namespace, Node, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
@@ -25,82 +26,80 @@ MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 RDFT = Namespace("http://www.w3.org/ns/rdftest#")
 
 
-def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
-    template = "%s " * (3 + (context != DATASET_DEFAULT_GRAPH_ID)) + ".\n"
-    args = (
-        triple[0].n3(),
-        triple[1].n3(),
-        _quoteLiteral(triple[2]) if isinstance(triple[2], Literal) else triple[2].n3(),
-        *((context.n3(),) if context != DATASET_DEFAULT_GRAPH_ID else ()),
-    )
-    return template % args
+@dataclass
+class JellyTestCase:
+    uri: str
+    type: str | None = None
+    name: str | None = None
+    action: List[URIRef] = field(default_factory=list)
+    result: List[Any] = field(default_factory=list)
+    requirements: List[str] = field(default_factory=list)
+    category: str | None = None
 
 
-workaround_rdflib_serializes_default_graph_id = patch(
-    "rdflib.plugins.serializers.nquads._nq_row",
-    new=_new_nq_row,
-)
-workaround_rdflib_serializes_default_graph_id.start()
-
-
+@dataclass
 class ManifestParser:
-    def __init__(self, manifest_path: Path) -> None:
-        self.manifest_path = manifest_path
-        self.graph = Graph()
-        with manifest_path.open("rb") as f:
-            self.graph.parse(f, format="turtle", publicID=str(manifest_path))
-        self.manifest_uri = URIRef(manifest_path.as_uri())
+    manifest_path: Path
+    graph: Graph = field(init=False)
+    manifest_uri: URIRef = field(init=False)
 
-    def get_test_cases(self, test_type: str | None = None) -> list[dict[str, Any]]:
-        test_cases: list[dict[str, Any]] = []
+    def __post_init__(self):
+        self.graph = Graph()
+        with self.manifest_path.open("rb") as f:
+            self.graph.parse(f, format="turtle", publicID=str(self.manifest_path))
+        self.manifest_uri = URIRef(self.manifest_path.as_uri())
+
+    def get_test_cases(self, test_type: str | None = None) -> list[JellyTestCase]:
+        test_cases: list[JellyTestCase] = []
         entries = self.graph.objects(self.manifest_uri, MF.entries)
         for entry_list in entries:
             for test_uri in self.graph.items(entry_list):
                 if not isinstance(test_uri, URIRef):
                     continue
                 test_case = self._parse_test_case(test_uri)
-                if test_type is None or test_case.get("type") == test_type:
+                if test_type is None or test_case.type == test_type:
                     test_cases.append(test_case)
         return test_cases
 
-    def _parse_test_case(self, test_uri: URIRef) -> dict[str, Any]:
-        test_case: dict[str, Any] = {"uri": str(test_uri)}
+    def _parse_test_case(self, test_uri: URIRef) -> JellyTestCase:
+        test_type = None
         if (test_uri, RDF.type, JELLYT.TestPositive) in self.graph:
-            test_case["type"] = "positive"
+            test_type = "positive"
         elif (test_uri, RDF.type, JELLYT.TestNegative) in self.graph:
-            test_case["type"] = "negative"
-
+            test_type = "negative"
         name = self.graph.value(test_uri, MF.name)
-        if name:
-            test_case["name"] = str(name)
-
+        name_str = str(name) if name else None
         action = self.graph.value(test_uri, MF.action)
+        action_list = []
         if action:
             if isinstance(action, URIRef):
-                test_case["action"] = [action]
+                action_list = [action]
             else:
-                test_case["action"] = list(self.graph.items(action))
-
+                action_list = list(self.graph.items(action))
         result = self.graph.value(test_uri, MF.result)
+        result_list = []
         if result:
             if isinstance(result, URIRef):
-                test_case["result"] = [result]
+                result_list = [result]
             else:
-                test_case["result"] = list(self.graph.items(result))
-
-        test_case["requirements"] = [
-            str(req) for req in self.graph.objects(test_uri, MF.requires)
-        ]
-
+                result_list = list(self.graph.items(result))
+        requirements = [str(req) for req in self.graph.objects(test_uri, MF.requires)]
         uri_str = str(test_uri)
         if "generalized" in uri_str:
-            test_case["category"] = "generalized"
+            category = "generalized"
         elif "rdf_star" in uri_str:
-            test_case["category"] = "rdf_star"
+            category = "rdf_star"
         else:
-            test_case["category"] = "rdf_1_1"
-
-        return test_case
+            category = "rdf_1_1"
+        return JellyTestCase(
+            uri=str(test_uri),
+            type=test_type,
+            name=name_str,
+            action=action_list,
+            result=result_list,
+            requirements=requirements,
+            category=category,
+        )
 
 
 def uri_to_local_path(uri: URIRef, base_dir: Path) -> Path:
@@ -117,9 +116,24 @@ def uri_to_local_path(uri: URIRef, base_dir: Path) -> Path:
     return base_dir / path_component
 
 
+def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
+    s, p, o = triple
+    context_str = ""
+    if context.identifier != DATASET_DEFAULT_GRAPH_ID:
+        context_str = f" {_quoteLiteral(context.identifier)}"
+    return f"{_quoteLiteral(s)} {_quoteLiteral(p)} {_quoteLiteral(o)}{context_str} .\n"
+
+
+workaround_rdflib_serializes_default_graph_id = patch(
+    "rdflib.plugins.serializers.nquads._nq_row",
+    new=_new_nq_row,
+)
+workaround_rdflib_serializes_default_graph_id.start()
+
 PROTOBUF_SUBMODULE_DIR = (
     Path(__file__).parent.parent.parent.parent / "submodules" / "protobuf"
 )
+
 FROM_JELLY_MANIFEST = (
     PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly" / "manifest.ttl"
 )
@@ -128,37 +142,30 @@ TO_JELLY_MANIFEST = (
 )
 
 if not FROM_JELLY_MANIFEST.exists():
-    _msg_from = f"From Jelly manifest not found: {FROM_JELLY_MANIFEST}"
-    raise FileNotFoundError(_msg_from)
+    raise FileNotFoundError(f"From Jelly manifest not found: {FROM_JELLY_MANIFEST}")
 if not TO_JELLY_MANIFEST.exists():
-    _msg_to = f"To Jelly manifest not found: {TO_JELLY_MANIFEST}"
-    raise FileNotFoundError(_msg_to)
+    raise FileNotFoundError(f"To Jelly manifest not found: {TO_JELLY_MANIFEST}")
 
 from_manifest = ManifestParser(FROM_JELLY_MANIFEST)
 to_manifest = ManifestParser(TO_JELLY_MANIFEST)
 
 
 def run_from_jelly_positive_test(
-    test_case: dict[str, Any],
+    test_case: JellyTestCase,
     test_id: str,
     *,
     use_generic: bool = False,
 ) -> None:
-    """Run positive test case — should parse successfully."""
-    if not test_case.get("action"):
+    if not test_case.action:
         pytest.skip(f"No action defined for test {test_id}")
-
-    input_uri = test_case["action"][0]
+    input_uri = test_case.action[0]
     input_path = uri_to_local_path(
         input_uri, PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly"
     )
-
     if not input_path.exists():
         pytest.skip(f"Input file not found: {input_path}")
-
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
-
     if use_generic:
         with input_path.open("rb") as input_file:
             for frame_no, sink in enumerate(generic_parse_jelly_grouped(input_file)):
@@ -201,23 +208,19 @@ def run_from_jelly_positive_test(
 
 
 def run_from_jelly_negative_test(
-    test_case: dict[str, Any],
+    test_case: JellyTestCase,
     test_id: str,
     *,
     use_generic: bool = False,
 ) -> None:
-    """Run negative test case — should fail to parse."""
-    if not test_case.get("action"):
+    if not test_case.action:
         pytest.skip(f"No action defined for test {test_id}")
-
-    input_uri = test_case["action"][0]
+    input_uri = test_case.action[0]
     input_path = uri_to_local_path(
         input_uri, PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly"
     )
-
     if not input_path.exists():
         pytest.skip(f"Input file not found: {input_path}")
-
     if use_generic:
         with (
             pytest.raises(BaseException, match=".") as _excinfo,
@@ -230,82 +233,73 @@ def run_from_jelly_negative_test(
             dataset.parse(location=str(input_path), format="jelly")
 
 
-def run_to_jelly_test(_test_case: dict[str, Any], _test_id: str) -> None:
+def run_to_jelly_test(_test_case: JellyTestCase, _test_id: str) -> None:
     pytest.skip("to_jelly tests not implemented in this example")
 
 
 for test_case in from_manifest.get_test_cases("positive"):
-    test_id = test_case["uri"].split("/")[-1]
+    test_id = test_case.uri.split("/")[-1]
 
     @needs_jelly_cli
     def test_from_jelly_positive_rdflib(
-        test_case: dict[str, Any] = test_case, test_id: str = test_id
+        test_case: JellyTestCase = test_case, test_id: str = test_id
     ) -> None:
         run_from_jelly_positive_test(test_case, test_id, use_generic=False)
 
     test_from_jelly_positive_rdflib.__name__ = (
         f"test_from_jelly_positive_rdflib_{test_id}"
     )
-    globals()[test_from_jelly_positive_rdflib.__name__] = (
-        test_from_jelly_positive_rdflib
-    )
+    globals()[test_from_jelly_positive_rdflib.__name__] = test_from_jelly_positive_rdflib
 
 for test_case in from_manifest.get_test_cases("positive"):
-    test_id = test_case["uri"].split("/")[-1]
-
-    if test_case.get("category") in ["generalized", "rdf_star"]:
+    test_id = test_case.uri.split("/")[-1]
+    if test_case.category in ["generalized", "rdf_star"]:
 
         @needs_jelly_cli
         def test_from_jelly_positive_generic(
-            test_case: dict[str, Any] = test_case, test_id: str = test_id
+            test_case: JellyTestCase = test_case, test_id: str = test_id
         ) -> None:
             run_from_jelly_positive_test(test_case, test_id, use_generic=True)
 
         test_from_jelly_positive_generic.__name__ = (
             f"test_from_jelly_positive_generic_{test_id}"
         )
-        globals()[test_from_jelly_positive_generic.__name__] = (
-            test_from_jelly_positive_generic
-        )
+        globals()[test_from_jelly_positive_generic.__name__] = test_from_jelly_positive_generic
 
 for test_case in from_manifest.get_test_cases("negative"):
-    test_id = test_case["uri"].split("/")[-1]
+    test_id = test_case.uri.split("/")[-1]
 
     @needs_jelly_cli
     def test_from_jelly_negative_rdflib(
-        test_case: dict[str, Any] = test_case, test_id: str = test_id
+        test_case: JellyTestCase = test_case, test_id: str = test_id
     ) -> None:
         run_from_jelly_negative_test(test_case, test_id, use_generic=False)
 
     test_from_jelly_negative_rdflib.__name__ = (
         f"test_from_jelly_negative_rdflib_{test_id}"
     )
-    globals()[test_from_jelly_negative_rdflib.__name__] = (
-        test_from_jelly_negative_rdflib
-    )
+    globals()[test_from_jelly_negative_rdflib.__name__] = test_from_jelly_negative_rdflib
 
 for test_case in from_manifest.get_test_cases("negative"):
-    test_id = test_case["uri"].split("/")[-1]
+    test_id = test_case.uri.split("/")[-1]
 
     @needs_jelly_cli
     def test_from_jelly_negative_generic(
-        test_case: dict[str, Any] = test_case, test_id: str = test_id
+        test_case: JellyTestCase = test_case, test_id: str = test_id
     ) -> None:
         run_from_jelly_negative_test(test_case, test_id, use_generic=True)
 
     test_from_jelly_negative_generic.__name__ = (
         f"test_from_jelly_negative_generic_{test_id}"
     )
-    globals()[test_from_jelly_negative_generic.__name__] = (
-        test_from_jelly_negative_generic
-    )
+    globals()[test_from_jelly_negative_generic.__name__] = test_from_jelly_negative_generic
 
 for test_case in to_manifest.get_test_cases():
-    test_id = test_case["uri"].split("/")[-1]
+    test_id = test_case.uri.split("/")[-1]
 
     @needs_jelly_cli
     def test_to_jelly_placeholder(
-        test_case: dict[str, Any] = test_case,
+        test_case: JellyTestCase = test_case,
         test_id: str = test_id,
     ) -> None:
         run_to_jelly_test(test_case, test_id)
