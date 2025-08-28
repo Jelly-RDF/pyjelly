@@ -204,13 +204,15 @@ def test_rdflib_parsing_fails_physical_negative(case: FromJellyTestCase) -> None
     with pytest.raises(Exception, match=".*"):
         dataset.parse(location=str(case.action_path), format="jelly")
 
+
 @needs_jelly_cli
 @pytest.mark.parametrize("case", GENERIC_NEGATIVE_CASES)
 def test_generic_parsing_fails_negative(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
-    with pytest.raises(Exception, match=".*"), case.action_path.open(
-        "rb"
-    ) as input_file:
+    with (
+        pytest.raises(Exception, match=".*"),
+        case.action_path.open("rb") as input_file,
+    ):
         list(generic_parse_jelly_grouped(input_file))
