@@ -3,7 +3,6 @@ from __future__ import annotations
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -73,7 +72,9 @@ class ManifestParser:
             if isinstance(action, URIRef):
                 action_list = [action]
             else:
-                action_list = [x for x in self.graph.items(action) if isinstance(x, URIRef)]
+                action_list = [
+                    x for x in self.graph.items(action) if isinstance(x, URIRef)
+                ]
         result = self.graph.value(test_uri, MF.result)
         result_list: list[Node] = []
         if result:
