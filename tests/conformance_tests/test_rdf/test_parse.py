@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, List, Optional
+from typing import Literal
 from unittest.mock import patch
 
 import pytest
-from rdflib import Dataset, Graph, Literal as RdfLiteral, Node, Namespace, URIRef
+from rdflib import Dataset, Graph, Namespace, Node, URIRef
+from rdflib import Literal as RdfLiteral
+from rdflib.exceptions import ParserError
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
-from rdflib.plugins.serializers.nt import _quoteLiteral
 from rdflib.namespace import RDF
+from rdflib.plugins.serializers.nt import _quoteLiteral
 
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
@@ -22,21 +24,27 @@ from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
-PROTOBUF_SUBMODULE_DIR = Path(__file__).parent.parent.parent.parent / "submodules" / "protobuf"
-FROM_JELLY_MANIFEST = PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly" / "manifest.ttl"
+PROTOBUF_SUBMODULE_DIR = (
+    Path(__file__).parent.parent.parent.parent / "submodules" / "protobuf"
+)
+FROM_JELLY_MANIFEST = (
+    PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly" / "manifest.ttl"
+)
+
 
 @dataclass
 class FromJellyTestCase:
     uri: str
     name: str
     action_path: Path
-    result_paths: Optional[List[Path]]
+    result_paths: list[Path] | None
     test_type: Literal["positive", "negative"]
     category: str
     id: str = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.id = f"{self.test_type}-{self.category}-{self.action_path.parent.name}"
+
 
 def categorize_test(uri: str) -> str:
     if "rdf_star_generalized" in uri:
@@ -47,14 +55,17 @@ def categorize_test(uri: str) -> str:
         return "generalized"
     return "physical"
 
-def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCase]:
+
+def load_from_jelly_manifest_cases(
+    manifest_path: Path,
+) -> list[FromJellyTestCase]:
     if not manifest_path.exists():
         return []
     graph = Graph()
     graph.parse(manifest_path, format="turtle")
     manifest_dir = manifest_path.parent
-    BASE_URI_FROM_MANIFEST = "https://w3id.org/jelly/dev/tests/rdf/from_jelly/"
-    test_cases = []
+    base_uri_from_manifest = "https://w3id.org/jelly/dev/tests/rdf/from_jelly/"
+    test_cases: list[FromJellyTestCase] = []
     test_type_map = {
         JELLYT.TestPositive: "positive",
         JELLYT.TestNegative: "negative",
@@ -64,38 +75,50 @@ def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCas
             if not isinstance(test_uri, URIRef):
                 continue
             action_uri = graph.value(test_uri, MF.action)
-            action_rel_path = str(action_uri).replace(BASE_URI_FROM_MANIFEST, "")
+            action_rel_path = str(action_uri).replace(base_uri_from_manifest, "")
             action_path = manifest_dir / action_rel_path
-            result_paths = None
+            result_paths: list[Path] | None = None
             result_node = graph.value(test_uri, MF.result)
             if result_node:
                 if (result_node, RDF.first, None) in graph:
                     result_uris = graph.items(result_node)
                     result_paths = [
-                        manifest_dir / str(uri).replace(BASE_URI_FROM_MANIFEST, "")
+                        manifest_dir / str(uri).replace(base_uri_from_manifest, "")
                         for uri in result_uris
                     ]
                 else:
-                    result_paths = [manifest_dir / str(result_node).replace(BASE_URI_FROM_MANIFEST, "")]
-            test_cases.append(FromJellyTestCase(
-                uri=str(test_uri),
-                name=str(graph.value(test_uri, MF.name) or ''),
-                action_path=action_path,
-                result_paths=result_paths,
-                test_type=test_type_str,
-                category=categorize_test(str(test_uri)),
-            ))
+                    result_paths = [
+                        manifest_dir
+                        / str(result_node).replace(base_uri_from_manifest, "")
+                    ]
+            test_cases.append(
+                FromJellyTestCase(
+                    uri=str(test_uri),
+                    name=str(graph.value(test_uri, MF.name) or ""),
+                    action_path=action_path,
+                    result_paths=result_paths,
+                    test_type=test_type_str,  # type: ignore[arg-type]
+                    category=categorize_test(str(test_uri)),
+                )
+            )
     return test_cases
 
-def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
+
+def _new_nq_row(
+    triple: tuple[Node, Node, Node],
+    context: Graph,
+) -> str:
     template = "%s " * (3 + (context != DATASET_DEFAULT_GRAPH_ID)) + ".\n"
     args = (
         triple[0].n3(),
         triple[1].n3(),
-        _quoteLiteral(triple[2]) if isinstance(triple[2], RdfLiteral) else triple[2].n3(),
+        _quoteLiteral(triple[2])
+        if isinstance(triple[2], RdfLiteral)
+        else triple[2].n3(),
         *((context.n3(),) if context != DATASET_DEFAULT_GRAPH_ID else ()),
     )
     return template % args
+
 
 workaround_rdflib_serializes_default_graph_id = patch(
     "rdflib.plugins.serializers.nquads._nq_row",
@@ -106,21 +129,22 @@ workaround_rdflib_serializes_default_graph_id.start()
 ALL_CASES = load_from_jelly_manifest_cases(FROM_JELLY_MANIFEST)
 
 PHYSICAL_POSITIVE_CASES = [
-    pytest.param(case, id=case.id) for case in ALL_CASES
-    if case.test_type == 'positive' and case.category == 'physical'
+    pytest.param(case, id=case.id)
+    for case in ALL_CASES
+    if case.test_type == "positive" and case.category == "physical"
 ]
 GENERIC_POSITIVE_CASES = [
-    pytest.param(case, id=case.id) for case in ALL_CASES
-    if case.test_type == 'positive'
+    pytest.param(case, id=case.id) for case in ALL_CASES if case.test_type == "positive"
 ]
 PHYSICAL_NEGATIVE_CASES = [
-    pytest.param(case, id=case.id) for case in ALL_CASES
-    if case.test_type == 'negative' and case.category == 'physical'
+    pytest.param(case, id=case.id)
+    for case in ALL_CASES
+    if case.test_type == "negative" and case.category == "physical"
 ]
 GENERIC_NEGATIVE_CASES = [
-    pytest.param(case, id=case.id) for case in ALL_CASES
-    if case.test_type == 'negative'
+    pytest.param(case, id=case.id) for case in ALL_CASES if case.test_type == "negative"
 ]
+
 
 @needs_jelly_cli
 @pytest.mark.parametrize("case", PHYSICAL_POSITIVE_CASES)
@@ -130,17 +154,19 @@ def test_rdflib_parses_physical_positive(case: FromJellyTestCase) -> None:
     output_dir.mkdir(exist_ok=True, parents=True)
     with case.action_path.open("rb") as input_file:
         for frame_no, graph in enumerate(
-                parse_jelly_grouped(
-                    input_file,
-                    graph_factory=lambda: Graph(store=OrderedMemory()),
-                    dataset_factory=lambda: Dataset(store=OrderedMemory()),
-                )
+            parse_jelly_grouped(
+                input_file,
+                graph_factory=lambda: Graph(store=OrderedMemory()),
+                dataset_factory=lambda: Dataset(store=OrderedMemory()),
+            )
         ):
-            output_format = 'nquads' if isinstance(graph, Dataset) else 'ntriples'
+            output_format = "nquads" if isinstance(graph, Dataset) else "ntriples"
             file_extension = ".nq" if isinstance(graph, Dataset) else ".nt"
             output_filename = output_dir / f"out_{frame_no:03}{file_extension}"
             graph.serialize(
-                destination=output_filename, encoding="utf-8", format=output_format
+                destination=output_filename,
+                encoding="utf-8",
+                format=output_format,
             )
             jelly_validate(
                 case.action_path,
@@ -151,6 +177,7 @@ def test_rdflib_parses_physical_positive(case: FromJellyTestCase) -> None:
                 output_filename,
                 hint=f"Test ID: {test_id}, output file: {output_filename}",
             )
+
 
 @needs_jelly_cli
 @pytest.mark.parametrize("case", GENERIC_POSITIVE_CASES)
@@ -160,10 +187,16 @@ def test_generic_parses_positive(case: FromJellyTestCase) -> None:
     output_dir.mkdir(exist_ok=True, parents=True)
     with case.action_path.open("rb") as input_file:
         for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
-            file_extension = case.result_paths[0].suffix
+            if case.result_paths and len(case.result_paths) > 0:
+                file_extension = case.result_paths[0].suffix
+            else:
+                file_extension = ".nt"
             output_filename = output_dir / f"out_{frame_no:03}{file_extension}"
             serializer = GenericSinkSerializer(graph)
-            serializer.serialize(output_filename=output_filename, encoding="utf-8")
+            serializer.serialize(
+                output_filename=output_filename,
+                encoding="utf-8",
+            )
             jelly_validate(
                 case.action_path,
                 "--compare-ordered",
@@ -174,6 +207,7 @@ def test_generic_parses_positive(case: FromJellyTestCase) -> None:
                 hint=f"Test ID: {test_id}, output file: {output_filename}",
             )
 
+
 @needs_jelly_cli
 @pytest.mark.parametrize("case", PHYSICAL_NEGATIVE_CASES)
 def test_rdflib_parsing_fails_physical_negative(case: FromJellyTestCase) -> None:
@@ -181,8 +215,9 @@ def test_rdflib_parsing_fails_physical_negative(case: FromJellyTestCase) -> None
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
     dataset = Dataset(store=OrderedMemory())
-    with pytest.raises(Exception):
+    with pytest.raises((ParserError, ValueError, RuntimeError), match="."):
         dataset.parse(location=str(case.action_path), format="jelly")
+
 
 @needs_jelly_cli
 @pytest.mark.parametrize("case", GENERIC_NEGATIVE_CASES)
@@ -190,5 +225,8 @@ def test_generic_parsing_fails_negative(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
-    with pytest.raises(Exception), case.action_path.open("rb") as input_file:
+    with (
+        pytest.raises((ParserError, ValueError, RuntimeError), match="."),
+        case.action_path.open("rb") as input_file,
+    ):
         list(generic_parse_jelly_grouped(input_file))
