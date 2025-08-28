@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 from enum import IntEnum
-from typing import Iterator, TypeVar, Union
+from typing import TypeVar, Union
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
