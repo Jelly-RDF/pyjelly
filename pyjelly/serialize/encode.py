@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from enum import IntEnum
-from typing import TypeVar, Union
+from typing import Iterator, TypeVar, Union
 from typing_extensions import TypeAlias
 
 from pyjelly import jelly, options
@@ -91,7 +91,6 @@ class TermEncoder:
 
         Args:
             iri_string (str): full iri in string format.
-            slot (Slot): iri's place in statement.
             iri (jelly.RdfIri): iri to fill
 
         Returns:
@@ -246,19 +245,19 @@ class Slot(IntEnum):
     graph = 3
 
 
-def encode_statement(
-    terms: Iterable[object],
+def encode_spo(
+    terms: Iterator[object],
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
     statement: Statement,
 ) -> list[jelly.RdfStreamRow]:
     """
-    Encode a statement.
+    Encode the s/p/o of a statement.
 
     Args:
-        terms (Iterable[object]): original terms to encode
+        terms (Iterator[object]): iterator for original terms to encode
         term_encoder (TermEncoder): encoder with lookup tables
-        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+        repeated_terms (list[object | None): list of repeated terms.
         statement (Statement): Triple/Quad to fill.
 
     Returns:
@@ -266,7 +265,6 @@ def encode_statement(
 
     """
     rows: list[jelly.RdfStreamRow] = []
-    terms = iter(terms)
     s = next(terms)
     if repeated_terms[Slot.subject] != s:
         extra_rows = term_encoder.encode_spo(s, Slot.subject, statement)
@@ -282,12 +280,6 @@ def encode_statement(
         extra_rows = term_encoder.encode_spo(o, Slot.object, statement)
         rows.extend(extra_rows)
         repeated_terms[Slot.object] = o
-    if isinstance(statement, jelly.RdfQuad):
-        g = next(terms)
-        if repeated_terms[Slot.graph] != g:
-            extra_rows = term_encoder.encode_graph(g, statement)
-            rows.extend(extra_rows)
-            repeated_terms[Slot.graph] = g
     return rows
 
 
@@ -302,14 +294,15 @@ def encode_triple(
     Args:
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
-        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+        repeated_terms (list[object | None]): list of repeated terms.
 
     Returns:
         list[jelly.RdfStreamRow]: list of rows to add to the current flow.
 
     """
     triple = jelly.RdfTriple()
-    rows = encode_statement(terms, term_encoder, repeated_terms, triple)
+    terms = iter(terms)
+    rows = encode_spo(terms, term_encoder, repeated_terms, triple)
     row = jelly.RdfStreamRow(triple=triple)
     rows.append(row)
     return rows
@@ -326,14 +319,20 @@ def encode_quad(
     Args:
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
-        repeated_terms (dict[Slot, object]): dictionary of repeated terms.
+        repeated_terms (list[object | None]): list of repeated terms.
 
     Returns:
         list[jelly.RdfStreamRow]: list of messages to append to current flow.
 
     """
+    terms = iter(terms)
     quad = jelly.RdfQuad()
-    rows = encode_statement(terms, term_encoder, repeated_terms, quad)
+    rows = encode_spo(terms, term_encoder, repeated_terms, quad)
+    g = next(terms)
+    if repeated_terms[Slot.graph] != g:
+        extra_rows = term_encoder.encode_graph(g, quad)
+        rows.extend(extra_rows)
+        repeated_terms[Slot.graph] = g
     row = jelly.RdfStreamRow(quad=quad)
     rows.append(row)
     return rows
