@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 from unittest.mock import patch
 
 import pytest
@@ -37,7 +36,7 @@ class FromJellyTestCase:
     name: str
     action_path: Path
     result_paths: list[Path] | None
-    test_type: Literal["positive", "negative"]
+    test_type: str
     category: str
     id: str = field(init=False)
 
@@ -179,7 +178,7 @@ def test_generic_parses_positive(case: FromJellyTestCase) -> None:
     output_dir.mkdir(exist_ok=True, parents=True)
     with case.action_path.open("rb") as input_file:
         for frame_no, graph in enumerate(generic_parse_jelly_grouped(input_file)):
-            file_extension = case.result_paths[0].suffix
+            file_extension = case.result_paths[0].suffix if case.result_paths else ".nt"
             output_filename = output_dir / f"out_{frame_no:03}{file_extension}"
             serializer = GenericSinkSerializer(graph)
             serializer.serialize(output_filename=output_filename, encoding="utf-8")

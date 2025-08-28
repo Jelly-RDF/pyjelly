@@ -110,7 +110,7 @@ def _process_test_case(
 def _process_action_node(
     graph: Graph, action_node: Node | None, manifest_dir: Path, base_uri: str
 ) -> tuple[list[Path], Path | None]:
-    action_paths = []
+    action_paths: list[Path] = []
     options_path = None
 
     if not action_node:
