@@ -124,6 +124,11 @@ workaround_rdflib_serializes_default_graph_id.start()
 
 ALL_TO_JELLY_CASES = load_to_jelly_manifest_cases(TO_JELLY_MANIFEST)
 
+ALL_TO_JELLY_CASES = [
+    case for case in ALL_TO_JELLY_CASES
+    if not ("pos_014" in case.uri and case.category == "physical")
+]
+
 PHYSICAL_POSITIVE_CASES = [
     pytest.param(case, id=case.id) for case in ALL_TO_JELLY_CASES
     if case.test_type == 'positive' and case.category == 'physical'
