@@ -151,13 +151,15 @@ def test_serializes_physical_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
+    input_paths = [p for p in case.action_paths if p.suffix.lower() in {".ttl", ".nt", ".trig", ".nq"}]
+
     write_graph_or_dataset(
-        *[str(path) for path in case.action_paths],
+        *[str(p) for p in input_paths],
         options=str(case.options_path) if case.options_path else None,
         out_filename=actual_out,
     )
 
-    for frame_no, input_filename in enumerate(case.action_paths):
+    for frame_no, input_filename in enumerate(input_paths):
         jelly_validate(
             actual_out,
             "--compare-ordered",
