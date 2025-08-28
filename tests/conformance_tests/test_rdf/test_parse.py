@@ -3,14 +3,13 @@ from __future__ import annotations
 import urllib.parse
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List
+from typing import Any
 from unittest.mock import patch
 
 import pytest
 from rdflib import Dataset, Graph, Namespace, Node, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
-from rdflib.plugins.serializers.nt import _quoteLiteral
 
 from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
@@ -23,7 +22,6 @@ from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
-RDFT = Namespace("http://www.w3.org/ns/rdftest#")
 
 
 @dataclass
@@ -31,9 +29,9 @@ class JellyTestCase:
     uri: str
     type: str | None = None
     name: str | None = None
-    action: List[URIRef] = field(default_factory=list)
-    result: List[Any] = field(default_factory=list)
-    requirements: List[str] = field(default_factory=list)
+    action: list[URIRef] = field(default_factory=list)
+    result: list[Node] = field(default_factory=list)
+    requirements: list[str] = field(default_factory=list)
     category: str | None = None
 
 
@@ -43,7 +41,7 @@ class ManifestParser:
     graph: Graph = field(init=False)
     manifest_uri: URIRef = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.graph = Graph()
         with self.manifest_path.open("rb") as f:
             self.graph.parse(f, format="turtle", publicID=str(self.manifest_path))
@@ -70,14 +68,14 @@ class ManifestParser:
         name = self.graph.value(test_uri, MF.name)
         name_str = str(name) if name else None
         action = self.graph.value(test_uri, MF.action)
-        action_list = []
+        action_list: list[URIRef] = []
         if action:
             if isinstance(action, URIRef):
                 action_list = [action]
             else:
-                action_list = list(self.graph.items(action))
+                action_list = [x for x in self.graph.items(action) if isinstance(x, URIRef)]
         result = self.graph.value(test_uri, MF.result)
-        result_list = []
+        result_list: list[Node] = []
         if result:
             if isinstance(result, URIRef):
                 result_list = [result]
@@ -120,8 +118,8 @@ def _new_nq_row(triple: tuple[Node, Node, Node], context: Graph) -> str:
     s, p, o = triple
     context_str = ""
     if context.identifier != DATASET_DEFAULT_GRAPH_ID:
-        context_str = f" {_quoteLiteral(context.identifier)}"
-    return f"{_quoteLiteral(s)} {_quoteLiteral(p)} {_quoteLiteral(o)}{context_str} .\n"
+        context_str = f" {context.identifier.n3()}"
+    return f"{s.n3()} {p.n3()} {o.n3()}{context_str} .\n"
 
 
 workaround_rdflib_serializes_default_graph_id = patch(
@@ -142,9 +140,11 @@ TO_JELLY_MANIFEST = (
 )
 
 if not FROM_JELLY_MANIFEST.exists():
-    raise FileNotFoundError(f"From Jelly manifest not found: {FROM_JELLY_MANIFEST}")
+    msg = f"Missing manifest: {FROM_JELLY_MANIFEST}"
+    raise FileNotFoundError(msg)
 if not TO_JELLY_MANIFEST.exists():
-    raise FileNotFoundError(f"To Jelly manifest not found: {TO_JELLY_MANIFEST}")
+    msg = f"Missing manifest: {TO_JELLY_MANIFEST}"
+    raise FileNotFoundError(msg)
 
 from_manifest = ManifestParser(FROM_JELLY_MANIFEST)
 to_manifest = ManifestParser(TO_JELLY_MANIFEST)
@@ -249,7 +249,8 @@ for test_case in from_manifest.get_test_cases("positive"):
     test_from_jelly_positive_rdflib.__name__ = (
         f"test_from_jelly_positive_rdflib_{test_id}"
     )
-    globals()[test_from_jelly_positive_rdflib.__name__] = test_from_jelly_positive_rdflib
+    name_pos = test_from_jelly_positive_rdflib.__name__
+    globals()[name_pos] = test_from_jelly_positive_rdflib
 
 for test_case in from_manifest.get_test_cases("positive"):
     test_id = test_case.uri.split("/")[-1]
@@ -264,7 +265,8 @@ for test_case in from_manifest.get_test_cases("positive"):
         test_from_jelly_positive_generic.__name__ = (
             f"test_from_jelly_positive_generic_{test_id}"
         )
-        globals()[test_from_jelly_positive_generic.__name__] = test_from_jelly_positive_generic
+        name_pos_gen = test_from_jelly_positive_generic.__name__
+        globals()[name_pos_gen] = test_from_jelly_positive_generic
 
 for test_case in from_manifest.get_test_cases("negative"):
     test_id = test_case.uri.split("/")[-1]
@@ -278,7 +280,8 @@ for test_case in from_manifest.get_test_cases("negative"):
     test_from_jelly_negative_rdflib.__name__ = (
         f"test_from_jelly_negative_rdflib_{test_id}"
     )
-    globals()[test_from_jelly_negative_rdflib.__name__] = test_from_jelly_negative_rdflib
+    name_neg = test_from_jelly_negative_rdflib.__name__
+    globals()[name_neg] = test_from_jelly_negative_rdflib
 
 for test_case in from_manifest.get_test_cases("negative"):
     test_id = test_case.uri.split("/")[-1]
@@ -292,7 +295,8 @@ for test_case in from_manifest.get_test_cases("negative"):
     test_from_jelly_negative_generic.__name__ = (
         f"test_from_jelly_negative_generic_{test_id}"
     )
-    globals()[test_from_jelly_negative_generic.__name__] = test_from_jelly_negative_generic
+    name_neg_gen = test_from_jelly_negative_generic.__name__
+    globals()[name_neg_gen] = test_from_jelly_negative_generic
 
 for test_case in to_manifest.get_test_cases():
     test_id = test_case.uri.split("/")[-1]
@@ -305,4 +309,5 @@ for test_case in to_manifest.get_test_cases():
         run_to_jelly_test(test_case, test_id)
 
     test_to_jelly_placeholder.__name__ = f"test_to_jelly_placeholder_{test_id}"
-    globals()[test_to_jelly_placeholder.__name__] = test_to_jelly_placeholder
+    name_to = test_to_jelly_placeholder.__name__
+    globals()[name_to] = test_to_jelly_placeholder

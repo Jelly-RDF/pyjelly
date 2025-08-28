@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -17,55 +18,57 @@ JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 RDFT = Namespace("http://www.w3.org/ns/rdftest#")
 
 
-def parse_manifest(manifest_path: Path) -> list[dict[str, Any]]:
-    """Parse a test manifest and return list of test cases."""
+@dataclass
+class JellySerializationCase:
+    uri: str
+    types: list[Any]
+    name: str | None
+    comment: str | None
+    action: list[str]
+    result: list[str]
+    requires: list[str]
+    manifest_path: Path
+    manifest_dir: Path | None = None
+
+
+def parse_manifest(manifest_path: Path) -> list[JellySerializationCase]:
     g = Graph()
     g.parse(manifest_path, format="turtle")
-
-    test_cases: list[dict[str, Any]] = []
-    manifest = None
-    for s in g.subjects(RDF.type, MF.Manifest):
-        manifest = s
-        break
-
+    manifest = next(g.subjects(RDF.type, MF.Manifest), None)
     if manifest is None:
         msg = "No manifest found in the file"
         raise ValueError(msg)
 
+    cases: list[JellySerializationCase] = []
     entries = list(g.objects(manifest, MF.entries))
     if entries:
-        entries_list = list(g.items(entries[0]))
-        for test_case in entries_list:
+        for test_case in g.items(entries[0]):
             test_types = list(g.objects(test_case, RDF.type))
             if JELLYT.TestRdfToJelly not in test_types:
                 continue
-            test_info: dict[str, Any] = {
-                "uri": str(test_case),
-                "type": test_types,
-                "name": (
-                    str(g.value(test_case, RDFS.label))
-                    if g.value(test_case, RDFS.label)
-                    else None
-                ),
-                "comment": (
-                    str(g.value(test_case, RDFS.comment))
-                    if g.value(test_case, RDFS.comment)
-                    else None
-                ),
-                "action": [str(action) for action in g.objects(test_case, MF.action)],
-                "result": [str(result) for result in g.objects(test_case, MF.result)],
-                "requires": [str(req) for req in g.objects(test_case, MF.requires)],
-                "manifest_path": manifest_path,
-            }
-            test_cases.append(test_info)
 
-    return test_cases
+            name_val = g.value(test_case, RDFS.label)
+            comment_val = g.value(test_case, RDFS.comment)
+
+            cases.append(
+                JellySerializationCase(
+                    uri=str(test_case),
+                    types=test_types,
+                    name=str(name_val) if name_val else None,
+                    comment=str(comment_val) if comment_val else None,
+                    action=[str(action) for action in g.objects(test_case, MF.action)],
+                    result=[str(result) for result in g.objects(test_case, MF.result)],
+                    requires=[str(req) for req in g.objects(test_case, MF.requires)],
+                    manifest_path=manifest_path,
+                )
+            )
+    return cases
 
 
 def resolve_manifest_paths(
-    action_paths: list[str], manifest_dir: Path
+    action_paths: list[str],
+    manifest_dir: Path,
 ) -> tuple[list[Path], Path | None]:
-    """Resolve relative paths from manifest actions to absolute paths."""
     input_files: list[Path] = []
     options_file: Path | None = None
 
@@ -89,9 +92,8 @@ def resolve_manifest_paths(
     return input_files, options_file
 
 
-def get_test_cases_from_manifests() -> list[dict[str, Any]]:
-    """Get test cases from all relevant manifests to maintain full coverage."""
-    test_cases: list[dict[str, Any]] = []
+def get_test_cases_from_manifests() -> list[JellySerializationCase]:
+    cases: list[JellySerializationCase] = []
     manifest_paths = [
         RDF_TO_JELLY_TESTS_DIR / "PhysicalTypeTestCases" / "manifest.ttl",
         RDF_TO_JELLY_TESTS_DIR / "RDFStarTestCases" / "manifest.ttl",
@@ -102,40 +104,38 @@ def get_test_cases_from_manifests() -> list[dict[str, Any]]:
 
     for manifest_path in manifest_paths:
         if manifest_path.exists():
-            manifest_cases = parse_manifest(manifest_path)
-            for case in manifest_cases:
-                case["manifest_dir"] = manifest_path.parent
-                test_cases.append(case)
+            for case in parse_manifest(manifest_path):
+                case.manifest_dir = manifest_path.parent
+                cases.append(case)
 
-    return test_cases
+    return cases
 
 
-def is_generic_test(test_case: dict[str, Any]) -> bool:
-    """Check if this is a generic test based on requirements and manifest location."""
-    requirements = test_case.get("requires", [])
-    manifest_path: Path = test_case.get("manifest_path", Path())
+def is_generic_test(test_case: JellySerializationCase) -> bool:
+    requirements = test_case.requires or []
+    manifest_path: Path = test_case.manifest_path
 
     generic_requirements = [
         "https://w3id.org/jelly/dev/tests/vocab#requirementGeneralizedRdf",
         "https://w3id.org/jelly/dev/tests/vocab#requirementRdfStar",
     ]
 
-    is_from_generic_manifest = any(
-        part in str(manifest_path)
-        for part in ["RDFStar", "Generalized", "RDFStarGeneralized"]
-    )
+    parts = ["RDFStar", "Generalized", "RDFStarGeneralized"]
+    is_from_generic_manifest = any(part in str(manifest_path) for part in parts)
 
     return any(req in requirements for req in generic_requirements) or (
         is_from_generic_manifest
     )
 
 
-def run_serialization_test(test_case: dict[str, Any]) -> None:
-    """Run a single serialization test case from manifest."""
-    test_uri: str = test_case["uri"]
-    test_types = test_case["type"]
-    actions = test_case["action"]
-    manifest_dir: Path = test_case["manifest_dir"]
+def run_serialization_test(test_case: JellySerializationCase) -> None:
+    test_uri: str = test_case.uri
+    test_types = test_case.types
+    actions = test_case.action
+    manifest_dir = test_case.manifest_dir
+
+    if manifest_dir is None:
+        pytest.skip(f"No manifest dir for {test_uri}")
 
     test_id = test_uri.split("/")[-1]
     is_positive = JELLYT.TestPositive in test_types
@@ -145,7 +145,6 @@ def run_serialization_test(test_case: dict[str, Any]) -> None:
         pytest.skip(f"Test {test_id} is neither positive nor negative")
 
     input_files, options_file = resolve_manifest_paths(actions, manifest_dir)
-
     if not input_files:
         pytest.skip(f"No input files found for test {test_id}")
 
@@ -155,11 +154,15 @@ def run_serialization_test(test_case: dict[str, Any]) -> None:
     if is_positive:
         if use_generic:
             write_generic_sink(
-                *input_files, options=options_file, out_filename=actual_out
+                *input_files,
+                options=options_file,
+                out_filename=actual_out,
             )
         else:
             write_graph_or_dataset(
-                *input_files, options=options_file, out_filename=actual_out
+                *input_files,
+                options=options_file,
+                out_filename=actual_out,
             )
 
         for frame_no, input_filename in enumerate(input_files):
@@ -195,6 +198,7 @@ def run_serialization_test(test_case: dict[str, Any]) -> None:
                 options=options_file,
                 out_filename=actual_out,
             )
+
         with pytest.raises(BaseException, match="."):
             call()
 
@@ -202,7 +206,7 @@ def run_serialization_test(test_case: dict[str, Any]) -> None:
 test_cases = get_test_cases_from_manifests()
 
 
-def make_test(tc: dict[str, Any]) -> Callable[[], None]:
+def make_test(tc: JellySerializationCase) -> Callable[[], None]:
     @needs_jelly_cli
     def _test() -> None:
         run_serialization_test(tc)
@@ -211,7 +215,7 @@ def make_test(tc: dict[str, Any]) -> Callable[[], None]:
 
 
 for test_case in test_cases:
-    test_id = test_case["uri"].split("/")[-1]
+    test_id = test_case.uri.split("/")[-1]
     test_name = f"test_to_jelly_{test_id}"
     test_func = make_test(test_case)
     test_func.__name__ = test_name
