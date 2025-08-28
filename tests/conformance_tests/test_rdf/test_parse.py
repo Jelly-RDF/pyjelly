@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, List, Optional
@@ -58,7 +57,8 @@ def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCas
     graph = Graph()
     graph.parse(manifest_path, format="turtle")
     manifest_dir = manifest_path.parent
-    base_uri_str = str(manifest_path.as_uri()).rsplit("/", 1)[0] + "/"
+
+    BASE_URI_FROM_MANIFEST = "https://w3id.org/jelly/dev/tests/rdf/from_jelly/"
 
     test_cases = []
 
@@ -73,7 +73,7 @@ def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCas
                 continue
 
             action_uri = graph.value(test_uri, MF.action)
-            action_rel_path = str(action_uri).replace(base_uri_str, "")
+            action_rel_path = str(action_uri).replace(BASE_URI_FROM_MANIFEST, "")
             action_path = manifest_dir / action_rel_path
 
             result_paths = None
@@ -82,11 +82,11 @@ def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCas
                 if (result_node, RDF.first, None) in graph:
                     result_uris = graph.items(result_node)
                     result_paths = [
-                        manifest_dir / str(uri).replace(base_uri_str, "")
+                        manifest_dir / str(uri).replace(BASE_URI_FROM_MANIFEST, "")
                         for uri in result_uris
                     ]
                 else:
-                    result_paths = [manifest_dir / str(result_node).replace(base_uri_str, "")]
+                    result_paths = [manifest_dir / str(result_node).replace(BASE_URI_FROM_MANIFEST, "")]
 
             test_cases.append(FromJellyTestCase(
                 uri=str(test_uri),
@@ -164,6 +164,7 @@ def test_rdflib_parses_physical_positive(case: FromJellyTestCase) -> None:
             jelly_validate(
                 case.action_path,
                 "--compare-ordered",
+                "--compare-frame-indices",
                 "--compare-frame-indices",
                 frame_no,
                 "--compare-to-rdf-file",
