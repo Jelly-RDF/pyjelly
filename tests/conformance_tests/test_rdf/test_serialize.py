@@ -11,14 +11,13 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
-from tests.meta import TEST_OUTPUTS_DIR, RDF_TO_JELLY_MANIFEST
+from tests.meta import RDF_TO_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.serialize import write_generic_sink, write_graph_or_dataset
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 TO_JELLY_MANIFEST = RDF_TO_JELLY_MANIFEST
-
 
 
 @dataclass
@@ -46,7 +45,7 @@ def categorize_test(uri: str) -> str:
         return "rdf_star"
     if "generalized" in uri:
         return "generalized"
-    return "physical"
+    return "rdf11"
 
 
 def load_to_jelly_manifest_cases(manifest_path: Path) -> list[ToJellyTestCase]:
@@ -166,13 +165,13 @@ ALL_TO_JELLY_CASES = load_to_jelly_manifest_cases(TO_JELLY_MANIFEST)
 ALL_TO_JELLY_CASES = [
     case
     for case in ALL_TO_JELLY_CASES
-    if not ("pos_014" in case.uri and case.category == "physical")
+    if not ("pos_014" in case.uri and case.category == "rdf11")
 ]
 
-PHYSICAL_POSITIVE_CASES = [
+RDF11_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
-    if case.test_type == "positive" and case.category == "physical"
+    if case.test_type == "positive" and case.category == "rdf11"
 ]
 
 GENERIC_POSITIVE_CASES = [
@@ -181,10 +180,10 @@ GENERIC_POSITIVE_CASES = [
     if case.test_type == "positive"
 ]
 
-PHYSICAL_NEGATIVE_CASES = [
+RDF11_NEGATIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
-    if case.test_type == "negative" and case.category == "physical"
+    if case.test_type == "negative" and case.category == "rdf11"
 ]
 
 GENERIC_NEGATIVE_CASES = [
@@ -195,8 +194,8 @@ GENERIC_NEGATIVE_CASES = [
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_POSITIVE_CASES)
-def test_serializes_physical_positive(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF11_POSITIVE_CASES)
+def test_serializes_rdf11_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
@@ -249,8 +248,8 @@ def test_serializes_generic_positive(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_NEGATIVE_CASES)
-def test_serializing_fails_physical_negative(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF11_NEGATIVE_CASES)
+def test_serializing_fails_rdf11_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 

@@ -15,7 +15,7 @@ from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
-from tests.meta import TEST_OUTPUTS_DIR, RDF_FROM_JELLY_MANIFEST
+from tests.meta import RDF_FROM_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
@@ -46,7 +46,8 @@ def categorize_test(uri: str) -> str:
         return "rdf_star"
     if "generalized" in uri:
         return "generalized"
-    return "physical"
+        return "generalized"
+    return "rdf11"
 
 
 def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCase]:
@@ -116,18 +117,18 @@ workaround_rdflib_serializes_default_graph_id.start()
 
 ALL_CASES = load_from_jelly_manifest_cases(FROM_JELLY_MANIFEST)
 
-PHYSICAL_POSITIVE_CASES = [
+RDF11_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_CASES
-    if case.test_type == "positive" and case.category == "physical"
+    if case.test_type == "positive" and case.category == "rdf11"
 ]
 GENERIC_POSITIVE_CASES = [
     pytest.param(case, id=case.id) for case in ALL_CASES if case.test_type == "positive"
 ]
-PHYSICAL_NEGATIVE_CASES = [
+RDF11_NEGATIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_CASES
-    if case.test_type == "negative" and case.category == "physical"
+    if case.test_type == "negative" and case.category == "rdf11"
 ]
 GENERIC_NEGATIVE_CASES = [
     pytest.param(case, id=case.id) for case in ALL_CASES if case.test_type == "negative"
@@ -135,8 +136,8 @@ GENERIC_NEGATIVE_CASES = [
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_POSITIVE_CASES)
-def test_rdflib_parses_physical_positive(case: FromJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF11_POSITIVE_CASES)
+def test_rdflib_parses_rdf11_positive(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
@@ -189,8 +190,8 @@ def test_generic_parses_positive(case: FromJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_NEGATIVE_CASES)
-def test_rdflib_parsing_fails_physical_negative(case: FromJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF11_NEGATIVE_CASES)
+def test_rdflib_parsing_fails_rdf11_negative(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
