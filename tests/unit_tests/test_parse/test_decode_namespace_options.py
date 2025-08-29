@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from pyjelly import jelly
+from pyjelly.parse.decode import options_from_frame
+
+
+def _frame_with_options(
+    *, version: int, set_nd: bool | None
+) -> tuple[jelly.RdfStreamFrame, jelly.RdfStreamOptions]:
+    frame = jelly.RdfStreamFrame()
+
+    opts = jelly.RdfStreamOptions()
+    opts.version = version
+    opts.stream_name = "t"
+    opts.physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
+    opts.logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    opts.max_name_table_size = 128
+    opts.max_prefix_table_size = 32
+    opts.max_datatype_table_size = 32
+
+    if set_nd is not None and hasattr(opts, "namespace_declarations"):
+        opts.namespace_declarations = set_nd
+
+    row = frame.rows.add()
+    row.options.CopyFrom(opts)
+
+    return frame, opts
+
+
+def test_nd_inferred_true_when_version_is_v2_and_field_missing() -> None:
+    frame, _ = _frame_with_options(version=2, set_nd=None)
+    parser_opts = options_from_frame(frame, delimited=True)
+    assert parser_opts.params.namespace_declarations is True
+    assert parser_opts.params.version == 2
+
+
+def test_nd_false_when_version_is_v1_and_field_missing() -> None:
+    frame, _ = _frame_with_options(version=1, set_nd=None)
+    parser_opts = options_from_frame(frame, delimited=True)
+    assert parser_opts.params.namespace_declarations is False
+    assert parser_opts.params.version == 1

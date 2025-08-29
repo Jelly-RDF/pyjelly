@@ -223,7 +223,7 @@ def test_graphs_stream_frames_parametrized(*, with_namespace: bool) -> None:
 def test_encoder_unsupported_raises() -> None:
     enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
     with pytest.raises(NotImplementedError, match="unsupported term type"):
-        enc.encode_any(object(), Slot.subject)
+        enc.encode_spo(object(), Slot.subject, jelly.RdfTriple())
 
 
 def test_graphs_stream_frames_emit_dataset() -> None:
@@ -283,3 +283,12 @@ def test_grouped_stream_to_frames_init_stream_guess_options() -> None:
     frames = list(grouped_stream_to_frames(gen(), options=None))
     expected = 2
     assert len(frames) == expected
+
+
+def test_graph_not_implemented() -> None:
+    enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
+    with pytest.raises(NotImplementedError, match="unsupported term type"):
+        enc.encode_graph(
+            Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), IRI("http://ex/o1")),
+            jelly.RdfQuad(),
+        )

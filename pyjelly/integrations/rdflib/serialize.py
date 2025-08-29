@@ -15,7 +15,7 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import RowsAndTerm, Slot, TermEncoder
+from pyjelly.serialize.encode import Rows, Slot, TermEncoder, Statement, HasGraph
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
     GraphStream,
@@ -29,37 +29,62 @@ QUAD_ARITY = 4
 
 
 class RDFLibTermEncoder(TermEncoder):
-    def encode_any(self, term: object, slot: Slot) -> RowsAndTerm:
+    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
         """
-        Encode term based on its RDFLib object.
+        Encode s/p/o term based on its RDFLib object.
 
         Args:
             term (object): term to encode
             slot (Slot): its place in statement.
+            statement (Statement): Triple/Quad message to fill with s/p/o terms.
 
         Returns:
-            RowsAndTerm: encoded extra rows and a jelly term to encode
+            Rows: encoded extra rows
 
         """
-        if slot is Slot.graph and term == DATASET_DEFAULT_GRAPH_ID:
-            return self.encode_default_graph()
-
         if isinstance(term, rdflib.URIRef):
-            return self.encode_iri(term)
+            iri = self.get_iri_field(statement, slot)
+            return self.encode_iri(term, iri)
 
         if isinstance(term, rdflib.Literal):
+            literal = self.get_literal_field(statement, slot)
             return self.encode_literal(
                 lex=str(term),
                 language=term.language,
                 # `datatype` is cast to `str` explicitly because
                 # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
                 datatype=term.datatype and str(term.datatype),
+                literal=literal,
             )
 
         if isinstance(term, rdflib.BNode):
-            return self.encode_bnode(str(term))
+            self.set_bnode_field(statement, slot, str(term))
+            return ()
 
-        return super().encode_any(term, slot)  # error if not handled
+        return super().encode_spo(term, slot, statement)  # error if not handled
+
+    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+        """
+        Encode graph name term based on its RDFLib object.
+
+        Args:
+            term (object): term to encode
+            statement (HasGraph): Quad/GraphStart message to fill g_{} in.
+
+        Returns:
+            Rows: encoded extra rows
+
+        """
+        if term == DATASET_DEFAULT_GRAPH_ID:
+            return self.encode_default_graph(statement.g_default_graph)
+
+        if isinstance(term, rdflib.URIRef):
+            return self.encode_iri(term, statement.g_iri)
+
+        if isinstance(term, rdflib.BNode):
+            statement.g_bnode = str(term)
+            return ()
+        return super().encode_graph(term, statement)  # error if not handled
 
 
 def namespace_declarations(store: Graph, stream: Stream) -> None:
@@ -208,10 +233,7 @@ def guess_options(sink: Graph | Dataset) -> SerializerOptions:
     )
     # RDFLib doesn't support RDF-star and generalized statements by default
     # as it requires specific handling for quoted triples and non-standard RDF terms
-    params = StreamParameters(
-        generalized_statements=False,
-        rdf_star=False,
-    )
+    params = StreamParameters(generalized_statements=False, rdf_star=False)
     return SerializerOptions(logical_type=logical_type, params=params)
 
 
