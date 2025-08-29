@@ -179,7 +179,7 @@ RDF11_NEGATIVE_CASES = [
     if case.test_type == "negative" and case.category == "rdf11"
 ]
 
-GENERIC_NEGATIVE_CASES = [
+ALL_NEGATIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "negative"
@@ -255,8 +255,8 @@ def test_serializing_fails_rdf11_negative(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", GENERIC_NEGATIVE_CASES)
-def test_serializing_fails_generic_negative(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", ALL_NEGATIVE_CASES)
+def test_serializing_fails_all_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
