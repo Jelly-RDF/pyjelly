@@ -38,12 +38,15 @@ class ToJellyTestCase:
         self.id = f"{self.test_type}-{self.category}-{action_name}"
 
 
-def categorize_test(uri: str) -> str:
-    if "rdf_star_generalized" in uri:
+def categorize_by_requires(graph: Graph, test_uri: URIRef) -> str:
+    reqs = set(graph.objects(test_uri, MF.requires))
+    has_star = JELLYT.requirementRdfStar in reqs
+    has_gen = JELLYT.requirementGeneralizedRdf in reqs
+    if has_star and has_gen:
         return "rdf_star_generalized"
-    if "rdf_star" in uri:
+    if has_star:
         return "rdf_star"
-    if "generalized" in uri:
+    if has_gen:
         return "generalized"
     return "rdf11"
 
@@ -98,7 +101,7 @@ def _process_test_case(
         options_path=options_path,
         result_path=result_path,
         test_type=test_type_str,
-        category=categorize_test(str(test_uri)),
+        category=categorize_by_requires(graph, test_uri),
     )
 
 
