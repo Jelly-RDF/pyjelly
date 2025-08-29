@@ -11,12 +11,12 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
-from tests.meta import RDF_TO_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.conformance_tests.test_rdf._common import (
     JELLYT,
     MF,
     categorize_by_requires,
 )
+from tests.meta import RDF_TO_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.serialize import write_generic_sink, write_graph_or_dataset
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 

@@ -15,12 +15,12 @@ from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
-from tests.meta import RDF_FROM_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.conformance_tests.test_rdf._common import (
     JELLYT,
     MF,
     categorize_by_requires,
 )
+from tests.meta import RDF_FROM_JELLY_MANIFEST, TEST_OUTPUTS_DIR
 from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
