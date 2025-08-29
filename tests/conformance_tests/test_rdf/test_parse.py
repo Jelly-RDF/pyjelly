@@ -193,7 +193,7 @@ def test_rdflib_parsing_fails_rdf11_negative(case: FromJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", ALL_NEGATIVE_CASES )
+@pytest.mark.parametrize("case", ALL_NEGATIVE_CASES)
 def test_generic_parsing_fails_negative(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id
