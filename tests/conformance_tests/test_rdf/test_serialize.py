@@ -11,18 +11,12 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
-from tests.meta import TEST_OUTPUTS_DIR
+from tests.meta import TEST_OUTPUTS_DIR, TO_JELLY_MANIFEST
 from tests.serialize import write_generic_sink, write_graph_or_dataset
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
-PROTOBUF_SUBMODULE_DIR = (
-    Path(__file__).parent.parent.parent.parent / "submodules" / "protobuf"
-)
-TO_JELLY_MANIFEST = (
-    PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "to_jelly" / "manifest.ttl"
-)
 
 
 @dataclass
@@ -33,24 +27,30 @@ class ToJellyTestCase:
     options_path: Path | None
     result_path: Path | None
     test_type: str
-    category: str
+    requirements: list[str]
     id: str = field(init=False)
 
     def __post_init__(self) -> None:
         action_name = (
             self.action_paths[0].parent.name if self.action_paths else "no-action"
         )
-        self.id = f"{self.test_type}-{self.category}-{action_name}"
+        self.id = f"{self.test_type}-{'-'.join(self.requirements)}-{action_name}"
 
 
-def categorize_test(uri: str) -> str:
-    if "rdf_star_generalized" in uri:
-        return "rdf_star_generalized"
-    if "rdf_star" in uri:
-        return "rdf_star"
-    if "generalized" in uri:
-        return "generalized"
-    return "physical"
+def get_test_requirements(graph: Graph, test_uri: URIRef) -> list[str]:
+    """Get test requirements from manifest properties"""
+    requirements = []
+
+    if graph.value(test_uri, JELLYT.requiresRDFStar):
+        requirements.append("rdf_star")
+
+    if graph.value(test_uri, JELLYT.requiresGeneralizedRDF):
+        requirements.append("generalized")
+
+    if not requirements:
+        requirements.append("rdf_1_1")
+
+    return requirements
 
 
 def load_to_jelly_manifest_cases(manifest_path: Path) -> list[ToJellyTestCase]:
@@ -73,8 +73,10 @@ def load_to_jelly_manifest_cases(manifest_path: Path) -> list[ToJellyTestCase]:
             if not isinstance(test_uri, URIRef):
                 continue
 
+            requirements = get_test_requirements(graph, test_uri)
+
             test_case = _process_test_case(
-                graph, test_uri, manifest_dir, base_uri, test_type_str
+                graph, test_uri, manifest_dir, base_uri, test_type_str, requirements
             )
             if test_case:
                 test_cases.append(test_case)
@@ -83,11 +85,12 @@ def load_to_jelly_manifest_cases(manifest_path: Path) -> list[ToJellyTestCase]:
 
 
 def _process_test_case(
-    graph: Graph,
-    test_uri: URIRef,
-    manifest_dir: Path,
-    base_uri: str,
-    test_type_str: str,
+        graph: Graph,
+        test_uri: URIRef,
+        manifest_dir: Path,
+        base_uri: str,
+        test_type_str: str,
+        requirements: list[str],
 ) -> ToJellyTestCase | None:
     action_node = graph.value(test_uri, MF.action)
     action_paths, options_path = _process_action_node(
@@ -103,12 +106,12 @@ def _process_test_case(
         options_path=options_path,
         result_path=result_path,
         test_type=test_type_str,
-        category=categorize_test(str(test_uri)),
+        requirements=requirements,
     )
 
 
 def _process_action_node(
-    graph: Graph, action_node: Node | None, manifest_dir: Path, base_uri: str
+        graph: Graph, action_node: Node | None, manifest_dir: Path, base_uri: str
 ) -> tuple[list[Path], Path | None]:
     action_paths: list[Path] = []
     options_path = None
@@ -136,7 +139,7 @@ def _process_action_node(
 
 
 def _process_result_node(
-    graph: Graph, test_uri: URIRef, manifest_dir: Path, base_uri: str
+        graph: Graph, test_uri: URIRef, manifest_dir: Path, base_uri: str
 ) -> Path | None:
     result_node = graph.value(test_uri, MF.result)
     if not result_node:
@@ -167,31 +170,33 @@ workaround_rdflib_serializes_default_graph_id.start()
 
 ALL_TO_JELLY_CASES = load_to_jelly_manifest_cases(TO_JELLY_MANIFEST)
 
+# Filter out specific problematic test case if needed
 ALL_TO_JELLY_CASES = [
     case
     for case in ALL_TO_JELLY_CASES
-    if not ("pos_014" in case.uri and case.category == "physical")
+    if not ("pos_014" in case.uri and "rdf_1_1" in case.requirements)
 ]
 
-PHYSICAL_POSITIVE_CASES = [
+# Updated constant names
+RDF_1_1_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
-    if case.test_type == "positive" and case.category == "physical"
+    if case.test_type == "positive" and "rdf_1_1" in case.requirements
 ]
 
-GENERIC_POSITIVE_CASES = [
+ALL_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "positive"
 ]
 
-PHYSICAL_NEGATIVE_CASES = [
+RDF_1_1_NEGATIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
-    if case.test_type == "negative" and case.category == "physical"
+    if case.test_type == "negative" and "rdf_1_1" in case.requirements
 ]
 
-GENERIC_NEGATIVE_CASES = [
+ALL_NEGATIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "negative"
@@ -199,8 +204,8 @@ GENERIC_NEGATIVE_CASES = [
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_POSITIVE_CASES)
-def test_serializes_physical_positive(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF_1_1_POSITIVE_CASES)
+def test_serializes_rdf_1_1_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
@@ -227,8 +232,8 @@ def test_serializes_physical_positive(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", GENERIC_POSITIVE_CASES)
-def test_serializes_generic_positive(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", ALL_POSITIVE_CASES)
+def test_serializes_all_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
@@ -253,8 +258,8 @@ def test_serializes_generic_positive(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", PHYSICAL_NEGATIVE_CASES)
-def test_serializing_fails_physical_negative(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", RDF_1_1_NEGATIVE_CASES)
+def test_serializing_fails_rdf_1_1_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
@@ -267,8 +272,8 @@ def test_serializing_fails_physical_negative(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", GENERIC_NEGATIVE_CASES)
-def test_serializing_fails_generic_negative(case: ToJellyTestCase) -> None:
+@pytest.mark.parametrize("case", ALL_NEGATIVE_CASES)
+def test_serializing_fails_all_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
