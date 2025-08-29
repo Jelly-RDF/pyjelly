@@ -11,13 +11,14 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
-from tests.meta import RDF_FROM_JELLY_TESTS_DIR
+from tests.meta import TEST_OUTPUTS_DIR, RDF_TO_JELLY_MANIFEST
 from tests.serialize import write_generic_sink, write_graph_or_dataset
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
-FROM_JELLY_MANIFEST = RDF_FROM_JELLY_TESTS_DIR / "manifest.ttl"
+TO_JELLY_MANIFEST = RDF_TO_JELLY_MANIFEST
+
 
 
 @dataclass

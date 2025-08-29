@@ -15,14 +15,14 @@ from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
-from tests.meta import RDF_FROM_JELLY_TESTS_DIR
+from tests.meta import TEST_OUTPUTS_DIR, RDF_FROM_JELLY_MANIFEST
 from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
-FROM_JELLY_MANIFEST = RDF_FROM_JELLY_TESTS_DIR / "manifest.ttl"
+FROM_JELLY_MANIFEST = RDF_FROM_JELLY_MANIFEST
 
 
 @dataclass
