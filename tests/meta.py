@@ -9,7 +9,3 @@ TEST_OUTPUTS_DIR = TESTS_DIR / "out"
 RDF_TESTS_DIR = CONFORMANCE_TESTS_DIR / "rdf"
 RDF_FROM_JELLY_TESTS_DIR = RDF_TESTS_DIR / "from_jelly"
 RDF_TO_JELLY_TESTS_DIR = RDF_TESTS_DIR / "to_jelly"
-
-PROTOBUF_SUBMODULE_DIR = TESTS_DIR.parent / "submodules" / "protobuf"
-FROM_JELLY_MANIFEST = PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "from_jelly" / "manifest.ttl"
-TO_JELLY_MANIFEST = PROTOBUF_SUBMODULE_DIR / "test" / "rdf" / "to_jelly" / "manifest.ttl"
