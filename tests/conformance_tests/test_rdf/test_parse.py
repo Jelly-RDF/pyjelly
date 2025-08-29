@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from rdflib import Dataset, Graph, Namespace, Node, URIRef
+from rdflib import Dataset, Graph, Node, URIRef
 from rdflib import Literal as RdfLiteral
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
@@ -16,12 +16,15 @@ from pyjelly.integrations.generic.parse import (
 )
 from pyjelly.integrations.rdflib.parse import parse_jelly_grouped
 from tests.meta import RDF_FROM_JELLY_MANIFEST, TEST_OUTPUTS_DIR
+from tests.conformance_tests.test_rdf._common import (
+    JELLYT,
+    MF,
+    categorize_by_requires,
+)
 from tests.utils.generic_sink_test_serializer import GenericSinkSerializer
 from tests.utils.ordered_memory import OrderedMemory
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
-JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
-MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 FROM_JELLY_MANIFEST = RDF_FROM_JELLY_MANIFEST
 
 
@@ -37,19 +40,6 @@ class FromJellyTestCase:
 
     def __post_init__(self) -> None:
         self.id = f"{self.test_type}-{self.category}-{self.action_path.parent.name}"
-
-
-def categorize_by_requires(graph: Graph, test_uri: URIRef) -> str:
-    reqs = set(graph.objects(test_uri, MF.requires))
-    has_star = JELLYT.requirementRdfStar in reqs
-    has_gen = JELLYT.requirementGeneralizedRdf in reqs
-    if has_star and has_gen:
-        return "rdf_star_generalized"
-    if has_star:
-        return "rdf_star"
-    if has_gen:
-        return "generalized"
-    return "rdf11"
 
 
 def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCase]:

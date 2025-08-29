@@ -5,18 +5,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from rdflib import Graph, Namespace, Node, URIRef
+from rdflib import Graph, Node, URIRef
 from rdflib import Literal as RdfLiteral
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from rdflib.namespace import RDF
 from rdflib.plugins.serializers.nt import _quoteLiteral
 
 from tests.meta import RDF_TO_JELLY_MANIFEST, TEST_OUTPUTS_DIR
+from tests.conformance_tests.test_rdf._common import (
+    JELLYT,
+    MF,
+    categorize_by_requires,
+)
 from tests.serialize import write_generic_sink, write_graph_or_dataset
 from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
-JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
-MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 TO_JELLY_MANIFEST = RDF_TO_JELLY_MANIFEST
 
 
@@ -36,19 +39,6 @@ class ToJellyTestCase:
             self.action_paths[0].parent.name if self.action_paths else "no-action"
         )
         self.id = f"{self.test_type}-{self.category}-{action_name}"
-
-
-def categorize_by_requires(graph: Graph, test_uri: URIRef) -> str:
-    reqs = set(graph.objects(test_uri, MF.requires))
-    has_star = JELLYT.requirementRdfStar in reqs
-    has_gen = JELLYT.requirementGeneralizedRdf in reqs
-    if has_star and has_gen:
-        return "rdf_star_generalized"
-    if has_star:
-        return "rdf_star"
-    if has_gen:
-        return "generalized"
-    return "rdf11"
 
 
 def load_to_jelly_manifest_cases(manifest_path: Path) -> list[ToJellyTestCase]:
