@@ -124,7 +124,7 @@ RDF11_POSITIVE_CASES = [
     for case in ALL_CASES
     if case.test_type == "positive" and case.category == "rdf11"
 ]
-GENERIC_POSITIVE_CASES = [
+ALL_POSITIVE_CASES = [
     pytest.param(case, id=case.id) for case in ALL_CASES if case.test_type == "positive"
 ]
 RDF11_NEGATIVE_CASES = [
@@ -169,7 +169,7 @@ def test_rdflib_parses_rdf11_positive(case: FromJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", GENERIC_POSITIVE_CASES)
+@pytest.mark.parametrize("case", ALL_POSITIVE_CASES)
 def test_generic_parses_positive(case: FromJellyTestCase) -> None:
     test_id = case.action_path.parent.name
     output_dir = TEST_OUTPUTS_DIR / test_id

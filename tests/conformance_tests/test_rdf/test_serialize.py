@@ -177,7 +177,7 @@ RDF11_POSITIVE_CASES = [
     if case.test_type == "positive" and case.category == "rdf11"
 ]
 
-GENERIC_POSITIVE_CASES = [
+ALL_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "positive"
@@ -225,7 +225,7 @@ def test_serializes_rdf11_positive(case: ToJellyTestCase) -> None:
 
 
 @needs_jelly_cli
-@pytest.mark.parametrize("case", GENERIC_POSITIVE_CASES)
+@pytest.mark.parametrize("case", ALL_POSITIVE_CASES)
 def test_serializes_generic_positive(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
