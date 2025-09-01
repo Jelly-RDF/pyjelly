@@ -1,3 +1,4 @@
+import io
 import os
 from collections.abc import Generator, Iterator
 from itertools import chain
@@ -48,7 +49,7 @@ def delimited_jelly_hint(header: bytes) -> bool:
     False
     """
     magic = 0x0A
-    return len(header) == 3 and (  # noqa: PLR2004
+    return len(header) >= 3 and (  # noqa: PLR2004
         header[0] != magic or (header[1] == magic and header[2] != magic)
     )
 
@@ -77,8 +78,15 @@ def get_options_and_frames(
             stream types, lookup presets and other stream options
 
     """
-    is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
-    inp.seek(-len(bytes_read), os.SEEK_CUR)
+    if not inp.seekable():
+        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
+        # it to determine if it's delimited.
+        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
+        inp = io.BufferedReader(inp)  # type: ignore[arg-type]
+        is_delimited = delimited_jelly_hint(inp.peek(3))
+    else:
+        is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
+        inp.seek(-len(bytes_read), os.SEEK_CUR)
 
     if is_delimited:
         first_frame = None
