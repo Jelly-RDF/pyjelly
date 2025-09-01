@@ -1,4 +1,5 @@
 import io
+import typing
 
 import pytest
 
@@ -13,7 +14,10 @@ def test_get_options_and_frames_no_seek(monkeypatch: pytest.MonkeyPatch) -> None
     inp = io.BytesIO(data)
     monkeypatch.setattr(inp, "seekable", lambda: False)
 
-    def seek() -> None:
+    def seek(
+        offset: int,  # noqa: ARG001
+        whence: typing.Any,  # noqa: ARG001
+    ) -> None:
         raise io.UnsupportedOperation
 
     monkeypatch.setattr(inp, "seek", seek)
