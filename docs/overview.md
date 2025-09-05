@@ -50,11 +50,11 @@ To learn how to use popular third-party libraries that connect with RDFLib, plea
      ```bash
      pip install pyjelly[rdflib] yatter
      ```
-    YARRRML to RML to Jelly
+    YARRRML to RML to Jelly:
      ```bash
      python3 -m yatter -i input_path_yml.yml -o output_path_jelly.jelly
      ```
-    Jelly to RML to YARRRML
+    Jelly to RML to YARRRML:
      ```bash
      python3 -m yatter -i input_path_jelly.jelly -o output_path_yml.yml 
      ```
