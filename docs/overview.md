@@ -57,7 +57,6 @@ To learn how to use popular third-party libraries that connect with RDFLib, plea
     ```bash
     python3 -m yatter -i input_path_jelly.jelly -o output_path_yml.yml 
     ```
-    - [YARRRML](https://kg-construct.github.io/yarrrml-spec/) 
    
 
 ## Generic API
