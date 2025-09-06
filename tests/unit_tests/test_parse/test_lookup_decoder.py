@@ -16,7 +16,7 @@ def test_lookup_size_ok(size: int) -> None:
 def test_max_lookup_size_exceeded(size: int) -> None:
     with pytest.raises(JellyAssertionError) as excinfo:
         LookupDecoder(lookup_size=size)
-    assert str(excinfo.value) == f"lookup size must be less than {MAX_LOOKUP_SIZE}"
+    assert str(excinfo.value) == f"lookup size cannot be larger than {MAX_LOOKUP_SIZE}"
 
 
 def test_decode_zero_error() -> None:
