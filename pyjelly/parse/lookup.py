@@ -26,7 +26,7 @@ class LookupDecoder:
 
     def __init__(self, *, lookup_size: int) -> None:
         if lookup_size > MAX_LOOKUP_SIZE:
-            msg = f"lookup size cannot be bigger than {MAX_LOOKUP_SIZE}"
+            msg = f"lookup size cannot be larger than {MAX_LOOKUP_SIZE}"
             raise JellyAssertionError(msg)
         self.lookup_size = lookup_size
         placeholders = (None,) * lookup_size
