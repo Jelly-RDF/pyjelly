@@ -8,9 +8,22 @@
 
 ## Features
 
-- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
-- **Seamless integration with [rdflib](https://rdflib.readthedocs.io/)**
-- **Stream processing support** for large datasets or streams of many RDF graphs/datasets
+- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly).
+- **Standalone [generic API](https://w3id.org/jelly/pyjelly/dev/generic-sink)** with no third-party dependencies, allowing for:
+    - Serialization and parsing of statements to and from Jelly files.
+    - Parsing and serializing streams of graphs and statements.
+- Precise control over **serialization options, framing and compression**.
+- **Seamless** integration with: 
+    - **[rdflib](https://w3id.org/jelly/pyjelly/dev/getting-started)**
+    - **[RDFLib-Neo4j](https://w3id.org/jelly/pyjelly/dev/rdflib-neo4j-integration)**
+    - **[NetworkX](https://w3id.org/jelly/pyjelly/dev/networkx-integration)**
+- **Stream processing support** for large datasets or streams of all [physical stream types](https://w3id.org/jelly/dev/specification/reference/#physicalstreamtype).
+
+**pyjelly** is useful when dealing with (see [full description](https://w3id.org/jelly/pyjelly/dev/overview/#use-cases)):
+
+- Dumping and loading **large RDF datasets**.
+- **Client-server communication**.
+- Workflows, where **streaming** is required.
 
 ## Getting started
 
