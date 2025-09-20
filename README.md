@@ -17,7 +17,6 @@
     - **[rdflib](https://w3id.org/jelly/pyjelly/dev/getting-started)**
     - **[RDFLib-Neo4j](https://w3id.org/jelly/pyjelly/dev/rdflib-neo4j-integration)**
     - **[NetworkX](https://w3id.org/jelly/pyjelly/dev/networkx-integration)**
-    - **[Yatter](https://github.com/citiususc/yatter)** 
 - **Stream processing support** for large datasets or streams of all [physical stream types](https://w3id.org/jelly/dev/specification/reference/#physicalstreamtype).
 
 **pyjelly** is useful when dealing with (see [full description](https://w3id.org/jelly/pyjelly/dev/overview/#use-cases)):
