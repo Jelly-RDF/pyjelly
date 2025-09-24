@@ -55,6 +55,11 @@ jobs:
           platform: ubuntu-latest
 
     steps:
+    # Needed to allow git to reconstruct symlinks on Windows
+    - name: Enable symlinks on Windows
+      if: runner.os == 'Windows'
+      run: git config --global core.symlinks true
+
     - uses: actions/checkout@v5
       with:
         submodules: true
