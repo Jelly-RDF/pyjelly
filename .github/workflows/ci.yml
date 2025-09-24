@@ -55,14 +55,15 @@ jobs:
           platform: ubuntu-latest
 
     steps:
-    # Needed to allow git to reconstruct symlinks on Windows
-    - name: Enable symlinks on Windows
-      if: runner.os == 'Windows'
-      run: git config --global core.symlinks true
-
     - uses: actions/checkout@v5
       with:
         submodules: true
+
+    - name: Windows walkaround for broken symlinks
+      if: runner.os == 'Windows'
+      run: |
+        rm -r pyjelly/_proto
+        cp -r submodules/protobuf/proto pyjelly/_proto
 
     - uses: astral-sh/setup-uv@v6
       with:
