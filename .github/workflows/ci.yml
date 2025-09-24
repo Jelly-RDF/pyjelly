@@ -63,7 +63,11 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         rm -r pyjelly/_proto
+        rm -r tests/conformance_tests/rdf
+        rm -r tests/conformance_tests/grpc
         cp -r submodules/protobuf/proto pyjelly/_proto
+        cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
+        cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
 
     - uses: astral-sh/setup-uv@v6
       with:
