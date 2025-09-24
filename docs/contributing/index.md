@@ -4,7 +4,9 @@ Hi! This guide explains how to get started with developing pyjelly and contribut
 
 ## Quick start
 
-Clone the project: 
+**System requirements:** while pyjelly works on any system that supports Python, **for development** we recommend using Linux, macOS, or WSL on Windows. We advise against using Windows directly, as it has caused many headaches in the past.
+
+**Clone the project:** 
 
 ```shell
 git clone --recursive git@github.com:Jelly-RDF/pyjelly.git
