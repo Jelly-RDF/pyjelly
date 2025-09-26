@@ -59,9 +59,9 @@ def get_release_version_date() -> tuple[str, str]:
     tag = cp.stdout.strip()
     if not re.match(r"^[A-Za-z0-9._-]+$", tag):
         raise ValueError
-    date = subprocess.check_output(
+    date = subprocess.check_output( # noqa: S603
         [git, "log", "-1", "--format=%ai", tag], text=True
-    ).strip()  # noqa: S603
+    ).strip()
     return tag.strip("v"), date.split(" ")[0]
 
 
