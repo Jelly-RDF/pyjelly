@@ -226,12 +226,12 @@ class ConformanceReportPlugin:
         g_generic.serialize(self.path_to_generic_report, format="turtle")
 
 def main():
-
+    tests_dir = os.path.dirname(os.path.abspath(__file__))
     os.environ['REPORTING_MODE'] = '1'
     conformance_report_plugin = ConformanceReportPlugin(path_to_rdflib_report="pyjelly RDFLib.ttl",
                                                         path_to_generic_report="pyjelly Generic API.ttl")
 
-    return pytest.main(plugins=[conformance_report_plugin])
+    return pytest.main(args = [tests_dir], plugins=[conformance_report_plugin])
 
 if __name__ == "__main__":
     raise SystemExit(main())
