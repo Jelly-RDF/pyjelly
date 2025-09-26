@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 
 import datetime as dt
 from rdflib import Graph, Namespace, URIRef, BNode, Literal
@@ -56,7 +57,10 @@ class ConformanceReportPlugin:
     def __init__(self, path_to_rdflib_report:str,
                  path_to_generic_report:str) -> None:
         """
-
+        Initialize the Reporter plugin.
+        Args:
+            path_to_rdflib_report (str): path to report file for RDFLib implementation
+            path_to_generic_report (str): path to report file for Generic API
         """
         self.path_to_rdflib_report = path_to_rdflib_report
         self.path_to_generic_report = path_to_generic_report
@@ -223,6 +227,7 @@ class ConformanceReportPlugin:
 
 def main():
 
+    os.environ['REPORTING_MODE'] = '1'
     conformance_report_plugin = ConformanceReportPlugin(path_to_rdflib_report="pyjelly RDFLib.ttl",
                                                         path_to_generic_report="pyjelly Generic API.ttl")
 
