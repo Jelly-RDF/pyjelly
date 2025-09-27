@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import patch
@@ -22,6 +23,7 @@ from tests.utils.rdf_test_cases import jelly_validate, needs_jelly_cli
 
 # Manifest path for to_jelly tests. This is where all test cases are defined.
 TO_JELLY_MANIFEST = RDF_TO_JELLY_MANIFEST
+REPORTING_MODE = os.getenv("REPORTING_MODE", "0") == "1"
 
 
 @dataclass
@@ -174,12 +176,13 @@ workaround_rdflib_serializes_default_graph_id.start()
 # Collect and categorize test cases for pytest parameterization
 ALL_TO_JELLY_CASES = load_to_jelly_manifest_cases(TO_JELLY_MANIFEST)
 
-# Temporary exclusion of a problematic case, can be replaced with xfail later
-ALL_TO_JELLY_CASES = [
-    case
-    for case in ALL_TO_JELLY_CASES
-    if not ("pos_014" in case.uri and case.category == "rdf11")
-]
+if not REPORTING_MODE:
+    # Temporary exclusion of a problematic case, can be replaced with xfail later
+    ALL_TO_JELLY_CASES = [
+        case
+        for case in ALL_TO_JELLY_CASES
+        if not ("pos_014" in case.uri and case.category == "rdf11")
+    ]
 
 RDF11_POSITIVE_CASES = [
     pytest.param(case, id=case.id)
