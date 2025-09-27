@@ -158,10 +158,10 @@ class ConformanceReportPlugin:
 
         if implementation.lower() == "generic":
             description = "pyjelly (Generic API)"
-            implementation = f"pyjelly (Generic API) {pyjelly_v}"
+            implementation = "pyjelly (Generic API)"
         elif implementation.lower() == "rdflib":
             description = "pyjelly integration with RDFLib"
-            implementation = f"pyjelly (RDFLib) {pyjelly_v}"
+            implementation = "pyjelly (RDFLib)"
         else:
             description = "implementation not found"
         # add implementation
@@ -175,8 +175,8 @@ class ConformanceReportPlugin:
         g.add((IMPL, DOAP["programming-language"], Literal("Python")))
         release = BNode()
         g.add((IMPL, DOAP.release, release))
-        g.add((release, DOAP.name, Literal(f"pyjelly {pyjelly_v}")))
-        g.add((release, DOAP.version, Literal(pyjelly_v)))
+        g.add((release, DOAP.name, Literal("pyjelly")))
+        g.add((release, DOAP.revision, Literal(pyjelly_v)))
         g.add((release, DCTERMS.created, Literal(pyjelly_d, datatype=XSD.date)))
         return g
 
