@@ -59,7 +59,7 @@ def get_release_version_date() -> tuple[str, str]:
     tag = cp.stdout.strip()
     if not re.match(r"^[A-Za-z0-9._-]+$", tag):
         raise ValueError
-    date = subprocess.check_output( # noqa: S603
+    date = subprocess.check_output(  # noqa: S603
         [git, "log", "-1", "--format=%ai", tag], text=True
     ).strip()
     return tag.strip("v"), date.split(" ")[0]
@@ -137,40 +137,42 @@ class ConformanceReportPlugin:
         g.add((URIRef(""), FOAF.maker, URIRef("#assertor")))
 
         # add developer
-        g.add((DEVELOPER, RDF.type, FOAF.Group))
-        g.add((DEVELOPER, DOAP.name, Literal("pyjelly contributors")))
-        g.add((DEVELOPER, DOAP.homepage, URIRef("https://w3id.org/jelly/pyjelly")))
 
         # add assertor
         g.add((ASSERTOR, RDF.type, EARL.Software))
         g.add((ASSERTOR, RDF.type, EARL.Assertor))
-        g.add((ASSERTOR, DOAP.name, Literal("Pyjelly test suite")))
+        g.add((ASSERTOR, FOAF.name, Literal("pyjelly test suite")))
         g.add(
             (
                 ASSERTOR,
-                DOAP.homepage,
+                FOAF.homepage,
                 URIRef(
                     "https://github.com/Jelly-RDF/pyjelly/tree/main/tests/conformance_tests"
                 ),
             )
         )
 
+        g.add((DEVELOPER, RDF.type, FOAF.Group))
+        g.add((DEVELOPER, FOAF.name, Literal("pyjelly contributors")))
+        g.add((DEVELOPER, FOAF.homepage, URIRef("https://w3id.org/jelly/pyjelly")))
+
+        if implementation.lower() == "generic":
+            description = "pyjelly (Generic API)"
+            implementation = f"pyjelly (Generic API) {pyjelly_v}"
+        elif implementation.lower() == "rdflib":
+            description = "pyjelly integration with RDFLib"
+            implementation = f"pyjelly (RDFLib) {pyjelly_v}"
+        else:
+            description = "implementation not found"
         # add implementation
         g.add((IMPL, RDF.type, DOAP.Project))
         g.add((IMPL, RDF.type, DOAP.TestSubject))
         g.add((IMPL, RDF.type, DOAP.Software))
-        g.add((IMPL, DOAP.name, Literal(f"pyjelly ({implementation})")))
+        g.add((IMPL, DOAP.name, Literal(implementation)))
+        g.add((IMPL, DOAP.developer, DEVELOPER))
         g.add((IMPL, DOAP.homepage, URIRef("https://w3id.org/jelly/pyjelly")))
-
-        if implementation.lower() == "generic":
-            description = f"pyjelly ({implementation})"
-        elif implementation.lower() == "rdflib":
-            description = f"pyjelly integration with {implementation}"
-        else:
-            description = "implementation not found"
-
         g.add((IMPL, DOAP.description, Literal(description, lang="en")))
-        g.add((IMPL, DOAP.programming_language, Literal("Python")))
+        g.add((IMPL, DOAP["programming-language"], Literal("Python")))
         release = BNode()
         g.add((IMPL, DOAP.release, release))
         g.add((release, DOAP.name, Literal(f"pyjelly {pyjelly_v}")))
@@ -224,7 +226,7 @@ class ConformanceReportPlugin:
                 ),
             )
         )
-        g.add((result, EARL.result, _outcome_map[outcome]))
+        g.add((result, EARL.outcome, _outcome_map[outcome]))
         return g
 
     def pytest_runtest_call(self, item: Item) -> None:
