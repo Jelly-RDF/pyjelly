@@ -44,21 +44,6 @@ To learn how to use popular third-party libraries that connect with RDFLib, plea
 
 - **[RDFLib-Neo4j integration](rdflib-neo4j-integration.md)**
 - **[NetworkX integration](networkx-integration.md)**
-- **[Yatter](https://github.com/citiususc/yatter) integration** 
-
-    Install the following libraries:
-     ```bash
-     pip install pyjelly[rdflib] yatter
-     ```
-    YARRRML to RML to Jelly:
-     ```bash
-     python3 -m yatter -i input_path_yml.yml -o output_path_jelly.jelly
-     ```
-    Jelly to RML to YARRRML:
-     ```bash
-     python3 -m yatter -i input_path_jelly.jelly -o output_path_yml.yml 
-     ```
-   
 
 ## Generic API
 
