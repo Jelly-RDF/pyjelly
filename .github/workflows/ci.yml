@@ -22,7 +22,7 @@ defaults:
 
 jobs:
   check:
-    if: ${{ && !cancelled() }}
+    if: ${{ !cancelled() }}
     name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
     runs-on: ${{ matrix.platform }}
 
