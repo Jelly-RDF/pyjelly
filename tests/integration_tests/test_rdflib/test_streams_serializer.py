@@ -16,6 +16,7 @@ from pyjelly.integrations.rdflib.serialize import (
     quads_stream_frames,
 )
 from pyjelly.options import StreamParameters
+from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions
 
 EX = Namespace("http://example.org/")
@@ -81,19 +82,51 @@ def test_grouped_stream_to_file() -> None:
 
     buf = io.BytesIO()
     grouped_stream_to_file(_gen_graphs(), buf)
-    assert buf.tell() > 0
+    data = buf.getvalue()
+
+    g_in = Graph()
+    g_in.parse(data=data, format="jelly")
+
+    g1 = _graph_gen()
+    g2 = _graph_gen()
+    expected = set(g1) | set(g2)
+    assert set(g_in) == expected
+    assert len(g_in) == len(expected)
 
 
 def test_flat_stream_to_frames_triples() -> None:
     frames = list(flat_stream_to_frames(_triples_gen()))
-    assert len(frames) >= 1
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    g_in = Graph()
+    g_in.parse(data=data, format="jelly")
+
+    expected = {
+        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1")),
+        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2")),
+    }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    assert set(g_in) == expected
+    assert len(g_in) == len(expected)
 
 
 def test_flat_stream_to_file_quads() -> None:
     buf = io.BytesIO()
     flat_stream_to_file(_quads_gen(), buf)
-    assert buf.tell() > 0
+    data = buf.getvalue()
+
+    ds_in = Dataset()
+    ds_in.parse(data=data, format="jelly")
+
+    expected = {
+        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+    }
+    assert set(ds_in) == expected
+    assert len(ds_in) == len(expected)
 
 
 def test_flat_stream_to_frames_empty() -> None:
@@ -110,8 +143,18 @@ def test_graphs_stream_frames_namespace() -> None:
     stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(graphs_stream_frames(stream, ds))
-    assert len(frames) >= 1
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    ds_in = Dataset()
+    ds_in.parse(data=data, format="jelly")
+
+    expected = set(ds)
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    assert set(ds_in) == expected
+    assert len(ds_in) == len(expected)
 
 
 def test_graphs_stream_frames_from_quads_generator() -> None:
@@ -122,13 +165,25 @@ def test_graphs_stream_frames_from_quads_generator() -> None:
     stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(graphs_stream_frames(stream, _quads_gen()))
-    assert len(frames) >= 1
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    ds_in = Dataset()
+    ds_in.parse(data=data, format="jelly")
+
+    expected = {
+        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+    }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    assert set(ds_in) == expected
+    assert len(ds_in) == len(expected)
 
 
 def test_quads_stream_frames_namespace() -> None:
     ds = _dataset_gen()
-
     opts = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
         params=StreamParameters(namespace_declarations=True),
@@ -136,8 +191,18 @@ def test_quads_stream_frames_namespace() -> None:
     stream: QuadStream = QuadStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(quads_stream_frames(stream, ds))
-    assert len(frames) >= 1
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    ds_in = Dataset()
+    ds_in.parse(data=data, format="jelly")
+
+    expected = set(ds)
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    assert set(ds_in) == expected
+    assert len(ds_in) == len(expected)
 
 
 def test_quads_stream_frames_from_quads_generator() -> None:
@@ -148,5 +213,18 @@ def test_quads_stream_frames_from_quads_generator() -> None:
     stream: QuadStream = QuadStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(quads_stream_frames(stream, _quads_gen()))
-    assert len(frames) >= 1
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    ds_in = Dataset()
+    ds_in.parse(data=data, format="jelly")
+
+    expected = {
+        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+    }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    assert set(ds_in) == expected
+    assert len(ds_in) == len(expected)
