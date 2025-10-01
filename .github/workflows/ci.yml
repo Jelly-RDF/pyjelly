@@ -22,7 +22,7 @@ defaults:
 
 jobs:
   check:
-    if: ${{ github.actor != 'dependabot[bot]' && !cancelled() }}
+    if: ${{ && !cancelled() }}
     name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
     runs-on: ${{ matrix.platform }}
 
