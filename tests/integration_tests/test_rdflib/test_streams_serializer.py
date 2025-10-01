@@ -67,12 +67,29 @@ def _empty_triples() -> Generator[tuple[URIRef, URIRef, Literal], None, None]:
 
 def test_grouped_stream_to_frames_graph_dataset() -> None:
     def _gen_graph_dataset() -> Generator[Graph | Dataset, None, None]:
-        yield _graph_gen()
-        yield _dataset_gen()
+        g = _graph_gen()
+        ds = _dataset_gen()
+        yield g
+        yield ds
 
     frames = list(grouped_stream_to_frames(_gen_graph_dataset()))
-    assert frames
-    assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
+    buf = io.BytesIO()
+    for f in frames:
+        write_delimited(f, buf)
+    data = buf.getvalue()
+
+    g_in = Graph()
+    g_in.parse(data=data, format="jelly")
+
+    g = _graph_gen()
+    ds = _dataset_gen()
+    expected = set(g)
+    for subg in ds.graphs():
+        expected |= set(subg)
+
+    assert set(g_in) == expected
+    assert len(g_in) == len(expected)
+
 
 
 def test_grouped_stream_to_file() -> None:
@@ -105,8 +122,8 @@ def test_flat_stream_to_frames_triples() -> None:
     g_in.parse(data=data, format="jelly")
 
     expected = {
-        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1")),
-        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2")),
+        Triple(URIRef(EX.s1), URIRef(EX.p1), Literal("o1")),
+        Triple(URIRef(EX.s2), URIRef(EX.p2), Literal("o2")),
     }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
     assert set(g_in) == expected
@@ -122,8 +139,8 @@ def test_flat_stream_to_file_quads() -> None:
     ds_in.parse(data=data, format="jelly")
 
     expected = {
-        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
-        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
     }
     assert set(ds_in) == expected
     assert len(ds_in) == len(expected)
@@ -174,8 +191,8 @@ def test_graphs_stream_frames_from_quads_generator() -> None:
     ds_in.parse(data=data, format="jelly")
 
     expected = {
-        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
-        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
     }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
     assert set(ds_in) == expected
@@ -222,8 +239,8 @@ def test_quads_stream_frames_from_quads_generator() -> None:
     ds_in.parse(data=data, format="jelly")
 
     expected = {
-        (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
-        (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
+        Quad(URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
     }
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
     assert set(ds_in) == expected
