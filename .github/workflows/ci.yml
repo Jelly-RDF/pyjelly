@@ -23,7 +23,7 @@ defaults:
 jobs:
   check:
     if: ${{ !cancelled() }}
-    name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{matrix.platform}}
+    name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{ matrix.platform }} ${{ matrix.backend == 'python' && '(py-backend)' || '' }}
     runs-on: ${{ matrix.platform }}
 
     env:
@@ -36,6 +36,7 @@ jobs:
         conformance-tests: [false]
         version: ['3.9', '3.13']
         platform: [ubuntu-latest, macos-latest, windows-latest]
+        backend: [cpp]
         include:
         - version: '3.10'
           platform: ubuntu-latest
@@ -46,6 +47,10 @@ jobs:
         - version: '3.13'
           platform: ubuntu-latest
           conformance-tests: true
+        - version: '3.13'
+          platform: ubuntu-latest
+          conformance-tests: true
+          backend: python
         # rdflib appears to be broken on 3.14
         # - version: '3.14'
         #   platform: ubuntu-latest
@@ -80,6 +85,10 @@ jobs:
     - name: Install jelly-cli
       uses: jelly-rdf/setup-cli@v1
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
+
+    - name: Select protobuf Python backend
+      if: ${{ matrix.backend == 'python' }}
+      run: echo "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python" >> "$GITHUB_ENV"
 
     - name: Run unit tests
       run: uv run pytest -vv
