@@ -91,7 +91,6 @@ def test_grouped_stream_to_frames_graph_dataset() -> None:
     assert len(g_in) == len(expected)
 
 
-
 def test_grouped_stream_to_file() -> None:
     def _gen_graphs() -> Generator[Graph | Dataset, None, None]:
         yield _graph_gen()
