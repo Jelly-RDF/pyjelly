@@ -6,7 +6,7 @@ from collections.abc import Generator
 from rdflib import Dataset, Graph, Literal, Namespace, URIRef
 
 from pyjelly import jelly
-from pyjelly.integrations.rdflib.parse import Quad
+from pyjelly.integrations.rdflib.parse import Quad, Triple
 from pyjelly.integrations.rdflib.serialize import (
     flat_stream_to_file,
     flat_stream_to_frames,
@@ -21,7 +21,6 @@ from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions
 EX = Namespace("http://example.org/")
 
 
-
 def _graph_gen() -> Graph:
     g: Graph = Graph()
     g.bind("ex", EX)
@@ -34,33 +33,54 @@ def _graph_gen() -> Graph:
 def _dataset_gen() -> Dataset:
     ds: Dataset = Dataset()
     g1 = ds.graph(URIRef(EX.g1))
-    g1.add((URIRef(EX.a), URIRef(EX.b), Literal("example", lang="en")))
+    g1.add((URIRef(EX.p1), URIRef(EX.s1), Literal("example", lang="en")))
     g2 = ds.graph(URIRef(EX.g2))
-    g2.add((URIRef(EX.x), URIRef(EX.y), URIRef(EX.z)))
+    g2.add((URIRef(EX.p2), URIRef(EX.s2), URIRef(EX.o2)))
     return ds
 
-def _triples_gen() -> Generator[tuple[URIRef, URIRef, Literal], None, None]:
-        yield (URIRef(EX.s1), URIRef(EX.p1), Literal("o1"))
-        yield (URIRef(EX.s2), URIRef(EX.p2), Literal("o2"))
+
+def _triples_gen() -> Generator[Triple, None, None]:
+    yield Triple(URIRef(EX.s1), URIRef(EX.p1), Literal("o1"))
+    yield Triple(URIRef(EX.s2), URIRef(EX.p2), Literal("o2"))
 
 
-def test_grouped_stream_to_frames_with_graph_then_dataset() -> None:
-    def gen() -> Generator[Graph | Dataset, None, None]:
+def _quads_gen() -> Generator[Quad, None, None]:
+    yield Quad(
+        s=URIRef(EX.s1),
+        p=URIRef(EX.p1),
+        o=Literal("o1"),
+        g=URIRef(EX.gq),
+    )
+    yield Quad(
+        s=URIRef(EX.s2),
+        p=URIRef(EX.p2),
+        o=Literal("o2"),
+        g=URIRef(EX.gq),
+    )
+
+
+def _empty_triples() -> Generator[tuple[URIRef, URIRef, Literal], None, None]:
+    if False:
+        yield
+
+
+def test_grouped_stream_to_frames_graph_dataset() -> None:
+    def _gen_graph_dataset() -> Generator[Graph | Dataset, None, None]:
         yield _graph_gen()
         yield _dataset_gen()
 
-    frames = list(grouped_stream_to_frames(gen()))
+    frames = list(grouped_stream_to_frames(_gen_graph_dataset()))
     assert frames
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
 
 
-def test_grouped_stream_to_file_writes_bytes() -> None:
-    def gen() -> Generator[Graph | Dataset, None, None]:
+def test_grouped_stream_to_file() -> None:
+    def _gen_graphs() -> Generator[Graph | Dataset, None, None]:
         yield _graph_gen()
         yield _graph_gen()
 
     buf = io.BytesIO()
-    grouped_stream_to_file(gen(), buf)
+    grouped_stream_to_file(_gen_graphs(), buf)
     assert buf.tell() > 0
 
 
@@ -70,113 +90,63 @@ def test_flat_stream_to_frames_triples() -> None:
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
 
 
-def test_flat_stream_to_file_quads_writes_bytes() -> None:
-    def quads() -> Generator[
-        tuple[URIRef, URIRef, Literal | URIRef, URIRef], None, None
-    ]:
-        yield (URIRef(EX.sq), URIRef(EX.pq), Literal("oq"), URIRef(EX.gq))
-        yield (URIRef(EX.sq2), URIRef(EX.pq2), URIRef(EX.oq2), URIRef(EX.gq))
-
+def test_flat_stream_to_file_quads() -> None:
     buf = io.BytesIO()
-    flat_stream_to_file(quads(), buf)
+    flat_stream_to_file(_quads_gen(), buf)
     assert buf.tell() > 0
 
 
-def _empty_triples() -> Generator[tuple[URIRef, URIRef, Literal], None, None]:
-    if False:
-        yield  # type: ignore[misc]
-
-
-def test_flat_stream_to_frames_empty_input_returns_immediately() -> None:
-    frames = list(flat_stream_to_frames(_empty_triples()))
+def test_flat_stream_to_frames_empty() -> None:
+    frames = list(flat_stream_to_frames(_empty_triples()))  # type: ignore[arg-type]
     assert frames == []
 
 
-def test_graphs_stream_frames_namespace_declarations_enabled() -> None:
-    ds: Dataset = Dataset()
-    ds.bind("ex", EX)
-    g1 = ds.graph(URIRef(EX.g1))
-    g1.add((URIRef(EX.s1), URIRef(EX.p1), Literal("o1")))
-    g2 = ds.graph(URIRef(EX.g2))
-    g2.add((URIRef(EX.s2), URIRef(EX.p2), URIRef(EX.o2)))
-
+def test_graphs_stream_frames_namespace() -> None:
+    ds = _dataset_gen()
     opts = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
         params=StreamParameters(namespace_declarations=True),
     )
-    stream: GraphStream = GraphStream.for_rdflib(options=opts)
+    stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(graphs_stream_frames(stream, ds))
     assert len(frames) >= 1
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
 
 
-def test_graphs_stream_frames_from_quads_generator_else_branch() -> None:
-    def quads() -> Generator[Quad, None, None]:
-        yield Quad(
-            s=URIRef(EX.sq1),
-            p=URIRef(EX.pq1),
-            o=Literal("oq1"),
-            g=URIRef(EX.gq),
-        )
-        yield Quad(
-            s=URIRef(EX.sq2),
-            p=URIRef(EX.pq2),
-            o=URIRef(EX.oq2),
-            g=URIRef(EX.gq),
-        )
-
+def test_graphs_stream_frames_from_quads_generator() -> None:
     opts = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
         params=StreamParameters(namespace_declarations=False),
     )
-    stream: GraphStream = GraphStream.for_rdflib(options=opts)
+    stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
-    frames = list(graphs_stream_frames(stream, quads()))
+    frames = list(graphs_stream_frames(stream, _quads_gen()))
     assert len(frames) >= 1
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
 
 
-def test_quads_stream_frames_namespace_declarations_enabled() -> None:
-    ds: Dataset = Dataset()
-    ds.bind("ex", EX)
-    g1: Graph = ds.graph(URIRef(EX.g1))
-    g1.add((URIRef(EX.s1), URIRef(EX.p1), Literal("o1")))
-    g2: Graph = ds.graph(URIRef(EX.g2))
-    g2.add((URIRef(EX.s2), URIRef(EX.p2), URIRef(EX.o2)))
+def test_quads_stream_frames_namespace() -> None:
+    ds = _dataset_gen()
 
     opts = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
         params=StreamParameters(namespace_declarations=True),
     )
-    stream: QuadStream = QuadStream.for_rdflib(options=opts)
+    stream: QuadStream = QuadStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
     frames = list(quads_stream_frames(stream, ds))
     assert len(frames) >= 1
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
 
 
-def test_quads_stream_frames_from_quads_generator_else_branch() -> None:
-    def quads() -> Generator[Quad, None, None]:
-        yield Quad(
-            s=URIRef(EX.sq1),
-            p=URIRef(EX.pq1),
-            o=Literal("oq1"),
-            g=URIRef(EX.gq),
-        )
-        yield Quad(
-            s=URIRef(EX.sq2),
-            p=URIRef(EX.pq2),
-            o=URIRef(EX.oq2),
-            g=URIRef(EX.gq),
-        )
-
+def test_quads_stream_frames_from_quads_generator() -> None:
     opts = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
         params=StreamParameters(namespace_declarations=False),
     )
-    stream: QuadStream = QuadStream.for_rdflib(options=opts)
+    stream: QuadStream = QuadStream.for_rdflib(options=opts)  # type: ignore[assignment]
 
-    frames = list(quads_stream_frames(stream, quads()))
+    frames = list(quads_stream_frames(stream, _quads_gen()))
     assert len(frames) >= 1
     assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)

@@ -1,5 +1,5 @@
 import pytest
-from rdflib import Graph, BNode
+from rdflib import BNode, Graph
 from rdflib.graph import QuotedGraph
 
 from pyjelly.integrations.rdflib.serialize import RDFLibJellySerializer, stream_frames
