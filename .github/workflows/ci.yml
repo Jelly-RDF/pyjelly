@@ -85,7 +85,19 @@ jobs:
       run: uv run pytest -vv
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
 
+    - name: Run unit tests (pure Python backend)
+      env:
+        PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+      run: uv run pytest -vv
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix.conformance-tests }}
+
     - name: Run unit tests (with conformance tests and coverage)
+      run: uv run pytest -vv --cov --cov-branch --cov-report=xml
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
+
+    - name: Run unit tests (pure Python backend, with conformance tests and coverage)
+      env:
+        PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
       run: uv run pytest -vv --cov --cov-branch --cov-report=xml
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix.conformance-tests }}
 
