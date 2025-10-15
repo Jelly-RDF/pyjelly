@@ -9,8 +9,6 @@ hot_paths = [
     # "pyjelly/parse/decode.py",
     # "pyjelly/parse/ioutils.py",
     # "pyjelly/parse/lookup.py",
-    # "pyjelly/integrations/generic/parse.py",
-    # "pyjelly/integrations/generic/serialize.py",
 ]
 
 setup(
