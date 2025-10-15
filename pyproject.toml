@@ -15,7 +15,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -31,6 +30,7 @@ classifiers = [
 ]
 keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
+license-files = ["LICENSE*", "COPYING*"]
 dependencies = [
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
