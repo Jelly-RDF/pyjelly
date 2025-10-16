@@ -76,31 +76,22 @@ def get_options_and_frames(
         tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:
             stream types, lookup presets and other stream options
     """
-    # Helper: ensure we can safely "peek" a few bytes on non-seekable streams
-    def _peek3_from_nonseekable(stream: IO[bytes]) -> tuple[bytes, IO[bytes]]:
-        # If already a BufferedReader, we can peek directly.
+    def _peek_from_nonseekable(stream: IO[bytes]) -> tuple[bytes, IO[bytes]]:
         if isinstance(stream, io.BufferedReader):
             return (stream.peek(3), stream)
 
-        # If it's a raw binary stream, wrap in BufferedReader (valid constructor arg).
         if isinstance(stream, io.RawIOBase):
             br = io.BufferedReader(stream)
             return (br.peek(3), br)
-
-        # Fallback: read a small head, then rebuild a seekable BytesIO so the rest of
-        # the pipeline can re-read from the start. This avoids incorrect typing while
-        # keeping runtime behavior consistent for odd non-seekable, non-raw IO[bytes].
         head = stream.read(3)
         rest = stream.read()
         rebuilt = io.BytesIO(head + rest)
         return (head, rebuilt)
 
     if not inp.seekable():
-        # Non-seekable: peek 3 bytes (buffering when needed) to detect delimiter.
-        head, inp = _peek3_from_nonseekable(inp)
+        head, inp = _peek_from_nonseekable(inp)
         is_delimited = delimited_jelly_hint(head)
     else:
-        # Seekable: read & rewind safely.
         bytes_read = inp.read(3)
         is_delimited = delimited_jelly_hint(bytes_read)
         inp.seek(-len(bytes_read), os.SEEK_CUR)
@@ -121,7 +112,6 @@ def get_options_and_frames(
         options: ParserOptions = options_from_frame(first_frame, delimited=True)
         return options, chain(skipped_frames, (first_frame,), frames)
 
-    # Non-delimited: parse a single frame from the whole stream.
     frame = parse(jelly.RdfStreamFrame, inp.read())
     if not frame.rows:
         raise JellyConformanceError("The stream is corrupted (only contains an empty frame)")
