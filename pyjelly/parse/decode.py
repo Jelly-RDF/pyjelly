@@ -3,13 +3,15 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from enum import Enum, auto
-from typing import Any, ClassVar, NamedTuple
+from typing import Any, Callable, ClassVar, Mapping, NamedTuple
 from typing_extensions import Never
 
 from pyjelly import jelly
 from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
+RowHandler = Callable[[Any, Any], Any | None]
+TermHandler = Callable[[Any, Any], Any]
 
 class ParsingMode(Enum):
     """
@@ -215,11 +217,11 @@ class Decoder:
 
         """
         try:
-            decode_row = self.row_handlers[type(row)]
+            handler: RowHandler = self.row_handlers[type(row)]
         except KeyError:
             msg = f"decoder not implemented for {type(row)}"
             raise TypeError(msg) from None
-        return decode_row(self, row)
+        return handler(self, row)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         stream_types, lookup_preset, params = self.options
@@ -413,19 +415,20 @@ class Decoder:
         return self.adapter.quad(terms)
 
     # dispatch by invariant type (no C3 resolution)
-    row_handlers: ClassVar = {
-        jelly.RdfStreamOptions: validate_stream_options,
-        jelly.RdfPrefixEntry: ingest_prefix_entry,
-        jelly.RdfNameEntry: ingest_name_entry,
-        jelly.RdfDatatypeEntry: ingest_datatype_entry,
-        jelly.RdfTriple: decode_triple,
-        jelly.RdfQuad: decode_quad,
-        jelly.RdfGraphStart: decode_graph_start,
-        jelly.RdfGraphEnd: decode_graph_end,
-        jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
-    }
+    row_handlers: ClassVar[Mapping[type[Any], RowHandler]] = {
+    jelly.RdfStreamOptions: validate_stream_options,
+    jelly.RdfPrefixEntry: ingest_prefix_entry,
+    jelly.RdfNameEntry: ingest_name_entry,
+    jelly.RdfDatatypeEntry: ingest_datatype_entry,
+    jelly.RdfTriple: decode_triple,
+    jelly.RdfQuad: decode_quad,
+    jelly.RdfGraphStart: decode_graph_start,
+    jelly.RdfGraphEnd: decode_graph_end,
+    jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
+}
 
-    term_handlers: ClassVar = {
+
+    term_handlers: ClassVar[Mapping[type[Any], TermHandler]] = {
         jelly.RdfIri: decode_iri,
         str: decode_bnode,
         jelly.RdfLiteral: decode_literal,
