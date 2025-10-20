@@ -9,9 +9,8 @@ hot_paths = [
 
     "pyjelly/integrations/generic/serialize.py",
     "pyjelly/integrations/generic/parse.py",
-    #"pyjelly/integrations/generic/generic_sink.py",
     "pyjelly/integrations/rdflib/serialize.py",
-    "pyjelly/integrations/rdflib/parse.py",
+    "pyjelly/integrations/rdflib /parse.py",
 
     "pyjelly/parse/decode.py",
     "pyjelly/parse/ioutils.py",
@@ -27,11 +26,7 @@ setup(
             "--disallow-untyped-defs",
             "--no-warn-no-return",
             "--disable-error-code=type-arg",
-            # "--disable-error-code=type-var",
-            # "--disable-error-code=operator",
             "--disable-error-code=misc",
-            # "--disable-error-code=assignment",
-            # "--disable-error-code=unused-ignore",
             *hot_paths,
         ]
     ),
