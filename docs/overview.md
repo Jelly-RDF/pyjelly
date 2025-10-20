@@ -49,3 +49,24 @@ To learn how to use popular third-party libraries that connect with RDFLib, plea
 
 pyjelly includes its own [generic API](generic-sink.md) for working with RDF data (no RDFLib or other external RDF libraries required).  
 It provides simple, built-in types for triples and quads, allowing you to create, read, and write data directly in the Jelly format.
+
+## Accessing stream frame metadata 
+
+It is possible to access `RDFStreamFrame` metadata in pyjelly via **context variables**.
+To do that, define a **context variable** before parsing and pass it as argument to parser functions, e.g.:
+
+```python
+from contextvars import ContextVar
+from google.protobuf.internal.containers import ScalarMap
+
+frame_metadata: ContextVar[ScalarMap[str, bytes]] = ContextVar("frame_metadata")
+
+url = "https://registry.petapico.org/nanopubs.jelly"
+with (urllib.request.urlopen(url) as response):
+    graphs = parse_jelly_grouped(response, frame_metadata=frame_metadata)
+    for i, graph in enumerate(graphs):
+        print(f"Graph {i} in the stream has {len(graph)} triples.")
+        metadata = frame_metadata.get()
+        print(f"Graph #{i}: {metadata}")
+
+```
