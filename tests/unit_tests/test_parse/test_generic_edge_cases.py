@@ -212,6 +212,7 @@ def test_parse_jelly_to_graph_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
         inp: IO[bytes],  # noqa: ARG001
         frames: Iterable[jelly.RdfStreamFrame],  # noqa: ARG001
         options: ParserOptions,  # noqa: ARG001
+        logical_type_strict: bool,  # noqa: ARG001
     ) -> Any:
         yield Prefix("ex", IRI("http://example.com/"))
         yield Triple(
