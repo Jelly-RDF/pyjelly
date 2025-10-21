@@ -22,7 +22,7 @@ def test_rdflib_parse(
         return g
 
     g = benchmark(run)
-    assert len(g) >= 0  # basic sanity
+    assert len(g) >= 0 
 
 
 def test_rdflib_serialize(
@@ -31,8 +31,6 @@ def test_rdflib_serialize(
     from rdflib import Graph
 
     data, fmt = rdflib_input
-
-    # Pre-parse once (outside timed region).
     g = Graph()
     if fmt:
         g.parse(data=data, format=fmt)
@@ -40,7 +38,6 @@ def test_rdflib_serialize(
         g.parse(data=data)
 
     def run() -> bytes:
-        # In-memory serialization; encoding ensures bytes.
         out: bytes = g.serialize(destination=None, format="jelly", encoding="utf-8")
         return out
 
