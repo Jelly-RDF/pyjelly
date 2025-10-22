@@ -119,6 +119,46 @@ jobs:
       run: uv run mypy .
       if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
 
+    - name: Build wheel
+      id: wheel-build
+      run: |
+          rm -rf dist
+          uv build
+          python - <<'PY'
+          import glob
+          wheels = glob.glob('dist/*.whl')
+          assert wheels, "No wheels built in dist/"
+          PY
+      if: ${{ matrix.platform == 'ubuntu-latest' && matrix.version == '3.13' && !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Wheel install and compile test
+      run: |
+          mv pyjelly pyjelly.src
+          uv venv .wheel-venv
+          source .wheel-venv/bin/activate
+          uv pip install --no-index --find-links dist pyjelly
+          python - <<'PY'
+          import importlib
+          mods = [
+              "pyjelly.serialize.encode",
+              "pyjelly.serialize.lookup",
+              "pyjelly.parse.decode",
+          ]
+          for m in mods:
+              mod = importlib.import_module(m)
+              path = getattr(mod, "__file__", "")
+              assert path and (path.endswith(".so") or path.endswith(".pyd")), f"{m} not compiled: {path}"
+          PY
+      if: ${{ matrix.platform == 'ubuntu-latest' && matrix.version == '3.13' && !cancelled() && steps.install.conclusion == 'success' }}
+
+    - name: Wheel run test
+      env:
+          PYTHONPATH: ""
+      run: |
+          source .wheel-venv/bin/activate
+          uv run pytest -vv
+      if: ${{ matrix.platform == 'ubuntu-latest' && matrix.version == '3.13' && !cancelled() && steps.install.conclusion == 'success' }}
+
   check-docs:
     runs-on: ubuntu-latest
     steps:

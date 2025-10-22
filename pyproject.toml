@@ -1,6 +1,30 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-mypyc", "mypy>=1.8"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+dependencies = ["hatch-mypyc"]
+include = [
+  "pyjelly/serialize/encode.py",
+  "pyjelly/serialize/lookup.py",
+  "pyjelly/serialize/streams.py",
+  "pyjelly/serialize/ioutils.py",
+  "pyjelly/integrations/generic/serialize.py",
+  "pyjelly/integrations/generic/parse.py",
+  "pyjelly/integrations/rdflib/serialize.py",
+  "pyjelly/integrations/rdflib/parse.py",
+  "pyjelly/parse/decode.py",
+  "pyjelly/parse/ioutils.py",
+  "pyjelly/parse/lookup.py",
+]
+
+mypy-args = [
+  "--ignore-missing-imports",
+  "--disallow-untyped-defs",
+  "--no-warn-no-return",
+  "--disable-error-code=type-arg",
+  "--disable-error-code=misc",
+]
 
 [project]
 name = "pyjelly"
