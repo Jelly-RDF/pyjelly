@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, Iterator
+from collections.abc import Generator, Iterable
 from contextvars import ContextVar
 from itertools import chain
 from typing import IO, Any, Callable, Union
@@ -262,7 +262,7 @@ def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     frame_metadata: ContextVar[ScalarMap[str, bytes]] | None = None,
-) -> Generator[Iterator[Any], Any, None]:
+) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
 
