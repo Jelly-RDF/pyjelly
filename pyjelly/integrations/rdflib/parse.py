@@ -316,7 +316,7 @@ def parse_quads_stream(
     adapter = adapter_class(options=options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
-        if frame.metadata and frame_metadata is not None:
+        if frame_metadata is not None:
             frame_metadata.set(
                 frame.metadata
             ) if frame.metadata else frame_metadata.set({})
