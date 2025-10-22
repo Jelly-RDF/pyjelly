@@ -9,7 +9,7 @@ def test_parse_raises_type_no_bytestream() -> None:
     class DummyInputSource(InputSource):
         pass
 
-    parser = RDFLibJellyParser()
+    parser = RDFLibJellyParser()  # type: ignore[no-untyped-call]
     source = DummyInputSource()
     sink = Graph()
 
