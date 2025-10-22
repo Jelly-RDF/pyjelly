@@ -70,7 +70,9 @@ def get_options_and_frames(
 
     Raises:
         JellyConformanceError: if no non-empty frames detected in the delimited stream
-        JellyConformanceError: if non-delimited, error is raised if no rows are detected
+        JellyConformanceError: if non-delimited, error is raised if no rows are
+            detected (empty frame)
+
 
     Returns:
         tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:

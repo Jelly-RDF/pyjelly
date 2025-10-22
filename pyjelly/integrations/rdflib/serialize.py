@@ -158,8 +158,7 @@ def quads_stream_frames(
     """
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
-
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
     iterator: Generator[Quad, None, None]
     if isinstance(data, Dataset):
         iterator = cast(Generator[Quad, None, None], data.quads())
@@ -197,7 +196,7 @@ def graphs_stream_frames(
     """
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
+        namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     if isinstance(data, Dataset):
         graphs = data.graphs()
@@ -278,7 +277,7 @@ class RDFLibJellySerializer(RDFLibSerializer):
         super().__init__(store)
 
     @override
-    def serialize(
+    def serialize(  # type: ignore[override]
         self,
         out: IO[bytes],
         /,
