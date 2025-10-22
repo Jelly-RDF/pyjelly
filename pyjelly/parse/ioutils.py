@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import io
 import os
 from collections.abc import Generator, Iterator
 from itertools import chain
-from typing import IO
+from typing import IO, Union
 
 from google.protobuf.proto import parse, parse_length_prefixed
 
@@ -101,7 +103,7 @@ def get_options_and_frames(
         inp.seek(-len(bytes_read), os.SEEK_CUR)
 
     if is_delimited:
-        first_frame: jelly.RdfStreamFrame | None = None
+        first_frame: Union[jelly.RdfStreamFrame, None] = None
         skipped_frames: list[jelly.RdfStreamFrame] = []
         frames = frame_iterator(inp)
         for frame in frames:
@@ -120,9 +122,7 @@ def get_options_and_frames(
     frame = parse(jelly.RdfStreamFrame, inp.read())
     if not frame.rows:
         msg = "The stream is corrupted (only contains an empty frame)"
-        raise JellyConformanceError(
-            msg
-        )
+        raise JellyConformanceError(msg)
 
     options = options_from_frame(frame, delimited=False)
     return options, iter((frame,))

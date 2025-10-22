@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
+from io import BytesIO
 from itertools import chain
 from typing import IO, Any, Callable, NamedTuple, Union
 from typing_extensions import Never, override
@@ -499,7 +500,7 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp = source.getByteStream()
+        inp: BytesIO = source.getByteStream()  # type: ignore[no-untyped-call]
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
