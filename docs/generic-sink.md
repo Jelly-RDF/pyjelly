@@ -87,6 +87,27 @@ The `data` variable is of type `bytes`, and can be passed to Kafka with [`KafkaP
 
 When working with Kafka, you should be aware of the broker's offset management and partitioning strategies. Data within one Jelly stream must be strictly ordered and no frames may be dropped. If you have less strict ordering guarantees, you should split up the stream into multiple Jelly streams, each with guaranteed consistency.
 
+### Accessing stream frame metadata 
+
+It is possible to access `RDFStreamFrame` metadata in pyjelly via **context variables**.
+To do that, define a **context variable** before parsing and pass it as argument to parser functions, e.g.:
+
+```python
+from contextvars import ContextVar
+from google.protobuf.internal.containers import ScalarMap
+
+frame_metadata: ContextVar[ScalarMap[str, bytes]] = ContextVar("frame_metadata")
+
+url = "https://registry.petapico.org/nanopubs.jelly"
+with (urllib.request.urlopen(url) as response):
+    graphs = parse_jelly_grouped(response, frame_metadata=frame_metadata)
+    for i, graph in enumerate(graphs):
+        print(f"Graph {i} in the stream has {len(graph)} triples.")
+        metadata = frame_metadata.get()
+        print(f"Graph #{i}: {metadata}")
+
+```
+
 ### See also
 
 If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. [See the dedicated guide](getting-started.md).
