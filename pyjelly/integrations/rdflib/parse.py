@@ -37,18 +37,6 @@ class Triple(NamedTuple):
     p: Node
     o: Node
 
-    @property
-    def subject(self) -> Node:
-        return self.s
-
-    @property
-    def predicate(self) -> Node:
-        return self.p
-
-    @property
-    def object(self) -> Node:
-        return self.o
-
 
 class Quad(NamedTuple):
     """

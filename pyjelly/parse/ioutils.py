@@ -83,12 +83,6 @@ def get_options_and_frames(
     """
 
     def _peek_from_nonseekable(stream: IO[bytes]) -> tuple[bytes, IO[bytes]]:
-        if isinstance(stream, io.BufferedReader):
-            return (stream.peek(3), stream)
-
-        if isinstance(stream, io.RawIOBase):
-            br = io.BufferedReader(stream)
-            return (br.peek(3), br)
         head = stream.read(3)
         rest = stream.read()
         rebuilt = io.BytesIO(head + rest)
