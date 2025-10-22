@@ -13,6 +13,7 @@ from pyjelly.parse.lookup import LookupDecoder
 RowHandler = Callable[[Any, Any], Optional[Any]]
 TermHandler = Callable[[Any, Any], Optional[Any]]
 
+
 class ParsingMode(Enum):
     """
     Specifies how jelly frames should be treated.
@@ -416,17 +417,16 @@ class Decoder:
 
     # dispatch by invariant type (no C3 resolution)
     row_handlers: ClassVar[Mapping[type[Any], RowHandler]] = {
-    jelly.RdfStreamOptions: validate_stream_options,
-    jelly.RdfPrefixEntry: ingest_prefix_entry,
-    jelly.RdfNameEntry: ingest_name_entry,
-    jelly.RdfDatatypeEntry: ingest_datatype_entry,
-    jelly.RdfTriple: decode_triple,
-    jelly.RdfQuad: decode_quad,
-    jelly.RdfGraphStart: decode_graph_start,
-    jelly.RdfGraphEnd: decode_graph_end,
-    jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
-}
-
+        jelly.RdfStreamOptions: validate_stream_options,
+        jelly.RdfPrefixEntry: ingest_prefix_entry,
+        jelly.RdfNameEntry: ingest_name_entry,
+        jelly.RdfDatatypeEntry: ingest_datatype_entry,
+        jelly.RdfTriple: decode_triple,
+        jelly.RdfQuad: decode_quad,
+        jelly.RdfGraphStart: decode_graph_start,
+        jelly.RdfGraphEnd: decode_graph_end,
+        jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
+    }
 
     term_handlers: ClassVar[Mapping[type[Any], TermHandler]] = {
         jelly.RdfIri: decode_iri,
