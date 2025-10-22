@@ -75,7 +75,9 @@ def get_options_and_frames(
     Returns:
         tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:
             stream types, lookup presets and other stream options
+
     """
+
     def _peek_from_nonseekable(stream: IO[bytes]) -> tuple[bytes, IO[bytes]]:
         if isinstance(stream, io.BufferedReader):
             return (stream.peek(3), stream)
@@ -114,8 +116,9 @@ def get_options_and_frames(
 
     frame = parse(jelly.RdfStreamFrame, inp.read())
     if not frame.rows:
-        raise JellyConformanceError("The stream is corrupted (only contains an empty frame)")
+        raise JellyConformanceError(
+            "The stream is corrupted (only contains an empty frame)"
+        )
 
     options = options_from_frame(frame, delimited=False)
     return options, iter((frame,))
-

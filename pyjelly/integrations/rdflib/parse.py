@@ -4,9 +4,9 @@ from collections.abc import Generator, Iterable
 from itertools import chain
 from typing import IO, Any, Callable, Union
 from typing_extensions import Never, Self, override
-from mypy_extensions import mypyc_attr
 
 import rdflib
+from mypy_extensions import mypyc_attr
 from rdflib import Node
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
 from rdflib.parser import InputSource
@@ -19,6 +19,7 @@ from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
 GraphName = Union[rdflib.URIRef, rdflib.BNode, str]
+
 
 @mypyc_attr(native_class=False)
 class Triple(tuple[Node, Node, Node]):
@@ -49,6 +50,7 @@ class Triple(tuple[Node, Node, Node]):
     @property
     def o(self) -> Node:
         return self[2]
+
 
 @mypyc_attr(native_class=False)
 class Quad(tuple[Node, Node, Node, GraphName]):
@@ -87,6 +89,7 @@ class Quad(tuple[Node, Node, Node, GraphName]):
 
 
 Statement = Union[Triple, Quad]
+
 
 @mypyc_attr(native_class=False)
 class Prefix(tuple[str, rdflib.URIRef]):
@@ -527,7 +530,7 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp = source.getByteStream() 
+        inp = source.getByteStream()
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
