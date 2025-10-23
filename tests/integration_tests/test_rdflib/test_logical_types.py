@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import io
+from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -92,7 +93,7 @@ def test_graphs() -> None:
 
     graphs_in = sorted(ds_in.graphs(), key=len)
 
-    for g_out, g_in in zip(graphs_out, graphs_in):
+    for g_out, g_in in zip(graphs_out, graphs_in, strict=False):
         assert len(g_out) == len(g_in)
         assert set(g_out) == set(g_in)
 

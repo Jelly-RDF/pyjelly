@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Union
 
 from rdflib import Dataset, Graph
 
 from pyjelly.options import LookupPreset
 
-TripleGraphType = Union[Graph]
-QuadGraphType = Union[Dataset]
+TripleGraphType = Graph
+QuadGraphType = Dataset
 
 
 class BaseSerDes(ABC):
