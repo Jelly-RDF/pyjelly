@@ -336,7 +336,7 @@ def parse_jelly_to_graph(
         inp=inp, frames=frames, options=options, logical_type_strict=False
     ):
         if isinstance(item, Prefix):
-            sink.bind(item.prefix, item.iri)  # type: ignore[union-attr]
+            sink.bind(item.prefix, item.iri)  # type: ignore[union-attr, unused-ignore]
         else:
             sink.add(item)
     return sink
@@ -348,7 +348,7 @@ def parse_jelly_flat(
     options: ParserOptions | None = None,
     *,
     logical_type_strict: bool = False,
-) -> Generator[Statement | Prefix]:  # type: ignore[valid-type]
+) -> Generator[Statement | Prefix]:  # type: ignore[valid-type, unused-ignore]
     """
     Parse jelly file with FLAT logical type into a Generator of stream events.
 
