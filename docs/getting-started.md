@@ -12,7 +12,7 @@ pip install pyjelly[rdflib]
 
 ### Requirements
 
-- Python 3.9 or newer  
+- Python 3.10 or newer  
 - Linux, macOS, or Windows
 
 ## Usage with RDFLib
