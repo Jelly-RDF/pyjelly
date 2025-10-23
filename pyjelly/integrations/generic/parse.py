@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, MutableMapping
+from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
 from itertools import chain
-from typing import IO, Any, Callable, Union
+from typing import IO, Any
 from typing_extensions import override
 
 from pyjelly import jelly
@@ -22,7 +22,7 @@ from pyjelly.integrations.generic.generic_sink import (
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
-Statement = Union[Triple, Quad]
+Statement = Triple | Quad
 
 
 class GenericStatementSinkAdapter(Adapter):

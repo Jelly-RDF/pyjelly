@@ -100,7 +100,7 @@ class Literal:
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple"]
-GraphName = Union[Node, _DefaultGraph]
+GraphName = Node | _DefaultGraph
 
 
 TRIPLE_ARITY = 3
