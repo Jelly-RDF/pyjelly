@@ -159,7 +159,6 @@ def quads_stream_frames(
     stream.enroll()
     if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)  # type: ignore[arg-type]
-
     iterator: Generator[Quad, None, None]
     if isinstance(data, Dataset):
         iterator = cast(Generator[Quad, None, None], data.quads())
