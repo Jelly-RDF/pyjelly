@@ -561,6 +561,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#accessing-stream-frame-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      Accessing stream frame metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       See also
@@ -948,6 +957,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#accessing-stream-frame-metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      Accessing stream frame metadata
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       See also
@@ -1214,6 +1232,24 @@
 </span></code></pre></div>
 <p>The <code>data</code> variable is of type <code>bytes</code>, and can be passed to Kafka with <a href="https://kafka-python.readthedocs.io/en/master/"><code>KafkaProducer.send(value=data)</code></a>, or any other API that accepts byte buffers. Same trick may be used when working with the <a href="../getting-started/">RDFLib integration</a>.</p>
 <p>When working with Kafka, you should be aware of the broker's offset management and partitioning strategies. Data within one Jelly stream must be strictly ordered and no frames may be dropped. If you have less strict ordering guarantees, you should split up the stream into multiple Jelly streams, each with guaranteed consistency.</p>
+<h3 id="accessing-stream-frame-metadata">Accessing stream frame metadata</h3>
+<p>It is possible to access <a href="https://w3id.org/jelly/dev/specification/serialization/#stream-frame-metadata"><code>RdfStreamFrame</code> metadata</a> in pyjelly via <strong>context variables</strong>.
+To do that, define a <strong>context variable</strong> before parsing and pass it as argument to parser functions, e.g.:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextvars</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContextVar</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">google.protobuf.internal.containers</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScalarMap</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pyjelly.integrations.rdflib.parse</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_jelly_grouped</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">frame_metadata</span><span class="p">:</span> <span class="n">ContextVar</span><span class="p">[</span><span class="n">ScalarMap</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]]</span> <span class="o">=</span> <span class="n">ContextVar</span><span class="p">(</span><span class="s2">&quot;frame_metadata&quot;</span><span class="p">)</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;https://registry.petapico.org/nanopubs.jelly&quot;</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="k">with</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span> <span class="k">as</span> <span class="n">response</span><span class="p">:</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>    <span class="n">graphs</span> <span class="o">=</span> <span class="n">parse_jelly_grouped</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">frame_metadata</span><span class="o">=</span><span class="n">frame_metadata</span><span class="p">)</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">graph</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">graphs</span><span class="p">):</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Graph </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> in the stream has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span><span class="si">}</span><span class="s2"> triples.&quot;</span><span class="p">)</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>        <span class="n">metadata</span> <span class="o">=</span> <span class="n">frame_metadata</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Graph #</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">metadata</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
 <h3 id="see-also">See also</h3>
 <p>If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. <a href="../getting-started/">See the dedicated guide</a>.</p>
 
@@ -1238,7 +1274,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 17, 2025 16:19:28">August 17, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 23, 2025 06:29:42">October 23, 2025</span>
   </span>
 
     
