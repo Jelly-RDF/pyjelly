@@ -219,7 +219,7 @@ class Decoder:
         except KeyError:
             msg = f"decoder not implemented for {type(row)}"
             raise TypeError(msg) from None
-        return decode_row(self, row)
+        return decode_row(self, row) # type: ignore[operator]
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         stream_types, lookup_preset, params = self.options
@@ -282,7 +282,7 @@ class Decoder:
         except KeyError:
             msg = f"decoder not implemented for {type(term)}"
             raise TypeError(msg) from None
-        return decode_term(self, term)
+        return decode_term(self, term) # type: ignore[operator]
 
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         """

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -285,7 +286,10 @@ def test_rdflib_flat_strict_requires_stream_types() -> None:
             "pyjelly.integrations.rdflib.parse.get_options_and_frames",
             return_value=(Opt(), frames),
         ),
-        pytest.raises(JellyConformanceError, match="requires options.stream_types"),
+        pytest.raises(
+            JellyConformanceError,
+            match=re.escape("requires options.stream_types"),
+        ),
     ):
         list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=True))
 

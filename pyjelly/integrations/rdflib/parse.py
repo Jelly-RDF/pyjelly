@@ -544,12 +544,12 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp = source.getByteStream()  # type: ignore[no-untyped-call]
+        inp = source.getByteStream()  
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
         parse_jelly_to_graph(
-            inp,
+            inp, # type: ignore[arg-type]
             graph_factory=lambda: Graph(store=sink.store, identifier=sink.identifier),
             dataset_factory=lambda: Dataset(store=sink.store),
         )

@@ -5,6 +5,7 @@ from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -25,13 +26,14 @@ from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
 from pyjelly.integrations.generic.serialize import (
+    GenericSinkTermEncoder,
     flat_stream_to_file,
     graphs_stream_frames,
     grouped_stream_to_file,
 )
 from pyjelly.options import StreamParameters
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.streams import SerializerOptions
+from pyjelly.serialize.streams import GraphStream, SerializerOptions
 
 
 def _make_flat_triples_bytes() -> bytes:
@@ -83,9 +85,6 @@ def _make_flat_quads_bytes() -> bytes:
 
 
 def _make_physical_graphs_bytes() -> bytes:
-    from pyjelly.integrations.generic.serialize import GenericSinkTermEncoder
-    from pyjelly.serialize.streams import GraphStream
-
     options = SerializerOptions(
         logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
         params=StreamParameters(
@@ -322,14 +321,13 @@ def test_generic_flat_strict_requires_stream_types() -> None:
     dummy = b"x"
     options = type("Opt", (), {"stream_types": None})()
     frames: list[object] = []
-    from unittest.mock import patch
 
     with (
         patch(
             "pyjelly.integrations.generic.parse.get_options_and_frames",
             return_value=(options, frames),
         ),
-        pytest.raises(JellyConformanceError, match="requires options.stream_types"),
+        pytest.raises(JellyConformanceError, match=r"requires options.stream_types"),
     ):
         list(generic_parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=True))
 
@@ -343,7 +341,6 @@ def test_generic_grouped_strict_unspecified_raises() -> None:
     dummy = b"x"
     options = type("Opt", (), {"stream_types": ST()})()
     frames: list[object] = []
-    from unittest.mock import patch
 
     with (
         patch(
@@ -364,7 +361,6 @@ def test_generic_flat_unsupported_physical_raises() -> None:
     dummy = b"x"
     options = type("Opt", (), {"stream_types": ST()})()
     frames: list[object] = []
-    from unittest.mock import patch
 
     with (
         patch(
