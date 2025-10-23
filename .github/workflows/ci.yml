@@ -40,6 +40,7 @@ jobs:
         include:
         - version: '3.10'
           platform: ubuntu-latest
+          conformance-tests: true
         - version: '3.11'
           platform: ubuntu-latest
         - version: '3.12'
