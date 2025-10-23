@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from io import BytesIO
 from collections.abc import Generator, Iterable, MutableMapping
 from contextvars import ContextVar
+from io import BytesIO
 from itertools import chain
 from typing import IO, Any, Callable, NamedTuple, Union
 from typing_extensions import Never, override
