@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
 from io import BytesIO
+from collections.abc import Generator, Iterable, MutableMapping
+from contextvars import ContextVar
 from itertools import chain
 from typing import IO, Any, Callable, NamedTuple, Union
 from typing_extensions import Never, override
@@ -221,6 +222,7 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
@@ -228,6 +230,8 @@ def parse_triples_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+            used for extracting frame metadata
 
     Yields:
         Generator[Iterable[Triple | Prefix]]:
@@ -238,6 +242,10 @@ def parse_triples_stream(
     adapter = RDFLibTriplesAdapter(options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
+        if frame_metadata is not None:
+            frame_metadata.set(
+                frame.metadata
+            ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
     return
 
@@ -245,6 +253,7 @@ def parse_triples_stream(
 def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[Iterable[Quad | Prefix]]:
     """
     Parse flat quads stream.
@@ -252,6 +261,8 @@ def parse_quads_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+            used for extracting frame metadata
 
     Yields:
         Generator[Iterable[Quad | Prefix]]:
@@ -267,6 +278,10 @@ def parse_quads_stream(
     adapter = adapter_class(options=options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
+        if frame_metadata is not None:
+            frame_metadata.set(
+                frame.metadata
+            ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
     return
 
@@ -277,6 +292,7 @@ def parse_jelly_grouped(
     dataset_factory: Callable[[], Dataset] = lambda: Dataset(),
     *,
     logical_type_strict: bool = False,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected physical type.
@@ -294,6 +310,8 @@ def parse_jelly_grouped(
         logical_type_strict (bool): If True, validate the *logical* type in
             stream options and require a grouped logical type. Otherwise, only the
             physical type is used to route parsing.
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+            used for extracting frame metadata
 
 
 
@@ -330,6 +348,7 @@ def parse_jelly_grouped(
         for graph in parse_triples_stream(
             frames=frames,
             options=options,
+            frame_metadata=frame_metadata,
         ):
             sink = graph_factory()
             for graph_item in graph:
@@ -344,8 +363,7 @@ def parse_jelly_grouped(
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
         for dataset in parse_quads_stream(
-            frames=frames,
-            options=options,
+            frames=frames, options=options, frame_metadata=frame_metadata
         ):
             sink = dataset_factory()
             for item in dataset:
@@ -429,7 +447,6 @@ def parse_jelly_flat(
             stream options and require FLAT_(TRIPLES|QUADS). Otherwise, only the
             physical type is used to route parsing.
 
-
     Raises:
         NotImplementedError: if physical type is not supported
 
@@ -462,10 +479,7 @@ def parse_jelly_flat(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        for quads in parse_quads_stream(
-            frames=frames,
-            options=options,
-        ):
+        for quads in parse_quads_stream(frames=frames, options=options):
             yield from quads
         return
     physical_type_name = jelly.PhysicalStreamType.Name(
@@ -476,7 +490,11 @@ def parse_jelly_flat(
 
 
 class RDFLibJellyParser(RDFLibParser):
-    def parse(self, source: InputSource, sink: Graph) -> None:
+    def parse(
+        self,
+        source: InputSource,
+        sink: Graph,
+    ) -> None:
         """
         Parse jelly file into provided RDFLib Graph.
 
