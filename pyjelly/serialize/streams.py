@@ -232,7 +232,7 @@ class QuadStream(Stream):
 
 class GraphStream(TripleStream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow # type: ignore[assignment]
+    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow 
 
     def graph(
         self,

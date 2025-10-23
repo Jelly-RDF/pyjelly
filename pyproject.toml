@@ -64,7 +64,7 @@ test = [
     "detect-test-pollution>=1.2.0",
     "hypothesis>=6.131.0",
     "inline-snapshot>=0.20.8",
-    "pytest>=8.3.4",
+    "pytest>=8.3.4,<8.4.0",
     "pytest-cov>=6.2.1",
     "pytest-accept>=0.1.12",
     "pytest-mock>=3.14.0",
@@ -86,7 +86,7 @@ docs = [
 ]
 
 [tool.uv]
-required-version = "~=0.9.5"
+required-version = "~=0.9.0"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
@@ -109,6 +109,7 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+testpaths = ["tests"]
 addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=**examples"]
 
 [tool.ruff]
