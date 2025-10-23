@@ -6,9 +6,6 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
-[manifest]
-overrides = [{ name = "pyyaml", marker = "python_full_version >= '3.14'", specifier = ">=6.0.3" }]
-
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -767,7 +764,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "mkdocs" },
     { name = "pyparsing" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
     { name = "pyyaml-env-tag" },
     { name = "verspec" },
 ]
@@ -791,7 +788,7 @@ dependencies = [
     { name = "mkdocs-get-deps" },
     { name = "packaging" },
     { name = "pathspec" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
     { name = "pyyaml-env-tag" },
     { name = "watchdog" },
 ]
@@ -821,7 +818,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mergedeep" },
     { name = "platformdirs" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/98/f5/ed29cd50067784976f25ed0ed6fcd3c2ce9eb90650aa3b2796ddf7b6870b/mkdocs_get_deps-0.2.0.tar.gz", hash = "sha256:162b3d129c7fad9b19abfdcb9c1458a651628e4b1dea628ac68790fb3061c60c", size = 10239, upload-time = "2023-11-20T17:51:09.981Z" }
 wheels = [
@@ -854,7 +851,7 @@ dependencies = [
     { name = "packaging" },
     { name = "pathspec" },
     { name = "python-dateutil" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
     { name = "super-collections" },
     { name = "termcolor" },
 ]
@@ -1106,7 +1103,7 @@ dependencies = [
     { name = "cfgv" },
     { name = "identify" },
     { name = "nodeenv" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
     { name = "virtualenv" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/08/39/679ca9b26c7bb2999ff122d50faa301e49af82ca9c066ec061cfbc0c6784/pre_commit-4.2.0.tar.gz", hash = "sha256:601283b9757afd87d40c4c4a9b2b5de9637a8ea02eaff7adc2d0fb4e04841146", size = 193424, upload-time = "2025-03-18T21:35:20.987Z" }
@@ -1360,7 +1357,7 @@ version = "10.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "markdown" },
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/08/92/a7296491dbf5585b3a987f3f3fc87af0e632121ff3e490c14b5f2d2b4eb5/pymdown_extensions-10.15.tar.gz", hash = "sha256:0e5994e32155f4b03504f939e501b981d306daf7ec2aa1cd2eb6bd300784f8f7", size = 852320, upload-time = "2025-04-27T23:48:29.183Z" }
 wheels = [
@@ -1548,7 +1545,7 @@ name = "pyyaml-env-tag"
 version = "1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyyaml", marker = "python_full_version >= '3.14'" },
+    { name = "pyyaml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/eb/2e/79c822141bfd05a853236b504869ebc6b70159afc570e1d5a20641782eaa/pyyaml_env_tag-1.1.tar.gz", hash = "sha256:2eb38b75a2d21ee0475d6d97ec19c63287a7e140231e4214969d0eac923cd7ff", size = 5737, upload-time = "2025-05-13T15:24:01.64Z" }
 wheels = [

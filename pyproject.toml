@@ -86,9 +86,6 @@ docs = [
 
 [tool.uv]
 required-version = "~=0.7.3"
-override-dependencies = [
-  "PyYAML>=6.0.3; python_version >= '3.14'"
-]
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
