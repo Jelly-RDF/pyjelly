@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Generator, Iterator
 from itertools import groupby
-from typing import Any
-from typing_extensions import TypeAlias
+from typing import Any, TypeAlias
 
 from rdflib.graph import Graph
 from rdflib.store import Store

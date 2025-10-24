@@ -34,26 +34,26 @@ jobs:
       # https://blog.jaraco.com/efficient-use-of-ci-resources/
       matrix:
         conformance-tests: [false]
-        version: ['3.9', '3.13']
+        version: ['3.10', '3.14']
         platform: [ubuntu-latest, macos-latest, windows-latest]
         backend: [cpp]
         include:
         - version: '3.10'
           platform: ubuntu-latest
+          conformance-tests: true
         - version: '3.11'
           platform: ubuntu-latest
         - version: '3.12'
           platform: ubuntu-latest
         - version: '3.13'
           platform: ubuntu-latest
+        - version: '3.14'
+          platform: ubuntu-latest
           conformance-tests: true
-        - version: '3.13'
+        - version: '3.14'
           platform: ubuntu-latest
           conformance-tests: true
           backend: python
-        # rdflib appears to be broken on 3.14
-        # - version: '3.14'
-        #   platform: ubuntu-latest
         - version: pypy3.10
           platform: ubuntu-latest  
         - version: pypy3.11

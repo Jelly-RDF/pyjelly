@@ -10,18 +10,18 @@ description = "Jelly-RDF implementation for Python"
 authors = [
     { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10, <3.15"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Environment :: Console",
     "Environment :: Plugins",
     "Topic :: Database",
@@ -32,6 +32,7 @@ classifiers = [
 keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
 dependencies = [
+    "mkdocs>=1.6.1",
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
@@ -63,7 +64,7 @@ test = [
     "detect-test-pollution>=1.2.0",
     "hypothesis>=6.131.0",
     "inline-snapshot>=0.20.8",
-    "pytest>=8.3.4",
+    "pytest>=8.3.4,<8.4.0",
     "pytest-cov>=6.2.1",
     "pytest-accept>=0.1.12",
     "pytest-mock>=3.14.0",
@@ -81,11 +82,13 @@ docs = [
     "mkdocs-material>=9.6.13",
     "mkdocstrings>=0.29.1",
     "mkdocstrings-python>=1.16.10",
+    "jinja2>=3.1,<3.2",
+    "markupsafe<3.0.0",
     "linkchecker~=10.6.0",
 ]
 
 [tool.uv]
-required-version = "~=0.7.3"
+required-version = "~=0.9.0"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
@@ -108,6 +111,7 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
+testpaths = ["tests"]
 addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=**examples"]
 
 [tool.ruff]

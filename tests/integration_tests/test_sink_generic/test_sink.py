@@ -357,5 +357,5 @@ def test_parse_serialize() -> None:
     assert len(new_sink) > 0
     assert len(sink) > 0
     assert len(new_sink) == len(sink)
-    for s_in, s_out in zip(sink.store, new_sink.store):
+    for s_in, s_out in zip(sink.store, new_sink.store, strict=False):
         assert repr(s_in) == repr(s_out)
