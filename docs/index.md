@@ -26,7 +26,8 @@ The following table shows the compatibility of the pyjelly implementation with o
 
 | pyjelly                                                                                                                                             | Python     | RDFLib         |
 |-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|----------------|
-| [0.1.0](https://w3id.org/jelly/pyjelly/0.1.0) – **[{{ python_package_version() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version() }})** | 3.10 – 3.14 | 7.x (>= 7.1.4) |
+| [0.1.0](https://w3id.org/jelly/pyjelly/0.1.0) – **[{{ python_package_version() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version() }})** | 3.9 – 3.13 | 7.x (>= 7.1.4) |
+| [0.7.0](https://w3id.org/jelly/pyjelly/0.7.0) – **[{{ python_package_version() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version() }})** | 3.10 – 3.14| 7.x (>= 7.1.4) |
 
 
 See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.
