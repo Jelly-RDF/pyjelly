@@ -12,3 +12,5 @@ with urllib.request.urlopen(url) as response:
         print(f"Graph {i} in the stream has {len(graph)} triples.")
         metadata = frame_metadata.get()
         print(f"Graph #{i}: {metadata}")
+        if i == 50:  # Show first 50
+            break
