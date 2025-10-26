@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import io
 import os
 from collections.abc import Generator, Iterator
@@ -72,22 +70,14 @@ def get_options_and_frames(
 
     Raises:
         JellyConformanceError: if no non-empty frames detected in the delimited stream
-        JellyConformanceError: if non-delimited, error is raised if no rows are
-            detected (empty frame)
-
+        JellyConformanceError: if non-delimited,
+            error is raised if no rows are detected (empty frame)
 
     Returns:
         tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:
             stream types, lookup presets and other stream options
 
     """
-
-    def _peek_from_nonseekable(stream: IO[bytes]) -> tuple[bytes, IO[bytes]]:
-        head = stream.read(3)
-        rest = stream.read()
-        rebuilt = io.BytesIO(head + rest)
-        return (head, rebuilt)
-
     if not inp.seekable():
         # Input may not be seekable (e.g. a network stream) -- then we need to buffer
         # it to determine if it's delimited.
@@ -95,13 +85,12 @@ def get_options_and_frames(
         inp = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
         is_delimited = delimited_jelly_hint(inp.peek(3))
     else:
-        bytes_read = inp.read(3)
-        is_delimited = delimited_jelly_hint(bytes_read)
+        is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
         inp.seek(-len(bytes_read), os.SEEK_CUR)
 
     if is_delimited:
-        first_frame: jelly.RdfStreamFrame | None = None
-        skipped_frames: list[jelly.RdfStreamFrame] = []
+        first_frame = None
+        skipped_frames = []
         frames = frame_iterator(inp)
         for frame in frames:
             if not frame.rows:
@@ -113,10 +102,11 @@ def get_options_and_frames(
             msg = "No non-empty frames found in the stream"
             raise JellyConformanceError(msg)
 
-        options: ParserOptions = options_from_frame(first_frame, delimited=True)
+        options = options_from_frame(first_frame, delimited=True)
         return options, chain(skipped_frames, (first_frame,), frames)
 
     frame = parse(jelly.RdfStreamFrame, inp.read())
+
     if not frame.rows:
         msg = "The stream is corrupted (only contains an empty frame)"
         raise JellyConformanceError(msg)
