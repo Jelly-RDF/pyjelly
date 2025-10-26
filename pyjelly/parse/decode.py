@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from enum import Enum, auto
-from typing import Any, Callable, ClassVar, NamedTuple, Optional
+from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
 
 from pyjelly import jelly
 from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
-RowHandler = Callable[[Any, Any], Optional[Any]]
-TermHandler = Callable[[Any, Any], Optional[Any]]
+RowHandler = Callable[[Any, Any], Any | None]
+TermHandler = Callable[[Any, Any], Any | None]
 
 
 class ParsingMode(Enum):

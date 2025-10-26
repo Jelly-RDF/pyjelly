@@ -4,13 +4,11 @@ from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
 from io import BytesIO
 from itertools import chain
-
-from typing import IO, Any, Callable, NamedTuple, Union
-from typing_extensions import Never, Self, override
-
+from typing import IO, Any, NamedTuple, TypeAlias
+from typing_extensions import Never, override
 
 import rdflib
-from rdflib import Node
+from rdflib import BNode, Node, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
@@ -21,7 +19,7 @@ from pyjelly.options import StreamTypes
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
-GraphName = rdflib.URIRef | rdflib.BNode | str
+GraphName: TypeAlias = URIRef | BNode | str
 
 
 class Triple(NamedTuple):

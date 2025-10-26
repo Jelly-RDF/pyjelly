@@ -178,7 +178,9 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
 
 class TripleStream(Stream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
-    default_delimited_flow_class: ClassVar = FlatTriplesFrameFlow
+    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]] = (
+        FlatTriplesFrameFlow
+    )
 
     def triple(self, terms: Iterable[object]) -> jelly.RdfStreamFrame | None:
         """
@@ -232,7 +234,7 @@ class QuadStream(Stream):
 
 class GraphStream(TripleStream):
     physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-    default_delimited_flow_class: ClassVar = FlatQuadsFrameFlow
+    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]] = FlatQuadsFrameFlow
 
     def graph(
         self,
