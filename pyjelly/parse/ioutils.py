@@ -89,8 +89,11 @@ def get_options_and_frames(
         return (head, rebuilt)
 
     if not inp.seekable():
-        head, inp = _peek_from_nonseekable(inp)
-        is_delimited = delimited_jelly_hint(head)
+        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
+        # it to determine if it's delimited.
+        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
+        inp = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
+        is_delimited = delimited_jelly_hint(inp.peek(3))
     else:
         bytes_read = inp.read(3)
         is_delimited = delimited_jelly_hint(bytes_read)

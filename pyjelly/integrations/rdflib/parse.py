@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable, MutableMapping
+from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
 from io import BytesIO
 from itertools import chain
+
 from typing import IO, Any, Callable, NamedTuple, Union
-from typing_extensions import Never, override
+from typing_extensions import Never, Self, override
+
 
 import rdflib
 from rdflib import Node
@@ -19,7 +21,7 @@ from pyjelly.options import StreamTypes
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
-GraphName = Union[rdflib.URIRef, rdflib.BNode, str]
+GraphName = rdflib.URIRef | rdflib.BNode | str
 
 
 class Triple(NamedTuple):
@@ -58,7 +60,7 @@ class Quad(NamedTuple):
     g: GraphName
 
 
-Statement = Union[Triple, Quad]
+Statement = Triple | Quad
 
 
 class Prefix(NamedTuple):

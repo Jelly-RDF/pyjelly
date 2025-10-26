@@ -275,7 +275,7 @@ def test_serializing_fails_rdf11_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
-    with pytest.raises(Exception, match=".*"):
+    with pytest.raises(Exception, match=r".*"):
         write_graph_or_dataset(
             *[str(path) for path in case.action_paths],
             options=str(case.options_path) if case.options_path else None,
@@ -290,7 +290,7 @@ def test_serializing_fails_generic_negative(case: ToJellyTestCase) -> None:
     test_id = case.action_paths[0].parent.name if case.action_paths else "unknown"
     actual_out = TEST_OUTPUTS_DIR / f"{test_id}.jelly"
 
-    with pytest.raises(Exception, match=".*"):
+    with pytest.raises(Exception, match=r".*"):
         write_generic_sink(
             *[str(path) for path in case.action_paths],
             options=str(case.options_path) if case.options_path else None,

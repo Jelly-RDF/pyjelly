@@ -86,7 +86,7 @@ class GenericSinkParser:
             return Triple(
                 *(
                     self.process_term(group)
-                    for _, group in zip(Triple._fields, triple_tokens)
+                    for _, group in zip(Triple._fields, triple_tokens, strict=False)
                 )
             )
 
@@ -230,7 +230,7 @@ class GenericSinkParser:
         terms = self.split_statement(statement)
         generic_terms = [
             self.process_term(term.strip())
-            for _, term in zip(statement_structure._fields, terms)
+            for _, term in zip(statement_structure._fields, terms, strict=False)
         ]
         if statement_structure == Quad and len(terms) == TRIPLE_ARITY:
             s, p, o = generic_terms

@@ -214,7 +214,7 @@ def test_rdflib_parsing_fails_rdf11_negative(case: FromJellyTestCase) -> None:
     output_dir.mkdir(exist_ok=True, parents=True)
     dataset = Dataset(store=OrderedMemory())
     # We expect an error for negative cases
-    with pytest.raises(Exception, match=".*"):
+    with pytest.raises(Exception, match=r".*"):
         dataset.parse(location=str(case.action_path), format="jelly")
 
 
@@ -226,7 +226,7 @@ def test_generic_parsing_fails_negative(case: FromJellyTestCase) -> None:
     output_dir = TEST_OUTPUTS_DIR / test_id
     output_dir.mkdir(exist_ok=True, parents=True)
     with (
-        pytest.raises(Exception, match=".*"),
+        pytest.raises(Exception, match=r".*"),
         case.action_path.open("rb") as input_file,
     ):
         list(generic_parse_jelly_grouped(input_file))
