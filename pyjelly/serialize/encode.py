@@ -4,8 +4,6 @@ from collections.abc import Iterable, Iterator, Sequence
 from enum import IntEnum
 from typing import TypeAlias, TypeVar
 
-from mypy_extensions import mypyc_attr
-
 from pyjelly import jelly, options
 from pyjelly.errors import JellyConformanceError
 from pyjelly.serialize.lookup import LookupEncoder
@@ -39,7 +37,7 @@ Terms: TypeAlias = (
     jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph | jelly.RdfTriple
 )
 
-@mypyc_attr(allow_interpreted_subclasses=True)
+
 class TermEncoder:
     def __init__(
         self,

@@ -1,60 +1,6 @@
 [build-system]
-requires = ["hatchling", "hatch-mypyc", "mypy>=1.8"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel.hooks.mypyc]
-dependencies = ["hatch-mypyc"]
-include = [
-  "pyjelly/serialize/encode.py",
-  "pyjelly/serialize/lookup.py",
-  "pyjelly/serialize/ioutils.py",
-  "pyjelly/integrations/generic/serialize.py",
-  "pyjelly/integrations/generic/parse.py",
-  "pyjelly/parse/ioutils.py",
-  "pyjelly/parse/lookup.py",
-]
-
-mypy-args = [
-  "--ignore-missing-imports",
-  "--disallow-untyped-defs",
-  "--no-warn-no-return",
-  "--disable-error-code=type-arg",
-  "--disable-error-code=misc",
-]
-
-[tool.hatch.build.targets.sdist]
-include = ["pyjelly"]
-
-[tool.hatch.build.targets.wheel]
-only-include = ["pyjelly"]
-
-[tool.cibuildwheel]
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-skip = ["pp*", "graalpy*"]
-
-[tool.cibuildwheel.environment]
-PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python"
-
-[tool.cibuildwheel.windows]
-archs = ["AMD64"]
-
-[tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
-
-test-requires = [
-  "pytest",
-  "hypothesis",
-  "inline-snapshot",
-  "pytest-mock",
-  "pytest-subtests",
-  "pytest-accept",
-  "detect-test-pollution",
-]
-test-extras = ["rdflib"] 
-test-command = "pytest -q {project}/tests"
 
 [project]
 name = "pyjelly"
@@ -69,7 +15,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
-    "License :: OSI Approved :: Apache Software License",
+   
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -84,8 +30,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
-license = "Apache-2.0"
-license-files = ["LICENSE*", "COPYING*"]
+
 dependencies = [
     "mkdocs>=1.6.1",
     "protobuf>=6.30.0",

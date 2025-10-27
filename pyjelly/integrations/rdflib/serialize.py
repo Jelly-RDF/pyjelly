@@ -29,6 +29,7 @@ from pyjelly.serialize.streams import (
 
 QUAD_ARITY = 4
 
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibTermEncoder(TermEncoder):
     def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
