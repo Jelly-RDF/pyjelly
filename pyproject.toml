@@ -112,8 +112,7 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-testpaths = ["tests"]
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=**examples"]
+addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
