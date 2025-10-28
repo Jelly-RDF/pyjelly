@@ -31,6 +31,7 @@ jobs:
 
     strategy:
       fail-fast: false
+      # https://blog.jaraco.com/efficient-use-of-ci-resources/
       matrix:
         conformance-tests: [false]
         version: ['3.10', '3.14']
@@ -200,25 +201,3 @@ jobs:
         with:
           name: wheels-pure
           path: dist/*.whl
-
-  pypi-publish:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [build-wheels, build-pure-wheel]
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Download all wheels
-        uses: actions/download-artifact@v4
-        with:
-          pattern: wheels-*
-          merge-multiple: true
-          path: dist
-      - name: Show artifacts
-        run: ls -l dist
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
-          skip-existing: true
