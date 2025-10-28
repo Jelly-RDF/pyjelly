@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
+from io import BytesIO
 from itertools import chain
-from typing import IO, Any
-from typing_extensions import Never, Self, override
+from typing import IO, Any, NamedTuple, TypeAlias
+from typing_extensions import Never, override
 
 import rdflib
-from rdflib import Node
+from rdflib import BNode, Node, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
@@ -18,10 +19,10 @@ from pyjelly.options import StreamTypes
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
-GraphName = rdflib.URIRef | rdflib.BNode | str
+GraphName: TypeAlias = URIRef | BNode | str
 
 
-class Triple(tuple[Node, Node, Node]):
+class Triple(NamedTuple):
     """
     Describe RDFLib triple.
 
@@ -33,25 +34,12 @@ class Triple(tuple[Node, Node, Node]):
 
     """
 
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
-        return tuple.__new__(cls, (s, p, o))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
+    s: Node
+    p: Node
+    o: Node
 
 
-class Quad(tuple[Node, Node, Node, GraphName]):
+class Quad(NamedTuple):
     """
     Describe RDFLib quad.
 
@@ -64,32 +52,16 @@ class Quad(tuple[Node, Node, Node, GraphName]):
 
     """
 
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
-        return tuple.__new__(cls, (s, p, o, g))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-    @property
-    def g(self) -> GraphName:
-        return self[3]
+    s: Node
+    p: Node
+    o: Node
+    g: GraphName
 
 
 Statement = Triple | Quad
 
 
-class Prefix(tuple[str, rdflib.URIRef]):
+class Prefix(NamedTuple):
     """
     Describe RDF Prefix(i.e, namespace declaration).
 
@@ -102,18 +74,8 @@ class Prefix(tuple[str, rdflib.URIRef]):
 
     """
 
-    __slots__ = ()
-
-    def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
-        return tuple.__new__(cls, (prefix, iri))
-
-    @property
-    def prefix(self) -> str:
-        return self[0]
-
-    @property
-    def iri(self) -> rdflib.URIRef:
-        return self[1]
+    prefix: str
+    iri: rdflib.URIRef
 
 
 class RDFLibAdapter(Adapter):
@@ -544,7 +506,7 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp = source.getByteStream()  # type: ignore[no-untyped-call]
+        inp: BytesIO = source.getByteStream()  # type: ignore[no-untyped-call]
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
