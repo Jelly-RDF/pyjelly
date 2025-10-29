@@ -31,7 +31,7 @@ archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-skip = ["pp*", "graalpy*"]
+skip = ["graalpy*"]
 test-extras = ["rdflib"]
 test-requires = ["pytest", "hypothesis", "inline-snapshot", "pytest-mock", "pytest-subtests", "pytest-accept", "detect-test-pollution"]
 test-command = "pytest -q {project}/tests"
