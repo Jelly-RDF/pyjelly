@@ -193,7 +193,7 @@ jobs:
         run: python -m pip install build
       - name: Build pure Python wheel (no mypyc)
         env:
-          SKIP_COMPILE: "1"
+          SKIP_COMPILE: "0"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m build --wheel --no-isolation
       - name: Upload pure Python wheel
