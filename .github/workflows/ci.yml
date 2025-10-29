@@ -22,7 +22,6 @@ defaults:
 
 jobs:
   check:
-    if: ${{ !cancelled() }}
     name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{ matrix.platform }} ${{ matrix.backend == 'python' && '(py-backend)' || '' }}
     runs-on: ${{ matrix.platform }}
 
