@@ -22,6 +22,7 @@ defaults:
 
 jobs:
   check:
+    if: ${{ !cancelled() }}
     name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{ matrix.platform }} ${{ matrix.backend == 'python' && '(py-backend)' || '' }}
     runs-on: ${{ matrix.platform }}
 
@@ -54,7 +55,7 @@ jobs:
           conformance-tests: true
           backend: python
         - version: pypy3.10
-          platform: ubuntu-latest  
+          platform: ubuntu-latest
         - version: pypy3.11
           platform: ubuntu-latest
 

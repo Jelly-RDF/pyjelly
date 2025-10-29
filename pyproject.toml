@@ -3,7 +3,8 @@ requires = ["hatchling", "hatch-mypyc", "mypy>=1.8"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel.hooks.mypyc]
-dependencies = ["hatch-mypyc"]
+require-cpython = true
+dependencies = ["hatch-mypyc; implementation_name == 'cpython'"]
 include = [
   "pyjelly/serialize/ioutils.py",
   "pyjelly/integrations/generic/serialize.py",
@@ -19,6 +20,9 @@ mypy-args = [
   "--disable-error-code=type-arg",
   "--disable-error-code=misc",
 ]
+
+[tool.hatch.build.hooks.mypyc]
+require-cpython = true
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
