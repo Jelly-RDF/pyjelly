@@ -80,6 +80,8 @@ jobs:
 
     - name: Install
       id: install
+      env:
+        MYPYC_DISABLE: ${{ startsWith(matrix.version, 'pypy') && '1' || '' }}
       run: uv sync
 
     - name: Install jelly-cli
