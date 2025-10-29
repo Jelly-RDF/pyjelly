@@ -25,7 +25,7 @@ class GenericSerDes:
         sink = GenericStatementSink()
         for item in parse_jelly_flat(inp=bio, frames=frames, options=options):
             if isinstance(item, Prefix):
-                sink.bind(item.prefix, item.iri)
+                sink.bind(item.prefix, item.iri)  # type: ignore[union-attr, unused-ignore]
             else:
                 sink.add(item)
         return sink
@@ -54,7 +54,7 @@ class GenericSerDes:
         sink = GenericStatementSink()
         for item in parse_jelly_flat(inp=bio, frames=frames, options=options):
             if isinstance(item, Prefix):
-                sink.bind(item.prefix, item.iri)
+                sink.bind(item.prefix, item.iri)  # type: ignore[union-attr, unused-ignore]
             else:
                 sink.add(item)
         return sink

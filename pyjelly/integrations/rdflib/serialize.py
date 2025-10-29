@@ -14,6 +14,8 @@ from rdflib import Graph
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
+from mypy_extensions import mypyc_attr
+
 from pyjelly import jelly
 from pyjelly.serialize.encode import Rows, Slot, TermEncoder, Statement, HasGraph
 from pyjelly.serialize.ioutils import write_delimited, write_single
@@ -28,6 +30,7 @@ from pyjelly.serialize.streams import (
 QUAD_ARITY = 4
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibTermEncoder(TermEncoder):
     def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
         """
@@ -159,7 +162,6 @@ def quads_stream_frames(
     stream.enroll()
     if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)  # type: ignore[arg-type]
-
     iterator: Generator[Quad, None, None]
     if isinstance(data, Dataset):
         iterator = cast(Generator[Quad, None, None], data.quads())

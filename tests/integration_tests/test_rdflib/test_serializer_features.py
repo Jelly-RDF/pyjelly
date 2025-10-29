@@ -1,4 +1,5 @@
-from typing import Callable, Union, cast
+from collections.abc import Callable
+from typing import TypeAlias, cast
 
 import pytest
 from rdflib import Graph
@@ -10,7 +11,7 @@ from pyjelly.integrations.rdflib.serialize import guess_options, guess_stream
 from pyjelly.options import StreamParameters
 from pyjelly.serialize.streams import QuadStream, SerializerOptions, TripleStream
 
-Store = Union[Graph, Dataset]
+Store: TypeAlias = Graph | Dataset
 
 
 @pytest.mark.parametrize(
