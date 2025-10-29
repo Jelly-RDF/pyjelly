@@ -23,6 +23,13 @@ mypy-args = [
 
 [tool.hatch.build.hooks.mypyc]
 require-cpython = true
+mypy-args = [
+  "--ignore-missing-imports",
+  "--disallow-untyped-defs",
+  "--no-warn-no-return",
+  "--disable-error-code=type-arg",
+  "--disable-error-code=misc",
+]
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
