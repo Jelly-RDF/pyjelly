@@ -78,10 +78,15 @@ jobs:
       with:
         enable-cache: true
 
+    - name: Disable mypyc on PyPy
+      if: startsWith(matrix.version, 'pypy')
+      run: |
+        echo "HATCH_MYPYC_DISABLE=1" >> "$GITHUB_ENV"
+        echo "MYPYC_NO_BUILD=1" >> "$GITHUB_ENV"
+        echo "SKIP_COMPILE=1" >> "$GITHUB_ENV"
+
     - name: Install
       id: install
-      env:
-        MYPYC_DISABLE: ${{ startsWith(matrix.version, 'pypy') && '1' || '' }}
       run: uv sync
 
     - name: Install jelly-cli
