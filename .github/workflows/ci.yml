@@ -86,6 +86,7 @@ jobs:
         id: install_pypy
         if: ${{ startsWith(matrix.version, 'pypy') }}
         env:
+          HATCH_BUILD_NO_HOOKS: "1"
           HATCH_MYPYC_DISABLE: "1"
           MYPYC_NO_BUILD: "1"
           SKIP_COMPILE: "1"
