@@ -196,6 +196,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          submodules: true  
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -209,7 +211,7 @@ jobs:
           MYPYC_NO_BUILD: "1"
           SKIP_COMPILE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
-        run: python -m build --wheel
+        run: python -m build --wheel -v
       - name: Upload pure Python wheel
         uses: actions/upload-artifact@v4
         with:
@@ -234,6 +236,7 @@ jobs:
         env:
           CIBW_BUILD: "pp310-* pp311-*"
           CIBW_SKIP: "*-win32"
+          CIBW_BUILD_VERBOSITY: "1"
           CIBW_ENVIRONMENT: "HATCH_BUILD_NO_HOOKS=1 HATCH_MYPYC_DISABLE=1 MYPYC_NO_BUILD=1 SKIP_COMPILE=1 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python"
           CIBW_TEST_EXTRAS: "rdflib"
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
