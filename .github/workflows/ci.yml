@@ -74,7 +74,7 @@ jobs:
         cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
         cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
 
-    - uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
 
@@ -128,7 +128,7 @@ jobs:
           submodules: true
           persist-credentials: false
 
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
