@@ -9,6 +9,15 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 only-include = ["pyjelly"]
 
+artifacts = [
+  "*__mypyc*.*",
+  "**/*__mypyc*.*",
+  "**/*.so",
+  "**/*.pyd",
+  "**/*.dylib"
+]
+
+
 [tool.hatch.build.targets.sdist]
 include = ["pyjelly"]
 
@@ -23,7 +32,6 @@ include = [
   "pyjelly/integrations/generic/serialize.py",
   "pyjelly/integrations/generic/parse.py",
   "pyjelly/parse/ioutils.py",
-  "pyjelly/parse/lookup.py",
 ]
 
 mypy-args = [
@@ -35,10 +43,15 @@ mypy-args = [
 ]
 
 [tool.cibuildwheel]
+before-build = "python .github/scripts/prepare_proto.py"
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
 skip = ["graalpy*"] 
 test-extras = ["rdflib"]
-test-requires = ["pytest", "hypothesis", "inline-snapshot", "pytest-mock", "pytest-subtests", "pytest-accept", "detect-test-pollution"]
+test-requires = [
+  "mypy-extensions",
+  "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
+  "pytest-subtests", "pytest-accept", "detect-test-pollution"
+]
 test-command = "pytest -q {project}/tests"
 
 [tool.cibuildwheel.environment]
@@ -52,6 +65,8 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
+test-command = "bash -lc 'cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -c \"import pyjelly,sys;\" && PYTHONPATH=/tmp pytest -q tests'"
+
 
 [project]
 name = "pyjelly"
@@ -87,6 +102,7 @@ dependencies = [
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
     "rdflib>=7.1.4",
+    "mypy-extensions>=1.0.0",
 ]
 
 [project.urls]
