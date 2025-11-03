@@ -37,7 +37,7 @@ _original_graph_parse = Graph.parse
 
 def _rdflib_graph_parse_mock(self, source=None, *args, **kwargs):
     if isinstance(source, str) and source.endswith(".ttl"):
-        sample_path = (BASE_DIR / "example_data" / "sample.ttl").resolve()
+        sample_path = (BASE_DIR / "example_data" / "sample.nt").resolve()
         with open(sample_path, "r", encoding="utf-8") as f:
             data = f.read()
         kw = dict(kwargs)
