@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:foaf="http://xmlns.com/foaf/0.1/"
+    xmlns:ex="http://example.com/people/">
+
+  <foaf:Person rdf:about="http://example.pl/people/jan_kowalski">
+    <foaf:name>Jan Kowalski</foaf:name>
+    <foaf:givenName>Jan</foaf:givenName>
+    <foaf:familyName>Kowalski</foaf:familyName>
+    <foaf:age>30</foaf:age>
+    <foaf:mbox rdf:resource="mailto:jan.kowalski@example.pl"/>
+    <foaf:homepage rdf:resource="http://jan-kowalski.example.pl/"/>
+    <foaf:based_near>Warsaw, Poland</foaf:based_near>
+    <foaf:img rdf:resource="http://example.pl/photos/jan.jpg"/>
+    <foaf:interest>photography</foaf:interest>
+    <foaf:interest>running</foaf:interest>
+    <foaf:knows rdf:resource="http://example.pl/people/anna_nowak"/>
+  </foaf:Person>
+
+  <foaf:Person rdf:about="http://example.pl/people/anna_nowak">
+    <foaf:name>Anna Nowak</foaf:name>
+    <foaf:givenName>Anna</foaf:givenName>
+    <foaf:familyName>Nowak</foaf:familyName>
+    <foaf:age>27</foaf:age>
+    <foaf:mbox rdf:resource="mailto:anna.nowak@example.pl"/>
+    <foaf:homepage rdf:resource="http://anna-nowak.example.pl/"/>
+    <foaf:based_near>Krakow, Poland</foaf:based_near>
+    <foaf:img rdf:resource="http://example.pl/photos/anna.jpg"/>
+    <foaf:interest>cooking</foaf:interest>
+    <foaf:interest>travel</foaf:interest>
+    <foaf:knows rdf:resource="http://example.pl/people/jan_kowalski"/>
+  </foaf:Person>
+
+</rdf:RDF>

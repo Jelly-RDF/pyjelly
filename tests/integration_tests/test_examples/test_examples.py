@@ -65,6 +65,8 @@ def urlopen_mock(url: str) -> IO[bytes]:
         response_file = "sample.jelly"
     elif url.endswith(".gz"):
         response_file = "sample.nt.gz"
+    elif url.endswith(".rdf"):
+        response_file = "sample.rdf"
     else:
         response_file = "sample.nt"
         mode = "r"
