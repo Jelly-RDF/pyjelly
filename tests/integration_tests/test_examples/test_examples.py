@@ -3,6 +3,7 @@ import pathlib
 import runpy
 import urllib.request
 from typing import IO
+from rdflib import Graph
 
 import pytest
 
@@ -21,6 +22,7 @@ def resolve_scripts_dir(name: str) -> pathlib.Path:
 SCRIPTS_RDFLIB = resolve_scripts_dir("examples/examples_rdflib")
 SCRIPTS_GENERIC = resolve_scripts_dir("examples/examples_generic")
 SCRIPTS_RDFLIB_CASE = ["rdflib/03_parse_autodetect.py"]
+SCRIPTS_RDFLIB_URL_PARSE = ["rdflib/01_serialize.py"]
 
 example_scripts = [
     pytest.param("rdflib", p, id=f"rdflib/{p.name}")
@@ -29,6 +31,20 @@ example_scripts = [
     pytest.param("generic", p, id=f"generic/{p.name}")
     for p in sorted(SCRIPTS_GENERIC.glob("*.py"))
 ]
+
+_original_graph_parse = Graph.parse
+
+
+def _rdflib_graph_parse_mock(self, source=None, *args, **kwargs):
+    if isinstance(source, str) and source.endswith(".ttl"):
+        sample_path = (BASE_DIR / "example_data" / "sample.ttl").resolve()
+        with open(sample_path, "r", encoding="utf-8") as f:
+            data = f.read()
+        kw = dict(kwargs)
+        kw.pop("format", None)
+        return _original_graph_parse(self, data=data, format="turtle", **kw)
+
+    return _original_graph_parse(self, source, *args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -49,6 +65,9 @@ def test_examples(
 
         importlib.reload(_integration)
 
+    if f"{set_name}/{script.name}" in SCRIPTS_RDFLIB_URL_PARSE:
+        monkeypatch.setattr(Graph, "parse", _rdflib_graph_parse_mock)
+
     # Run the examples in a temporary directory to avoid polluting the repository
     monkeypatch.chdir(temp_dir)
     # Mock HTTP requests to avoid network calls during tests
@@ -65,8 +84,8 @@ def urlopen_mock(url: str) -> IO[bytes]:
         response_file = "sample.jelly"
     elif url.endswith(".gz"):
         response_file = "sample.nt.gz"
-    elif url.endswith(".rdf"):
-        response_file = "sample.rdf"
+    elif url.endswith(".ttl"):
+        response_file = "sample.ttl"
     else:
         response_file = "sample.nt"
         mode = "r"
