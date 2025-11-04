@@ -238,4 +238,3 @@ jobs:
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
           CIBW_TEST_COMMAND: "pytest -q {project}/tests"
         run: python -m cibuildwheel --output-dir wheelhouse
-
