@@ -224,9 +224,9 @@ jobs:
             "Remove-Item -Recurse -Force $env:TEMP\pyjelly,$env:TEMP\tests -ErrorAction SilentlyContinue;
             Copy-Item -Recurse -Force '{project}\pyjelly' $env:TEMP\pyjelly;
             Copy-Item -Recurse -Force '{project}\tests'   $env:TEMP\tests;
-            Set-Location $env:TEMP;
             $env:PYTHONPATH=$env:TEMP;
-            & '{python}' -m pytest -q --import-mode=importlib tests"
+            Set-Location $env:TEMP\tests;
+            & '{python}' -m pytest -q --import-mode=importlib ."
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
