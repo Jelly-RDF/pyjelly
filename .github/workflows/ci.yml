@@ -221,12 +221,13 @@ jobs:
           CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
           CIBW_TEST_COMMAND_WINDOWS: >-
             powershell -NoLogo -NoProfile -Command
-            "Remove-Item -Recurse -Force $env:TEMP\pyjelly,$env:TEMP\tests -ErrorAction SilentlyContinue;
-            Copy-Item -Recurse -Force '{project}\pyjelly' $env:TEMP\pyjelly;
-            Copy-Item -Recurse -Force '{project}\tests'   $env:TEMP\tests;
-            $env:PYTHONPATH=$env:TEMP;
-            Set-Location $env:TEMP\tests;
-            & '{python}' -m pytest -q --import-mode=importlib ."
+            "$work = Join-Path $env:TEMP ('ciwheels_' + [guid]::NewGuid().ToString());
+            New-Item -ItemType Directory -Force -Path $work | Out-Null;
+            Copy-Item -Recurse -Force '{project}\pyjelly' (Join-Path $work 'pyjelly');
+            Copy-Item -Recurse -Force '{project}\tests'   (Join-Path $work 'tests');
+            Set-Location $work;
+            $env:PYTHONPATH = $work;
+            & '{python}' -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
