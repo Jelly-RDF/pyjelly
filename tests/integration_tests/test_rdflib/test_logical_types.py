@@ -296,7 +296,7 @@ def test_rdflib_flat_strict_requires_stream_types() -> None:
         list(
             parse_jelly_flat(
                 io.BytesIO(b"x"),
-                options=Opt(), # type: ignore[arg-type]
+                options=Opt(),  # type: ignore[arg-type]
                 frames=[],
                 logical_type_strict=True,
             )
