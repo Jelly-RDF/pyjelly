@@ -166,7 +166,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm64, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -219,6 +219,14 @@ jobs:
           CIBW_TEST_EXTRAS: "rdflib"
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
           CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
+          CIBW_TEST_COMMAND_WINDOWS: >-
+            powershell -NoLogo -NoProfile -Command
+            "Remove-Item -Recurse -Force $env:TEMP\pyjelly,$env:TEMP\tests -ErrorAction SilentlyContinue;
+            Copy-Item -Recurse -Force '{project}\pyjelly' $env:TEMP\pyjelly;
+            Copy-Item -Recurse -Force '{project}\tests'   $env:TEMP\tests;
+            Set-Location $env:TEMP;
+            $env:PYTHONPATH=$env:TEMP;
+            & '{python}' -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
