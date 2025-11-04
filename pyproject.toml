@@ -62,7 +62,7 @@ PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python"
 archs = ["AMD64"]
 
 [tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
+archs = ["universal2"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
