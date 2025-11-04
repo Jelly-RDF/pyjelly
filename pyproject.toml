@@ -53,7 +53,7 @@ test-requires = [
   "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
   "pytest-subtests", "pytest-accept", "detect-test-pollution"
 ]
-test-command = "bash -lc 'cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp pytest -q --import-mode=importlib tests'"
+test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
 
 [tool.cibuildwheel.environment]
 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python"
