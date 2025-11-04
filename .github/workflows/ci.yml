@@ -204,17 +204,17 @@ jobs:
 
       - name: Build mypyc wheels (multi-platform)
         env:
-        CIBW_ARCHS_LINUX: "x86_64 aarch64"
-        CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
-        CIBW_SKIP: "pp* graalpy* *-win32"
-        CIBW_TEST_COMMAND: "{python} -m pytest -q --import-mode=importlib {project}/tests"
-        CIBW_TEST_COMMAND_WINDOWS: "python -m pytest -q --import-mode=importlib {project}\\tests"
-        CIBW_ARCHS_MACOS: ${{ runner.arch == 'X64' && 'x86_64' || 'arm64' }}
-        CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=11.0"
-        CIBW_TEST_EXTRAS: "rdflib"
-        CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
-        PYTHONDONTWRITEBYTECODE: "1"
-        PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_SKIP: "pp* graalpy* *-win32"
+          CIBW_TEST_COMMAND: "{python} -m pytest -q --import-mode=importlib {project}/tests"
+          CIBW_TEST_COMMAND_WINDOWS: "python -m pytest -q --import-mode=importlib {project}\\tests"
+          CIBW_ARCHS_MACOS: ${{ runner.arch == 'X64' && 'x86_64' || 'arm64' }}
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=11.0"
+          CIBW_TEST_EXTRAS: "rdflib"
+          CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
+          PYTHONDONTWRITEBYTECODE: "1"
+          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
 
   build-pure-wheel:
