@@ -45,7 +45,6 @@ mypy-args = [
 ]
 
 [tool.cibuildwheel]
-before-build = "python .github/scripts/prepare_proto.py"
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
 skip = ["graalpy*"] 
 test-extras = ["rdflib"]
