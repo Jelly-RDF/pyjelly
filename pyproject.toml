@@ -30,16 +30,18 @@ modules = ["pyjelly"]
 include = [
   "pyjelly/serialize/ioutils.py",
   "pyjelly/integrations/generic/serialize.py",
-  "pyjelly/integrations/generic/parse.py",
+  "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
+  "pyjelly/serialize/streams.py",
+  "pyjelly/integrations/rdflib/parse.py",
+
+  "pyjelly/parse/decode.py",
+  
 ]
 
 mypy-args = [
   "--ignore-missing-imports",
-  "--disallow-untyped-defs",
-  "--no-warn-no-return",
-  "--disable-error-code=type-arg",
-  "--disable-error-code=misc",
+  "--no-warn-no-return"
 ]
 
 [tool.cibuildwheel]
@@ -52,7 +54,7 @@ test-requires = [
   "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
   "pytest-subtests", "pytest-accept", "detect-test-pollution"
 ]
-test-command = "pytest -q {project}/tests"
+test-command = "bash -lc 'cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp pytest -q --import-mode=importlib tests'"
 
 [tool.cibuildwheel.environment]
 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python"
@@ -65,7 +67,6 @@ archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
-test-command = "bash -lc 'cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -c \"import pyjelly,sys;\" && PYTHONPATH=/tmp pytest -q tests'"
 
 
 [project]

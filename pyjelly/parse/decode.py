@@ -6,12 +6,15 @@ from enum import Enum, auto
 from typing import Any, ClassVar, NamedTuple
 from typing_extensions import Never
 
+from mypy_extensions import mypyc_attr
+
 from pyjelly import jelly
 from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
-RowHandler = Callable[[Any, Any], Any | None]
-TermHandler = Callable[[Any, Any], Any | None]
+RowHandler = Callable[[Any], Any | None]
+TermHandler = Callable[[Any], Any | None]
+RdfStreamOptions = jelly.RdfStreamOptions
 
 
 class ParsingMode(Enum):
@@ -29,6 +32,7 @@ class ParsingMode(Enum):
     GROUPED = auto()
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class ParserOptions(NamedTuple):
     stream_types: StreamTypes
     lookup_preset: LookupPreset
@@ -91,6 +95,7 @@ def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
     raise NotImplementedError(msg)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Adapter(metaclass=ABCMeta):
     def __init__(
         self, options: ParserOptions, parsing_mode: ParsingMode = ParsingMode.FLAT
@@ -152,7 +157,28 @@ class Adapter(metaclass=ABCMeta):
         return None
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Decoder:
+    _ROW_HANDLER_NAMES: ClassVar[Mapping[type[Any], str]] = {
+        jelly.RdfStreamOptions: "validate_stream_options",
+        jelly.RdfPrefixEntry: "ingest_prefix_entry",
+        jelly.RdfNameEntry: "ingest_name_entry",
+        jelly.RdfDatatypeEntry: "ingest_datatype_entry",
+        jelly.RdfTriple: "decode_triple",
+        jelly.RdfQuad: "decode_quad",
+        jelly.RdfGraphStart: "decode_graph_start",
+        jelly.RdfGraphEnd: "decode_graph_end",
+        jelly.RdfNamespaceDeclaration: "decode_namespace_declaration",
+    }
+
+    _TERM_HANDLER_NAMES: ClassVar[Mapping[type[Any], str]] = {
+        jelly.RdfIri: "decode_iri",
+        str: "decode_bnode",
+        jelly.RdfLiteral: "decode_literal",
+        jelly.RdfDefaultGraph: "decode_default_graph",
+        jelly.RdfTriple: "decode_quoted_triple",
+    }
+
     def __init__(self, adapter: Adapter) -> None:
         """
         Initialize decoder.
@@ -175,6 +201,13 @@ class Decoder:
             lookup_size=self.options.lookup_preset.max_datatypes
         )
         self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
+
+        self.row_handlers: dict[type[Any], RowHandler] = {
+            t: getattr(self, name) for t, name in self._ROW_HANDLER_NAMES.items()
+        }
+        self.term_handlers: dict[type[Any], TermHandler] = {
+            t: getattr(self, name) for t, name in self._TERM_HANDLER_NAMES.items()
+        }
 
     @property
     def options(self) -> ParserOptions:
@@ -217,12 +250,20 @@ class Decoder:
                         result from calling decode_row (row type appropriate handler)
 
         """
-        try:
-            handler: RowHandler = self.row_handlers[type(row)]
-        except KeyError:
+        handler = self.row_handlers.get(type(row))
+        if handler is None:
+            # Fallback for subclasses / alternate class objects
+            for t, h in self.row_handlers.items():
+                try:
+                    if isinstance(row, t):
+                        handler = h
+                        break
+                except TypeError:
+                    continue
+        if handler is None:
             msg = f"decoder not implemented for {type(row)}"
             raise TypeError(msg) from None
-        return handler(self, row)
+        return handler(row)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         stream_types, lookup_preset, params = self.options
@@ -280,12 +321,20 @@ class Decoder:
             Any: decoded term (currently, rdflib objects, e.g., rdflib.term.URIRef)
 
         """
-        try:
-            decode_term = self.term_handlers[type(term)]
-        except KeyError:
+        decode_term = self.term_handlers.get(type(term))
+        if decode_term is None:
+            # Fallback for subclasses / alternate class objects
+            for t, h in self.term_handlers.items():
+                try:
+                    if isinstance(term, t):
+                        decode_term = h
+                        break
+                except TypeError:
+                    continue
+        if decode_term is None:
             msg = f"decoder not implemented for {type(term)}"
             raise TypeError(msg) from None
-        return decode_term(self, term)
+        return decode_term(term)
 
     def decode_iri(self, iri: jelly.RdfIri) -> Any:
         """
@@ -414,24 +463,3 @@ class Decoder:
     def decode_quad(self, quad: jelly.RdfQuad) -> Any:
         terms = self.decode_statement(quad, ("subject", "predicate", "object", "graph"))
         return self.adapter.quad(terms)
-
-    # dispatch by invariant type (no C3 resolution)
-    row_handlers: ClassVar[Mapping[type[Any], RowHandler]] = {
-        jelly.RdfStreamOptions: validate_stream_options,
-        jelly.RdfPrefixEntry: ingest_prefix_entry,
-        jelly.RdfNameEntry: ingest_name_entry,
-        jelly.RdfDatatypeEntry: ingest_datatype_entry,
-        jelly.RdfTriple: decode_triple,
-        jelly.RdfQuad: decode_quad,
-        jelly.RdfGraphStart: decode_graph_start,
-        jelly.RdfGraphEnd: decode_graph_end,
-        jelly.RdfNamespaceDeclaration: decode_namespace_declaration,
-    }
-
-    term_handlers: ClassVar[Mapping[type[Any], TermHandler]] = {
-        jelly.RdfIri: decode_iri,
-        str: decode_bnode,
-        jelly.RdfLiteral: decode_literal,
-        jelly.RdfDefaultGraph: decode_default_graph,
-        jelly.RdfTriple: decode_quoted_triple,
-    }

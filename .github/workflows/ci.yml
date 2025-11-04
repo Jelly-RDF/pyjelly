@@ -184,14 +184,11 @@ jobs:
           CIBW_BUILD_VERBOSITY: "1"
           CIBW_TEST_EXTRAS: "rdflib"
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
-          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
+          PYTEST_ADDOPTS: "--import-mode=importlib"
+          CIBW_TEST_COMMAND: "PYTHONPATH= pytest -q {project}/tests"
+          PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
-      - name: Upload compiled wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ runner.os }}
-          path: wheelhouse/*
 
   build-pure-wheel:
     needs: [check]
@@ -214,11 +211,6 @@ jobs:
           SKIP_COMPILE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m build --wheel -v
-      - name: Upload pure Python wheel
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-pure
-          path: dist/*.whl
 
   build-pypy-wheels:
     needs: [check]
@@ -246,7 +238,4 @@ jobs:
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
           CIBW_TEST_COMMAND: "pytest -q {project}/tests"
         run: python -m cibuildwheel --output-dir wheelhouse
-      - uses: actions/upload-artifact@v4
-        with:
-          name: wheels-pypy-${{ runner.os }}
-          path: wheelhouse/*.whl
+

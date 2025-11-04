@@ -4,6 +4,8 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from mypy_extensions import mypyc_attr
+
 from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.serialize.encode import (
@@ -24,16 +26,20 @@ from pyjelly.serialize.flows import (
     flow_for_type,
 )
 
+LogicalStreamType = jelly.LogicalStreamType
+LOGICAL_STREAM_TYPE_UNSPECIFIED = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+
 
 @dataclass
 class SerializerOptions:
     flow: FrameFlow | None = None
     frame_size: int = DEFAULT_FRAME_SIZE
-    logical_type: jelly.LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    logical_type: LogicalStreamType = LOGICAL_STREAM_TYPE_UNSPECIFIED
     params: StreamParameters = field(default_factory=StreamParameters)
     lookup_preset: LookupPreset = field(default_factory=LookupPreset)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Stream:
     physical_type: ClassVar[jelly.PhysicalStreamType]
     default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]]
@@ -70,7 +76,7 @@ class Stream:
         """
         flow: FrameFlow
         if self.options.params.delimited:
-            if self.options.logical_type != jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED:
+            if self.options.logical_type != LOGICAL_STREAM_TYPE_UNSPECIFIED:
                 flow_class = flow_for_type(self.options.logical_type)
             else:
                 flow_class = self.default_delimited_flow_class
