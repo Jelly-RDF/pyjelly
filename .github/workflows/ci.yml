@@ -218,7 +218,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=11.0"
           CIBW_TEST_EXTRAS: "rdflib"
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
-          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
+          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
           CIBW_TEST_COMMAND_WINDOWS: >-
             powershell -NoLogo -NoProfile -Command
             "$work = Join-Path $env:TEMP ('ciwheels_' + [guid]::NewGuid().ToString());
@@ -227,7 +227,7 @@ jobs:
             Copy-Item -Recurse -Force '{project}\tests'   (Join-Path $work 'tests');
             Set-Location $work;
             $env:PYTHONPATH = $work;
-            & '{python}' -m pytest -q --import-mode=importlib tests"
+            python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -268,7 +268,7 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64 aarch64"
           CIBW_TEST_EXTRAS: "rdflib"
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
-          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
+          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
