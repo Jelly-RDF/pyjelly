@@ -252,7 +252,6 @@ class Decoder:
         """
         handler = self.row_handlers.get(type(row))
         if handler is None:
-            # Fallback for subclasses / alternate class objects
             for t, h in self.row_handlers.items():
                 try:
                     if isinstance(row, t):
@@ -323,7 +322,6 @@ class Decoder:
         """
         decode_term = self.term_handlers.get(type(term))
         if decode_term is None:
-            # Fallback for subclasses / alternate class objects
             for t, h in self.term_handlers.items():
                 try:
                     if isinstance(term, t):

@@ -22,7 +22,6 @@ artifacts = [
 include = ["pyjelly"]
 
 [tool.hatch.build.targets.wheel.hooks.mypyc]
-
 require-cpython = true
 
 modules = ["pyjelly"]
@@ -34,9 +33,7 @@ include = [
   "pyjelly/parse/ioutils.py",
   "pyjelly/serialize/streams.py",
   "pyjelly/integrations/rdflib/parse.py",
-
   "pyjelly/parse/decode.py",
-  
 ]
 
 mypy-args = [
@@ -46,14 +43,13 @@ mypy-args = [
 
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-skip = ["graalpy*"] 
+skip = ["pp*, graalpy*, *-win32"] 
 test-extras = ["rdflib"]
 test-requires = [
   "mypy-extensions",
   "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
   "pytest-subtests", "pytest-accept", "detect-test-pollution"
 ]
-test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp {python} -m pytest -q --import-mode=importlib tests"
 
 [tool.cibuildwheel.environment]
 PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION = "python"

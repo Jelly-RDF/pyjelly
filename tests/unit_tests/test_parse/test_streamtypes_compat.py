@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from mypy_extensions import mypyc_attr
-
 from pyjelly import jelly
 from pyjelly.parse.decode import Adapter, Decoder, options_from_frame
 
@@ -28,7 +26,6 @@ def _frame_with_options(
     return frame, opts
 
 
-@mypyc_attr(allow_interpreted_subclasses=True)
 class _DummyAdapter(Adapter):
     def iri(self, iri: str) -> str:
         return iri
