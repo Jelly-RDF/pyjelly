@@ -204,7 +204,7 @@ jobs:
           python-version: "3.11"
           
       - name: Install builder dependency group
-        run: uv sync --group builder
+        run: uv pip install -r requirements-builder.txt
 
       - uses: docker/setup-qemu-action@v3
         if: runner.os == 'Linux'
@@ -256,7 +256,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install builder dependency group
-        run: uv sync --group builder
+        run: uv pip install -r requirements-builder.txt
 
       - uses: docker/setup-qemu-action@v3
         with:

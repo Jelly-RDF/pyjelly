@@ -50,6 +50,7 @@ test-requires = [
   "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
   "pytest-subtests", "pytest-accept", "detect-test-pollution"
 ]
+test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
@@ -144,7 +145,6 @@ docs = [
     "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
-builder = ["cibuildwheel>=3.1.0,<4"]
 
 [tool.uv]
 required-version = "~=0.9.0"

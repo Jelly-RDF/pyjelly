@@ -252,14 +252,6 @@ class Decoder:
         """
         handler = self.row_handlers.get(type(row))
         if handler is None:
-            for t, h in self.row_handlers.items():
-                try:
-                    if isinstance(row, t):
-                        handler = h
-                        break
-                except TypeError:
-                    continue
-        if handler is None:
             msg = f"decoder not implemented for {type(row)}"
             raise TypeError(msg) from None
         return handler(row)
@@ -321,14 +313,6 @@ class Decoder:
 
         """
         decode_term = self.term_handlers.get(type(term))
-        if decode_term is None:
-            for t, h in self.term_handlers.items():
-                try:
-                    if isinstance(term, t):
-                        decode_term = h
-                        break
-                except TypeError:
-                    continue
         if decode_term is None:
             msg = f"decoder not implemented for {type(term)}"
             raise TypeError(msg) from None
