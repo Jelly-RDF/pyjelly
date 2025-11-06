@@ -23,7 +23,7 @@ defaults:
 jobs:
   check:
     if: ${{ !cancelled() }}
-    name: ${{ matrix['conformance-tests'] && '(conformance) ' || '' }}${{ matrix.version }} ${{ matrix.platform }} ${{ matrix.backend == 'python' && '(py-backend)' || '' }}
+    name: ${{ matrix.conformance-tests && '(conformance) ' || '' }}${{ matrix.version }} ${{ matrix.platform }} ${{ matrix.backend == 'python' && '(py-backend)' || '' }}
     runs-on: ${{ matrix.platform }}
 
     env:
@@ -31,103 +31,104 @@ jobs:
 
     strategy:
       fail-fast: false
+      # https://blog.jaraco.com/efficient-use-of-ci-resources/
       matrix:
         conformance-tests: [false]
         version: ['3.10', '3.14']
         platform: [ubuntu-latest, macos-latest, windows-latest]
         backend: [cpp]
         include:
-          - version: '3.10'
-            platform: ubuntu-latest
-            conformance-tests: true
-          - version: '3.11'
-            platform: ubuntu-latest
-          - version: '3.12'
-            platform: ubuntu-latest
-          - version: '3.13'
-            platform: ubuntu-latest
-          - version: '3.14'
-            platform: ubuntu-latest
-            conformance-tests: true
-          - version: '3.14'
-            platform: ubuntu-latest
-            conformance-tests: true
-            backend: python
-          - version: pypy3.10
-            platform: ubuntu-latest
-          - version: pypy3.11
-            platform: ubuntu-latest
+        - version: '3.10'
+          platform: ubuntu-latest
+          conformance-tests: true
+        - version: '3.11'
+          platform: ubuntu-latest
+        - version: '3.12'
+          platform: ubuntu-latest
+        - version: '3.13'
+          platform: ubuntu-latest
+        - version: '3.14'
+          platform: ubuntu-latest
+          conformance-tests: true
+        - version: '3.14'
+          platform: ubuntu-latest
+          conformance-tests: true
+          backend: python
+        - version: pypy3.10
+          platform: ubuntu-latest  
+        - version: pypy3.11
+          platform: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: true
+    - uses: actions/checkout@v5
+      with:
+        submodules: true
 
-      - name: Windows workaround for broken symlinks
-        if: runner.os == 'Windows'
-        run: |
-          rm -r pyjelly/_proto
-          rm -r tests/conformance_tests/rdf
-          rm -r tests/conformance_tests/grpc
-          cp -r submodules/protobuf/proto pyjelly/_proto
-          cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
-          cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
+    - name: Windows workaround for broken symlinks
+      if: runner.os == 'Windows'
+      run: |
+        rm -r pyjelly/_proto
+        rm -r tests/conformance_tests/rdf
+        rm -r tests/conformance_tests/grpc
+        cp -r submodules/protobuf/proto pyjelly/_proto
+        cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
+        cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
 
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
+    - uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
 
-      - name: Install
-        id: install
-        if: ${{ !startsWith(matrix.version, 'pypy') }}
-        run: uv sync
+    - name: Install
+      id: install
+      if: ${{ !startsWith(matrix.version, 'pypy') }}
+      run: uv sync
 
-      - name: Install (PyPy)
-        id: install_pypy
-        if: ${{ startsWith(matrix.version, 'pypy') }}
-        env:
-          HATCH_BUILD_NO_HOOKS: "1"
-          HATCH_MYPYC_DISABLE: "1"
-          MYPYC_NO_BUILD: "1"
-          SKIP_COMPILE: "1"
-        run: uv sync
+    - name: Install (PyPy)
+      id: install_pypy
+      if: ${{ startsWith(matrix.version, 'pypy') }}
+      env:
+        HATCH_BUILD_NO_HOOKS: "1"
+        HATCH_MYPYC_DISABLE: "1"
+        MYPYC_NO_BUILD: "1"
+        SKIP_COMPILE: "1"
+      run: uv sync
 
-      - name: Install jelly-cli
-        uses: jelly-rdf/setup-cli@v1
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+    - name: Install jelly-cli
+      uses: jelly-rdf/setup-cli@v1
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
 
-      - name: Select protobuf Python backend
-        if: ${{ matrix.backend == 'python' }}
-        run: echo "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python" >> "$GITHUB_ENV"
+    - name: Select protobuf Python backend
+      if: ${{ matrix.backend == 'python' }}
+      run: echo "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python" >> "$GITHUB_ENV"
 
-      - name: Run unit tests
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && !matrix['conformance-tests'] }}
-        run: uv run pytest -vv
+    - name: Run unit tests
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && !matrix['conformance-tests'] }}
+      run: uv run pytest -vv
 
-      - name: Run unit tests (with conformance tests and coverage)
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
-        run: uv run pytest -vv --cov --cov-branch --cov-report=xml
+    - name: Run unit tests (with conformance tests and coverage)
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+      run: uv run pytest -vv --cov --cov-branch --cov-report=xml
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Check formatting
-        id: formatting
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
-        run: uv run ruff format . --diff
+    - name: Check formatting
+      id: formatting
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      run: uv run ruff format . --diff
 
-      - name: Lint
-        id: linting
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
-        run: uv run ruff check --output-format github
+    - name: Lint
+      id: linting
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      run: uv run ruff check --output-format github
 
-      - name: Check type safety
-        id: types
-        if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
-        run: uv run mypy .
+    - name: Check type safety
+      id: types
+      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      run: uv run mypy .
 
   check-docs:
     runs-on: ubuntu-latest
@@ -201,8 +202,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install cibuildwheel
-        run: python -m pip install "cibuildwheel>=3.1.0,<4"
+          
+      - name: Install builder dependency group
+        run: uv sync --group builder
 
       - uses: docker/setup-qemu-action@v3
         if: runner.os == 'Linux'
@@ -229,7 +231,6 @@ jobs:
             $env:PYTHONPATH = $work;
             python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
-          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
   
   build-wheels-musllinux:
@@ -254,8 +255,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install cibuildwheel
-        run: python -m pip install "cibuildwheel>=3.1.0,<4"
+      - name: Install builder dependency group
+        run: uv sync --group builder
 
       - uses: docker/setup-qemu-action@v3
         with:
@@ -270,9 +271,7 @@ jobs:
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
           CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
-          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m cibuildwheel --output-dir wheelhouse
-
 
   build-pure-wheel:
     needs: [check]
@@ -293,5 +292,4 @@ jobs:
           HATCH_MYPYC_DISABLE: "1"
           MYPYC_NO_BUILD: "1"
           SKIP_COMPILE: "1"
-          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
         run: python -m build --wheel -v
