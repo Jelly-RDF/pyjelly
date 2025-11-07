@@ -32,7 +32,6 @@ classifiers = [
 keywords = ["RDF", "Knowledge graph", "Jelly", "Serialization format"]
 license = "Apache-2.0"
 dependencies = [
-    "mkdocs>=1.6.1",
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
 ]
