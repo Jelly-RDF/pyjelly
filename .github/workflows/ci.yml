@@ -213,7 +213,7 @@ jobs:
           enable-cache: true
 
       - name: Install builder dependency group
-        run: uv sync --group ci --frozen
+        run: uv sync --group ci
 
       # Enable QEMU only for the Linux aarch64
       - uses: docker/setup-qemu-action@v3
@@ -281,7 +281,7 @@ jobs:
           enable-cache: true
 
       - name: Install builder dependency group
-        run: uv sync --group ci --frozen
+        run: uv sync --group ci
 
       # Only needed when targeting aarch64
       - uses: docker/setup-qemu-action@v3
