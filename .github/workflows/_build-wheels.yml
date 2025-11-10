@@ -41,11 +41,6 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          python-version: "3.11"
-    
       # Fix symlink checkout on Windows
       - name: Windows symlink fix for packaging
         if: runner.os == 'Windows'
@@ -60,6 +55,11 @@ jobs:
           mkdir -p tests/conformance_tests
           cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
           cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.11"
 
       # QEMU only for Linux aarch64 cross-builds
       - uses: docker/setup-qemu-action@v3
