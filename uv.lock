@@ -1337,7 +1337,6 @@ name = "pyjelly"
 version = "0.0.0"
 source = { editable = "." }
 dependencies = [
-    { name = "mypy-extensions" },
     { name = "protobuf" },
     { name = "typing-extensions" },
 ]
@@ -1396,7 +1395,6 @@ types = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mypy-extensions", specifier = ">=1.0.0" },
     { name = "protobuf", specifier = ">=6.30.0" },
     { name = "rdflib", marker = "extra == 'rdflib'", specifier = ">=7.1.4" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
