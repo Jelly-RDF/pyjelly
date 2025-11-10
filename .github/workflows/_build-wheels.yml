@@ -152,7 +152,6 @@ jobs:
           if-no-files-found: error
   
   build-pure-wheel:
-    needs: [check]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
