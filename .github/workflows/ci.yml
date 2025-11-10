@@ -208,6 +208,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
       - name: Install builder dependency group
         run: uv sync --group ci --frozen
 
@@ -228,7 +232,7 @@ jobs:
             echo "CIBW_ENVIRONMENT_MACOS=MACOSX_DEPLOYMENT_TARGET=11.0" >> $GITHUB_ENV
           fi
 
-      - name: Build mypyc wheels (manylinux + macOS + Windows, single-arch per runner)
+      - name: Build mypyc wheels (manylinux + macOS + Windows)
         env:
           CIBW_SKIP: "pp* graalpy* *-win32 *-musllinux_*"
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
@@ -272,8 +276,12 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
       - name: Install builder dependency group
-        run: python -m pip install ".[ci]"
+        run: uv sync --group ci --frozen
 
       # Only needed when targeting aarch64
       - uses: docker/setup-qemu-action@v3
