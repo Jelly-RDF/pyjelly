@@ -250,7 +250,7 @@ jobs:
             python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: "python"
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: uv run -m cibuildwheel --output-dir wheelhouse
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -298,7 +298,7 @@ jobs:
           CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
           CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
           PYTHONDONTWRITEBYTECODE: "1"
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: uv run -m cibuildwheel --output-dir wheelhouse
 
       - name: Upload musllinux wheels
         uses: actions/upload-artifact@v4
