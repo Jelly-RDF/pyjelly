@@ -35,20 +35,6 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
-    name: Windows symlink fix for packaging
-    if: runner.os == 'Windows'
-    shell: bash
-    run: |
-      set -euxo pipefail
-      rm -rf pyjelly/_proto
-      mkdir -p pyjelly
-      cp -r submodules/protobuf/proto pyjelly/_proto
-      rm -rf tests/conformance_tests/rdf
-      rm -rf tests/conformance_tests/grpc
-      mkdir -p tests/conformance_tests
-      cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
-      cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
-
     steps:
       - uses: actions/checkout@v5
         with:
@@ -59,6 +45,21 @@ jobs:
         with:
           enable-cache: true
           python-version: "3.11"
+    
+      # Fix symlink checkout on Windows
+      - name: Windows symlink fix for packaging
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf pyjelly/_proto
+          mkdir -p pyjelly
+          cp -r submodules/protobuf/proto pyjelly/_proto
+          rm -rf tests/conformance_tests/rdf
+          rm -rf tests/conformance_tests/grpc
+          mkdir -p tests/conformance_tests
+          cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
+          cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
 
       # QEMU only for Linux aarch64 cross-builds
       - uses: docker/setup-qemu-action@v3
