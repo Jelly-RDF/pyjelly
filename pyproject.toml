@@ -34,6 +34,8 @@ include = [
   "pyjelly/serialize/streams.py",
   "pyjelly/integrations/rdflib/parse.py",
   "pyjelly/parse/decode.py",
+  "pyjelly/serialize/encode.py",
+  "pyjelly/serialize/lookup.py",
 ]
 
 mypy-args = [
