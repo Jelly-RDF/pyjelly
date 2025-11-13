@@ -6,6 +6,8 @@ from itertools import chain
 from typing import IO, Any
 from typing_extensions import override
 
+from mypy_extensions import mypyc_attr
+
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.generic_sink import (
@@ -25,6 +27,7 @@ from pyjelly.parse.ioutils import get_options_and_frames
 Statement = Triple | Quad
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericStatementSinkAdapter(Adapter):
     """
     Implement Adapter for generic statements.
@@ -68,6 +71,7 @@ class GenericStatementSinkAdapter(Adapter):
         return Triple(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericTriplesAdapter(GenericStatementSinkAdapter):
     """
     Triples adapted implementation for GenericStatementSink.
@@ -89,11 +93,13 @@ class GenericTriplesAdapter(GenericStatementSinkAdapter):
         return Triple(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericQuadsBaseAdapter(GenericStatementSinkAdapter):
     def __init__(self, options: ParserOptions) -> None:
         super().__init__(options=options)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericQuadsAdapter(GenericQuadsBaseAdapter):
     """
     Extends GenericQuadsBaseAdapter for QUADS physical type.
@@ -109,6 +115,7 @@ class GenericQuadsAdapter(GenericQuadsBaseAdapter):
         return Quad(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericGraphsAdapter(GenericQuadsBaseAdapter):
     """
     Extends GenericQuadsBaseAdapter for GRAPHS physical type.

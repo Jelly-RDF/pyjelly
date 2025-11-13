@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Final
 from typing_extensions import Self
 
+from mypy_extensions import mypyc_attr
+
 from pyjelly import jelly
 from pyjelly.errors import (
     JellyAssertionError,
@@ -47,6 +49,7 @@ def register_mimetypes(extension: str = ".jelly") -> None:
         mimetypes.add_type(mimetype, extension)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 @dataclass(frozen=True)
 class LookupPreset:
     max_names: int = DEFAULT_NAME_LOOKUP_SIZE
