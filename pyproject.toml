@@ -44,7 +44,7 @@ mypy-args = [
 
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-skip = ["pp*, graalpy*, *-win32"] 
+skip = ["*-win32"] 
 test-extras = ["rdflib"]
 test-requires = [
   "mypy-extensions",

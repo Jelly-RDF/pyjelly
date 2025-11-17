@@ -64,7 +64,7 @@ jobs:
       with:
         submodules: true
 
-    - name: Windows workaround for broken symlinks
+    - name: Windows walkaround for broken symlinks
       if: runner.os == 'Windows'
       run: |
         rm -r pyjelly/_proto
@@ -74,7 +74,7 @@ jobs:
         cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
         cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
 
-    - uses: astral-sh/setup-uv@v6
+    - uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
 
