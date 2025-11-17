@@ -24,7 +24,7 @@ class DummyLookupEncoder(LookupEncoder):
 
 lookup_mod = importlib.import_module("pyjelly.serialize.lookup")
 file_path = Path(getattr(lookup_mod, "__file__", ""))
-IS_COMPILED = file_path.suffix.lower() in {".so", ".pyd", ".dll"}
+IS_COMPILED = file_path.suffix.lower() in {".so", ".pyd"}
 
 
 def test_encode_entry_index() -> None:
