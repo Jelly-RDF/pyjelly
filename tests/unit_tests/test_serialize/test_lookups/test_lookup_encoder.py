@@ -14,20 +14,17 @@ class DummyLookupEncoder(LookupEncoder):
         self, *, lookup_size: int | None = None, lookup: Lookup | None = None
     ) -> None:
         if lookup is None:
-            super().__init__(lookup_size=lookup_size if lookup_size is not None else 0)
+            super().__init__(lookup_size=lookup_size or 0)
         else:
             self.lookup = lookup
-            self.last_assigned_index = 0
-            self.last_reused_index = 0
+
+        self.last_assigned_index = 0
+        self.last_reused_index = 0
 
 
 lookup_mod = importlib.import_module("pyjelly.serialize.lookup")
 file_path = Path(getattr(lookup_mod, "__file__", ""))
 IS_COMPILED = file_path.suffix.lower() in {".so", ".pyd", ".dll"}
-
-pytestmark = pytest.mark.skipif(
-    IS_COMPILED, reason="compiled extension; patching wont work here"
-)
 
 
 def test_encode_entry_index() -> None:
@@ -74,8 +71,8 @@ def test_last_reused_index() -> None:
 
     encoder.encode_entry_index("foo")
 
-    passthrough = object()
-    encoder.lookup.data["foo"] = passthrough  # type: ignore[assignment]
+    passthrough = 0
+    encoder.lookup.data["foo"] = passthrough
     encoder.encode_term_index("foo")
 
     assert encoder.last_reused_index is passthrough

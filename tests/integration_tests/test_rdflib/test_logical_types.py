@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import importlib
 import io
 import re
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -276,60 +274,61 @@ def test_rdflib_logical_matrix(case: Case) -> None:
         list(case.parser(io.BytesIO(data), logical_type_strict=case.strict))
 
 
-rdparse = importlib.import_module("pyjelly.integrations.rdflib.parse")
-file_path = Path(getattr(rdparse, "__file__", ""))
-IS_COMPILED = file_path.suffix in {".so", ".pyd"}
-
-
-PATCH_EXT = "pyjelly.integrations.rdflib.parse.get_options_and_frames"
-PATCH_SRC = "pyjelly.parse.ioutils.get_options_and_frames"
-
-
-@pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
 def test_rdflib_flat_strict_requires_stream_types() -> None:
     class Opt:
         stream_types = None
 
-    with pytest.raises(
-        JellyConformanceError, match=re.escape("requires options.stream_types")
+    dummy = b"x"
+    frames: list[object] = []
+
+    with (
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(Opt(), frames),
+        ),
+        pytest.raises(
+            JellyConformanceError,
+            match=re.escape("requires options.stream_types"),
+        ),
     ):
-        list(
-            parse_jelly_flat(
-                io.BytesIO(b"x"),
-                options=Opt(),  # type: ignore[arg-type]
-                frames=[],
-                logical_type_strict=True,
-            )
-        )
+        list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=True))
 
 
-@pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
 def test_rdflib_grouped_strict_unspecified_raises() -> None:
     class ST:
         flat = False
         logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
         physical_type = jelly.PHYSICAL_STREAM_TYPE_TRIPLES
 
+    dummy = b"x"
     options = type("Opt", (), {"stream_types": ST()})()
+    frames: list[object] = []
+
     with (
-        patch(PATCH_EXT, return_value=(options, [])),
-        patch(PATCH_SRC, return_value=(options, [])),
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
         pytest.raises(JellyConformanceError, match="expected GROUPED"),
     ):
-        list(parse_jelly_grouped(io.BytesIO(b"x"), logical_type_strict=True))
+        list(parse_jelly_grouped(io.BytesIO(dummy), logical_type_strict=True))
 
 
-@pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
 def test_rdflib_flat_unsupported_physical_raises() -> None:
     class ST:
         flat = True
         logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
         physical_type = jelly.PHYSICAL_STREAM_TYPE_UNSPECIFIED
 
+    dummy = b"x"
     options = type("Opt", (), {"stream_types": ST()})()
+    frames: list[object] = []
+
     with (
-        patch(PATCH_EXT, return_value=(options, [])),
-        patch(PATCH_SRC, return_value=(options, [])),
+        patch(
+            "pyjelly.integrations.rdflib.parse.get_options_and_frames",
+            return_value=(options, frames),
+        ),
         pytest.raises(NotImplementedError, match="not supported"),
     ):
-        list(parse_jelly_flat(io.BytesIO(b"x"), logical_type_strict=False))
+        list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=False))
