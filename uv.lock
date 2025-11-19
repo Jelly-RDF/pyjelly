@@ -1121,6 +1121,15 @@ wheels = [
 ]
 
 [[package]]
+name = "py-cpuinfo"
+version = "9.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.11.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1246,6 +1255,10 @@ rdflib = [
 ]
 
 [package.dev-dependencies]
+bench = [
+    { name = "pytest-benchmark" },
+    { name = "rdflib" },
+]
 dev = [
     { name = "mypy" },
     { name = "pre-commit" },
@@ -1298,6 +1311,10 @@ requires-dist = [
 provides-extras = ["rdflib"]
 
 [package.metadata.requires-dev]
+bench = [
+    { name = "pytest-benchmark", specifier = ">=5.2.1" },
+    { name = "rdflib", specifier = ">=7.1.4" },
+]
 dev = [
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "pre-commit", specifier = ">=4.2.0" },
@@ -1384,6 +1401,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b5/a9/1ba09166e1bb7dc3db5c74e447e68ca0a72c799dce6b8745ca8ad64acd95/pytest-accept-0.1.12.tar.gz", hash = "sha256:0cbed8fafac4ab5ca4413f353c68ea51d99911d13656530ba8b49d0dae200f26", size = 17698, upload-time = "2024-12-08T22:57:00.211Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/23/4e/7677b01b773f9aa1b77ad1aa55c601cc8763966d691e7a341eaca1ffc09e/pytest_accept-0.1.12-py3-none-any.whl", hash = "sha256:189ccac80113920966c98ce4d6d1bfbe1b22f39b7e97a5c3a46c68db2ca84415", size = 15511, upload-time = "2024-12-08T22:57:01.785Z" },
+]
+
+[[package]]
+name = "pytest-benchmark"
+version = "5.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "py-cpuinfo" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/24/34/9f732b76456d64faffbef6232f1f9dbec7a7c4999ff46282fa418bd1af66/pytest_benchmark-5.2.3.tar.gz", hash = "sha256:deb7317998a23c650fd4ff76e1230066a76cb45dcece0aca5607143c619e7779", size = 341340, upload-time = "2025-11-09T18:48:43.215Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/33/29/e756e715a48959f1c0045342088d7ca9762a2f509b945f362a316e9412b7/pytest_benchmark-5.2.3-py3-none-any.whl", hash = "sha256:bc839726ad20e99aaa0d11a127445457b4219bdb9e80a1afc4b51da7f96b0803", size = 45255, upload-time = "2025-11-09T18:48:39.765Z" },
 ]
 
 [[package]]

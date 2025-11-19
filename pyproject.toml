@@ -85,6 +85,10 @@ docs = [
     "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
+bench = [
+    "pytest-benchmark>=5.2.1",
+    "rdflib>=7.1.4",
+]
 
 [tool.uv]
 required-version = "~=0.9.0"
@@ -110,7 +114,13 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**"]
+addopts = ["--import-mode=importlib", 
+          "--doctest-modules", 
+          "--ignore-glob=docs/examples/**", 
+          "--ignore-glob=examples/**", 
+          "--ignore-glob=tests/benchmark_tests/**",
+          "-m", "not benchmark"]
+markers = ["benchmark: flat ser/des benchmarks"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
