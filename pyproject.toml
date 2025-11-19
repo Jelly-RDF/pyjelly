@@ -118,9 +118,7 @@ addopts = ["--import-mode=importlib",
           "--doctest-modules", 
           "--ignore-glob=docs/examples/**", 
           "--ignore-glob=examples/**", 
-          "--ignore-glob=tests/benchmark_tests/**",
-          "-m", "not benchmark"]
-markers = ["benchmark: flat ser/des benchmarks"]
+          "--ignore-glob=tests/benchmark_tests/**"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
