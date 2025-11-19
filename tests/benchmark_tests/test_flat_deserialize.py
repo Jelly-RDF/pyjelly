@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from pytest_benchmark.fixture import BenchmarkFixture
+from pytest_benchmark.fixture import BenchmarkFixture  # type: ignore[import-not-found]
 
 from tests.benchmark_tests.jelly_rdflib import (
     parse_jelly_quads_bytes,
@@ -19,7 +19,7 @@ pytest.importorskip(
 pytestmark = pytest.mark.benchmark
 
 
-@pytest.mark.triples  # type: ignore[misc]
+@pytest.mark.triples
 def test_flat_triples_deserialize_nt(
     benchmark: BenchmarkFixture,
     nt_bytes_sliced: bytes,
@@ -30,7 +30,7 @@ def test_flat_triples_deserialize_nt(
     print_throughput(benchmark, limit_statements, "triples: parse NT")
 
 
-@pytest.mark.triples  # type: ignore[misc]
+@pytest.mark.triples
 def test_flat_triples_deserialize_jelly(
     benchmark: BenchmarkFixture,
     jelly_triples_bytes: bytes,
@@ -43,7 +43,7 @@ def test_flat_triples_deserialize_jelly(
     print_throughput(benchmark, limit_statements, "triples: parse Jelly")
 
 
-@pytest.mark.quads  # type: ignore[misc]
+@pytest.mark.quads
 def test_flat_quads_deserialize_nq(
     benchmark: BenchmarkFixture,
     nq_bytes_sliced: bytes,
@@ -54,7 +54,7 @@ def test_flat_quads_deserialize_nq(
     print_throughput(benchmark, limit_statements, "quads: parse NQ")
 
 
-@pytest.mark.quads  # type: ignore[misc]
+@pytest.mark.quads
 def test_flat_quads_deserialize_jelly(
     benchmark: BenchmarkFixture,
     jelly_quads_bytes: bytes,

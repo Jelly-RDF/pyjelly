@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from pytest_benchmark.fixture import BenchmarkFixture
+import logging
+
+from pytest_benchmark.fixture import BenchmarkFixture  # type: ignore[import-not-found]
+
+log = logging.getLogger(__name__)
 
 
-def print_throughput(bench: BenchmarkFixture, n_statements: int) -> None:
+def print_throughput(bench: BenchmarkFixture, n_statements: int, label: str) -> None:
     mean_s = None
     st = getattr(bench, "stats", None)
     if isinstance(st, dict):
@@ -18,3 +22,10 @@ def print_throughput(bench: BenchmarkFixture, n_statements: int) -> None:
         bench.extra_info["statements"] = n_statements
         bench.extra_info["mean_seconds"] = mean_s
         bench.extra_info["throughput_statements_per_sec"] = tps
+        log.info(
+            "[%s] N=%s mean=%.6fs throughput=%.2f stmts/s",
+            label,
+            f"{n_statements:,}",
+            mean_s,
+            tps,
+        )

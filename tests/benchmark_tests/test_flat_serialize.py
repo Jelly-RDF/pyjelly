@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from pytest_benchmark.fixture import BenchmarkFixture
+from pytest_benchmark.fixture import BenchmarkFixture  # type: ignore[import-not-found]
 from rdflib import Dataset, Graph
 
 from tests.benchmark_tests.jelly_rdflib import (
