@@ -25,14 +25,15 @@ jobs:
     with:
       cibw_build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
 
-  release:
+   release:
     if: ${{ github.ref_type == 'tag' }}
-    name: Release to PyPI
+    name: Release to TestPyPI
     needs: [wheels]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
+    environment: testpypi
     env:
       UV_LOCKED: 0
     steps:
@@ -45,22 +46,20 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-        
+
       - name: Bump project version to match tag
         id: automatic-version
         run: |
           set -Eeuxo pipefail
           version="${GITHUB_REF#refs/tags/v}"
           uv version "$version"
-      
+
       - name: Validate tag
         id: validate-tag
         run: |
           set -Eeuxo pipefail
-
           project_version=v$(uv version --short)
           tag=${GITHUB_REF#refs/tags/}
-
           [[ "$tag" == "$project_version" ]] || {
             echo "Tag $tag does not match project version $project_version"
             exit 1
@@ -77,19 +76,23 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Publish package distributions
+      - name: Publish package distributions to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-
-      - name: 'Create a GitHub release'
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+      
+      - name: Create GitHub Release and upload artifacts
         uses: ncipollo/release-action@v1.20.0
         with:
-          prerelease: false
-          draft: false
-          makeLatest: true
           tag: "${{ github.ref_name }}"
           name: "${{ github.ref_name }}"
+          makeLatest: true
+          draft: false
+          prerelease: false
           generateReleaseNotes: true
-
+          artifacts: "dist/*" 
+      
   release-docs:
     runs-on: ubuntu-latest
     steps:
