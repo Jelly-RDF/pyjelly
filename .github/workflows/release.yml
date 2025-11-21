@@ -27,13 +27,12 @@ jobs:
 
   release:
     if: ${{ github.ref_type == 'tag' }}
-    name: Release to TestPyPI
+    name: Release to PyPI
     needs: [wheels]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
-    environment: testpypi
     env:
       UV_LOCKED: 0
     steps:
@@ -79,7 +78,7 @@ jobs:
       - name: Publish package distributions
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true
+          skip-existing: false
           verbose: true
 
       - name: 'Create a GitHub release'
