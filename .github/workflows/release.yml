@@ -18,9 +18,17 @@ env:
   UV_NO_SYNC: 1
 
 jobs:
+  wheels:
+    if: ${{ github.ref_type == 'tag' }}
+    uses: ./.github/workflows/_build-wheels.yml
+    with:
+      cibw_build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+      version: ${{ github.ref_name }}
+
   release:
     if: ${{ github.ref_type == 'tag' }}
     name: Release to PyPI
+    needs: [wheels]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -37,22 +45,20 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-        
+
       - name: Bump project version to match tag
         id: automatic-version
         run: |
           set -Eeuxo pipefail
           version="${GITHUB_REF#refs/tags/v}"
           uv version "$version"
-      
+
       - name: Validate tag
         id: validate-tag
         run: |
           set -Eeuxo pipefail
-
           project_version=v$(uv version --short)
           tag=${GITHUB_REF#refs/tags/}
-
           [[ "$tag" == "$project_version" ]] || {
             echo "Tag $tag does not match project version $project_version"
             exit 1
@@ -60,10 +66,20 @@ jobs:
 
       - name: Build package distributions
         id: build
-        run: uv build --out-dir dist
+        run: uv build --sdist --out-dir dist
+
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist
+          merge-multiple: true
 
       - name: Publish package distributions
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: false
+          verbose: true
 
       - name: 'Create a GitHub release'
         uses: ncipollo/release-action@v1.20.0

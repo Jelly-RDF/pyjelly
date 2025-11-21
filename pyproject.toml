@@ -1,6 +1,66 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+  "hatchling>=1.24",
+  "hatch-mypyc; platform_python_implementation == 'CPython'",
+  "mypy>=1.8; platform_python_implementation == 'CPython'",
+]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["pyjelly"]
+
+artifacts = [
+  "*__mypyc*.*",
+  "**/*__mypyc*.*",
+  "**/*.so",
+  "**/*.pyd",
+  "**/*.dylib"
+]
+
+
+[tool.hatch.build.targets.sdist]
+include = ["pyjelly"]
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+require-cpython = true
+
+modules = ["pyjelly"]
+
+include = [
+  "pyjelly/serialize/ioutils.py",
+  "pyjelly/integrations/generic/serialize.py",
+  "pyjelly/parse/lookup.py",
+  "pyjelly/parse/ioutils.py",
+  "pyjelly/serialize/streams.py",
+  "pyjelly/parse/decode.py",
+  "pyjelly/serialize/encode.py",
+  "pyjelly/serialize/lookup.py",
+]
+
+mypy-args = [
+  "--ignore-missing-imports",
+  "--no-warn-no-return"
+]
+
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+skip = ["*-win32"] 
+test-extras = ["rdflib"]
+test-requires = [
+  "mypy-extensions",
+  "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
+  "pytest-subtests", "pytest-accept", "detect-test-pollution"
+]
+test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+archs = ["universal2"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
 
 [project]
 name = "pyjelly"
@@ -34,6 +94,7 @@ license = "Apache-2.0"
 dependencies = [
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
+    "mypy-extensions>=1.0.0",
 ]
 
 [project.urls]
@@ -85,6 +146,9 @@ docs = [
     "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
+# version 3.1 required for python 3.14 support
+ci = ["cibuildwheel>=3.1.0,<4 ; python_version >= '3.11'"]
+
 
 [tool.uv]
 required-version = "~=0.9.0"

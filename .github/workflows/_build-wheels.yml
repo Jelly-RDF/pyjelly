@@ -1,0 +1,216 @@
+name: _build-wheels
+
+on:
+  workflow_call:
+    inputs:
+      cibw_build:
+        required: false
+        type: string
+        default: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+      version:
+        required: false
+        type: string
+
+jobs:
+  build-wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux (manylinux)
+          - os: ubuntu-latest
+            arch: x86_64
+            artifact_suffix: linux-manylinux-x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+            artifact_suffix: linux-manylinux-aarch64
+          # macOS
+          - os: macos-latest
+            arch: x86_64
+            artifact_suffix: macos-x86_64
+          - os: macos-latest
+            arch: arm64
+            artifact_suffix: macos-arm64
+          # Windows
+          - os: windows-latest
+            arch: AMD64
+            artifact_suffix: windows-amd64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: true
+      
+      # Fix symlink checkout on Windows
+      - name: Windows symlink fix for packaging
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf pyjelly/_proto
+          mkdir -p pyjelly
+          cp -r submodules/protobuf/proto pyjelly/_proto
+          rm -rf tests/conformance_tests/rdf
+          rm -rf tests/conformance_tests/grpc
+          mkdir -p tests/conformance_tests
+          cp -r submodules/protobuf/test/rdf tests/conformance_tests/rdf
+          cp -r submodules/protobuf/test/grpc tests/conformance_tests/grpc
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Set project version from input/tag
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        run: |
+          set -Eeuxo pipefail
+          version="${{ inputs.version }}"
+          version="${version#v}"
+          uv --version
+          uv version "$version"
+
+      # QEMU only for Linux aarch64 cross-builds
+      - uses: docker/setup-qemu-action@v3
+        if: runner.os == 'Linux' && matrix.arch == 'aarch64'
+        with:
+          platforms: arm64
+          
+      - name: Install builder deps (uv group)
+        run: uv sync --group ci
+
+      - name: Build wheels (manylinux/macOS/Windows)
+        env:
+          CIBW_BUILD: ${{ inputs.cibw_build }}
+          # For this job we exclude musllinux and 32-bit win
+          CIBW_SKIP: "*-musllinux_* *-win32"
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=11.0"
+          CIBW_TEST_EXTRAS: "rdflib"
+          CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
+          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
+          CIBW_TEST_COMMAND_WINDOWS: >-
+            powershell -NoLogo -NoProfile -Command
+            "$work = Join-Path $env:TEMP ('ciwheels_' + [guid]::NewGuid().ToString());
+            New-Item -ItemType Directory -Force -Path $work | Out-Null;
+            Copy-Item -Recurse -Force '{project}\pyjelly' (Join-Path $work 'pyjelly');
+            Copy-Item -Recurse -Force '{project}\tests'   (Join-Path $work 'tests');
+            Set-Location $work;
+            $env:PYTHONPATH = $work;
+            python -m pytest -q --import-mode=importlib tests"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: uv run --group ci -m cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.artifact_suffix }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build-wheels-musllinux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            artifact_suffix: linux-musllinux-x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+            artifact_suffix: linux-musllinux-aarch64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Set project version from input/tag
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        run: |
+          set -Eeuxo pipefail
+          version="${{ inputs.version }}"
+          version="${version#v}"
+          uv --version
+          uv version "$version"
+
+      - uses: docker/setup-qemu-action@v3
+        if: matrix.arch == 'aarch64'
+        with:
+          platforms: arm64
+
+      - name: Install builder deps (uv group)
+        run: uv sync --group ci
+
+      - name: Build wheels (musllinux)
+        env:
+          CIBW_BUILD: ${{ inputs.cibw_build }}
+          # For musllinux job we exclude manylinux and 32-bit win
+          CIBW_SKIP: "*-manylinux_* *-win32"
+          CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_TEST_EXTRAS: "rdflib"
+          CIBW_TEST_REQUIRES: "pytest hypothesis inline-snapshot pytest-mock pytest-subtests pytest-accept detect-test-pollution"
+          CIBW_TEST_COMMAND: "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: uv run --group ci -m cibuildwheel --output-dir wheelhouse
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.artifact_suffix }}
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  build-pure-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Set project version from input/tag
+        if: ${{ inputs.version != '' }}
+        shell: bash
+        run: |
+          set -Eeuxo pipefail
+          version="${{ inputs.version }}"
+          version="${version#v}"
+          uv --version
+          uv version "$version"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install build backend
+        run: python -m pip install build
+      - name: Build pure Python wheel
+        env:
+          HATCH_BUILD_NO_HOOKS: "1"
+          HATCH_MYPYC_DISABLE: "1"
+          MYPYC_NO_BUILD: "1"
+          SKIP_COMPILE: "1"
+        run: python -m build --wheel -v
+      - name: Upload pure wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-pure
+          path: dist/*.whl
+          if-no-files-found: error
+          retention-days: 7
