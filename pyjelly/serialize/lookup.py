@@ -4,7 +4,10 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import final
 
+from mypy_extensions import mypyc_attr
 
+
+@mypyc_attr(allow_interpreted_subclasses=True)
 @final
 class Lookup:
     """
@@ -52,6 +55,7 @@ class Lookup:
         return f"Lookup({max_size=!r}, {data=!r})"
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 @dataclass
 class LookupEncoder:
     """

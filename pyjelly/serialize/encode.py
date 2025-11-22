@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Sequence
 from enum import IntEnum
-from typing import TypeVar, Union
-from typing_extensions import TypeAlias
+from typing import TypeAlias, TypeVar
+
+from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly, options
 from pyjelly.errors import JellyConformanceError
@@ -32,13 +33,14 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 T = TypeVar("T")
 Rows: TypeAlias = Sequence[jelly.RdfStreamRow]
-Statement: TypeAlias = Union[jelly.RdfQuad, jelly.RdfTriple]
-HasGraph: TypeAlias = Union[jelly.RdfQuad, jelly.RdfGraphStart]
-Terms: TypeAlias = Union[
-    jelly.RdfIri, jelly.RdfLiteral, str, jelly.RdfDefaultGraph, jelly.RdfTriple
-]
+Statement: TypeAlias = jelly.RdfQuad | jelly.RdfTriple
+HasGraph: TypeAlias = jelly.RdfQuad | jelly.RdfGraphStart
+Terms: TypeAlias = (
+    jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph | jelly.RdfTriple
+)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class TermEncoder:
     def __init__(
         self,

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Callable, Generator, Iterable, MutableMapping
+from contextvars import ContextVar
 from itertools import chain
-from typing import IO, Any, Callable, Union
+from typing import IO, Any
 from typing_extensions import override
+
+from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
@@ -21,9 +24,10 @@ from pyjelly.integrations.generic.generic_sink import (
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
-Statement = Union[Triple, Quad]
+Statement = Triple | Quad
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericStatementSinkAdapter(Adapter):
     """
     Implement Adapter for generic statements.
@@ -67,6 +71,7 @@ class GenericStatementSinkAdapter(Adapter):
         return Triple(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericTriplesAdapter(GenericStatementSinkAdapter):
     """
     Triples adapted implementation for GenericStatementSink.
@@ -88,11 +93,13 @@ class GenericTriplesAdapter(GenericStatementSinkAdapter):
         return Triple(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericQuadsBaseAdapter(GenericStatementSinkAdapter):
     def __init__(self, options: ParserOptions) -> None:
         super().__init__(options=options)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericQuadsAdapter(GenericQuadsBaseAdapter):
     """
     Extends GenericQuadsBaseAdapter for QUADS physical type.
@@ -108,6 +115,7 @@ class GenericQuadsAdapter(GenericQuadsBaseAdapter):
         return Quad(*terms)
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericGraphsAdapter(GenericQuadsBaseAdapter):
     """
     Extends GenericQuadsBaseAdapter for GRAPHS physical type.
@@ -155,6 +163,7 @@ class GenericGraphsAdapter(GenericQuadsBaseAdapter):
 def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
@@ -162,6 +171,8 @@ def parse_triples_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+                used for extracting frame metadata
 
     Yields:
         Generator[Iterable[Triple | Prefix]]:
@@ -172,6 +183,10 @@ def parse_triples_stream(
     adapter = GenericTriplesAdapter(options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
+        if frame_metadata is not None:
+            frame_metadata.set(
+                frame.metadata
+            ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
     return
 
@@ -179,6 +194,7 @@ def parse_triples_stream(
 def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[Iterable[Quad | Prefix]]:
     """
     Parse flat quads stream.
@@ -186,6 +202,8 @@ def parse_quads_stream(
     Args:
         frames (Iterable[jelly.RdfStreamFrame]): iterator over stream frames
         options (ParserOptions): stream options
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+                used for extracting frame metadata
 
     Yields:
         Generator[Iterable[Quad | Prefix]]:
@@ -201,6 +219,10 @@ def parse_quads_stream(
     adapter = adapter_class(options=options)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
+        if frame_metadata is not None:
+            frame_metadata.set(
+                frame.metadata
+            ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
     return
 
@@ -210,6 +232,7 @@ def parse_jelly_grouped(
     sink_factory: Callable[[], GenericStatementSink] = lambda: GenericStatementSink(),
     *,
     logical_type_strict: bool = False,
+    frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
 ) -> Generator[GenericStatementSink]:
     """
     Take a jelly file and return generators of generic statements sinks.
@@ -223,6 +246,8 @@ def parse_jelly_grouped(
         logical_type_strict (bool): If True, validate the *logical* type
             in stream options and require a grouped logical type.
             Otherwise, only the physical type is used to route parsing.
+        frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
+                used for extracting frame metadata
 
     Raises:
         NotImplementedError: is raised if a physical type is not implemented
@@ -257,6 +282,7 @@ def parse_jelly_grouped(
         for graph in parse_triples_stream(
             frames=frames,
             options=options,
+            **{"frame_metadata": frame_metadata} if frame_metadata is not None else {},
         ):
             sink = sink_factory()
             for graph_item in graph:
@@ -273,6 +299,7 @@ def parse_jelly_grouped(
         for dataset in parse_quads_stream(
             frames=frames,
             options=options,
+            **{"frame_metadata": frame_metadata} if frame_metadata is not None else {},
         ):
             sink = sink_factory()
             for item in dataset:
@@ -312,9 +339,11 @@ def parse_jelly_to_graph(
     options, frames = get_options_and_frames(inp)
     sink = sink_factory()
 
-    for item in parse_jelly_flat(inp=inp, frames=frames, options=options):
+    for item in parse_jelly_flat(
+        inp=inp, frames=frames, options=options, logical_type_strict=False
+    ):
         if isinstance(item, Prefix):
-            sink.bind(item.prefix, item.iri)
+            sink.bind(item.prefix, item.iri)  # type: ignore[union-attr, unused-ignore]
         else:
             sink.add(item)
     return sink
@@ -326,7 +355,7 @@ def parse_jelly_flat(
     options: ParserOptions | None = None,
     *,
     logical_type_strict: bool = False,
-) -> Generator[Statement | Prefix]:
+) -> Generator[Statement | Prefix]:  # type: ignore[valid-type, unused-ignore]
     """
     Parse jelly file with FLAT logical type into a Generator of stream events.
 
@@ -373,10 +402,7 @@ def parse_jelly_flat(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        for quads in parse_quads_stream(
-            frames=frames,
-            options=options,
-        ):
+        for quads in parse_quads_stream(frames=frames, options=options):
             yield from quads
         return
     physical_type_name = jelly.PhysicalStreamType.Name(

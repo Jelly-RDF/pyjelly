@@ -1,6 +1,66 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+  "hatchling>=1.24",
+  "hatch-mypyc; platform_python_implementation == 'CPython'",
+  "mypy>=1.8; platform_python_implementation == 'CPython'",
+]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["pyjelly"]
+
+artifacts = [
+  "*__mypyc*.*",
+  "**/*__mypyc*.*",
+  "**/*.so",
+  "**/*.pyd",
+  "**/*.dylib"
+]
+
+
+[tool.hatch.build.targets.sdist]
+include = ["pyjelly"]
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+require-cpython = true
+
+modules = ["pyjelly"]
+
+include = [
+  "pyjelly/serialize/ioutils.py",
+  "pyjelly/integrations/generic/serialize.py",
+  "pyjelly/parse/lookup.py",
+  "pyjelly/parse/ioutils.py",
+  "pyjelly/serialize/streams.py",
+  "pyjelly/parse/decode.py",
+  "pyjelly/serialize/encode.py",
+  "pyjelly/serialize/lookup.py",
+]
+
+mypy-args = [
+  "--ignore-missing-imports",
+  "--no-warn-no-return"
+]
+
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+skip = ["*-win32"] 
+test-extras = ["rdflib"]
+test-requires = [
+  "mypy-extensions",
+  "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
+  "pytest-subtests", "pytest-accept", "detect-test-pollution"
+]
+test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+archs = ["universal2"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
 
 [project]
 name = "pyjelly"
@@ -10,18 +70,18 @@ description = "Jelly-RDF implementation for Python"
 authors = [
     { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10, <3.15"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Environment :: Console",
     "Environment :: Plugins",
     "Topic :: Database",
@@ -34,6 +94,7 @@ license = "Apache-2.0"
 dependencies = [
     "protobuf>=6.30.0",
     "typing-extensions>=4.12.2", # revisit after 3.13 is older
+    "mypy-extensions>=1.0.0",
 ]
 
 [project.urls]
@@ -63,7 +124,7 @@ test = [
     "detect-test-pollution>=1.2.0",
     "hypothesis>=6.131.0",
     "inline-snapshot>=0.20.8",
-    "pytest>=8.3.4",
+    "pytest>=8.3.4,<8.5.0",
     "pytest-cov>=6.2.1",
     "pytest-accept>=0.1.12",
     "pytest-mock>=3.14.0",
@@ -81,11 +142,16 @@ docs = [
     "mkdocs-material>=9.6.13",
     "mkdocstrings>=0.29.1",
     "mkdocstrings-python>=1.16.10",
+    "jinja2>=3.1,<3.2",
+    "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
+# version 3.1 required for python 3.14 support
+ci = ["cibuildwheel>=3.1.0,<4 ; python_version >= '3.11'"]
+
 
 [tool.uv]
-required-version = "~=0.7.3"
+required-version = "~=0.9.0"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
@@ -108,7 +174,7 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=**examples"]
+addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**"]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]

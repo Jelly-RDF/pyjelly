@@ -12,7 +12,7 @@ pip install pyjelly
 
 ### Requirements
 
-- Python 3.9 or newer  
+- Python 3.10 or newer  
 - Linux, macOS, or Windows
 
 ## Usage without external libraries
@@ -86,6 +86,14 @@ When working with Kafka or other message brokers, you may want to write Jelly da
 The `data` variable is of type `bytes`, and can be passed to Kafka with [`KafkaProducer.send(value=data)`](https://kafka-python.readthedocs.io/en/master/), or any other API that accepts byte buffers. Same trick may be used when working with the [RDFLib integration](getting-started.md).
 
 When working with Kafka, you should be aware of the broker's offset management and partitioning strategies. Data within one Jelly stream must be strictly ordered and no frames may be dropped. If you have less strict ordering guarantees, you should split up the stream into multiple Jelly streams, each with guaranteed consistency.
+
+### Accessing stream frame metadata 
+
+It is possible to access [`RdfStreamFrame` metadata](https://w3id.org/jelly/dev/specification/serialization/#stream-frame-metadata) in pyjelly via **context variables**.
+To do that, define a **context variable** before parsing and pass it as argument to parser functions, e.g.:
+
+{{ code_example('generic/09_metadata.py')}}
+
 
 ### See also
 

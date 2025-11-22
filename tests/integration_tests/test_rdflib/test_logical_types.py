@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import io
+import re
+from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -92,7 +94,7 @@ def test_graphs() -> None:
 
     graphs_in = sorted(ds_in.graphs(), key=len)
 
-    for g_out, g_in in zip(graphs_out, graphs_in):
+    for g_out, g_in in zip(graphs_out, graphs_in, strict=False):
         assert len(g_out) == len(g_in)
         assert set(g_out) == set(g_in)
 
@@ -284,7 +286,10 @@ def test_rdflib_flat_strict_requires_stream_types() -> None:
             "pyjelly.integrations.rdflib.parse.get_options_and_frames",
             return_value=(Opt(), frames),
         ),
-        pytest.raises(JellyConformanceError, match="requires options.stream_types"),
+        pytest.raises(
+            JellyConformanceError,
+            match=re.escape("requires options.stream_types"),
+        ),
     ):
         list(parse_jelly_flat(io.BytesIO(dummy), logical_type_strict=True))
 

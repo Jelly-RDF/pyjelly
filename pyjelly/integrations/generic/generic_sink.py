@@ -100,7 +100,7 @@ class Literal:
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple"]
-GraphName = Union[Node, _DefaultGraph]
+GraphName = Node | _DefaultGraph
 
 
 TRIPLE_ARITY = 3
@@ -182,7 +182,7 @@ class GenericStatementSink:
             bool: true, if length of statement is 3.
 
         """
-        return len(self._store[0]) == TRIPLE_ARITY
+        return bool(self._store) and len(self._store[0]) == TRIPLE_ARITY
 
     def parse(self, input_file: IO[bytes]) -> None:
         from pyjelly.integrations.generic.parse import parse_jelly_to_graph
