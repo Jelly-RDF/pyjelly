@@ -58,9 +58,14 @@ To learn how to use popular third-party libraries that connect with RDFLib, plea
      ```bash
      python3 -m yatter -i input_path_jelly.jelly -o output_path_yml.yml 
      ```
-   
 
 ## Generic API
 
 pyjelly includes its own [generic API](generic-sink.md) for working with RDF data (no RDFLib or other external RDF libraries required).  
 It provides simple, built-in types for triples and quads, allowing you to create, read, and write data directly in the Jelly format.
+
+## Pre-compiled binaries
+
+pyjelly is written in pure Python, so you can run it on any platform that supports Python. We also provide pre-compiled binaries using [mypyc](https://mypyc.readthedocs.io/en/latest/) for better performance. Supported platforms include Windows, macOS, and Linux (x86_64 and ARM64). When installing `pyjelly`, your package manager will automatically download the right binary, or, if your platform is not supported, it will automatically fall back to the pure Python implementation. You can find the full list of supported platforms on [pypi](https://pypi.org/project/pyjelly/#files).
+
+In rudimentary benchmarks, the mypyc-compiled version of pyjelly is 20–80% faster than the pure Python version, depending on the workload.
