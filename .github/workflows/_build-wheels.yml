@@ -18,17 +18,17 @@ jobs:
       matrix:
         include:
           # Linux (manylinux)
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             arch: x86_64
             artifact_suffix: linux-manylinux-x86_64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             arch: aarch64
             artifact_suffix: linux-manylinux-aarch64
           # macOS
-          - os: macos-latest
+          - os: macos-15-intel
             arch: x86_64
             artifact_suffix: macos-x86_64
-          - os: macos-latest
+          - os: macos-15
             arch: arm64
             artifact_suffix: macos-arm64
           # Windows
@@ -116,10 +116,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             arch: x86_64
             artifact_suffix: linux-musllinux-x86_64
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             arch: aarch64
             artifact_suffix: linux-musllinux-aarch64
 
@@ -173,7 +173,7 @@ jobs:
           if-no-files-found: error
 
   build-pure-wheel:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
