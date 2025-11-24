@@ -14,8 +14,9 @@ def test_rdflib_serializer_raises_quoted_graph() -> None:
 
 def test_stream_frames_raise_unregistered() -> None:
     class DummyStream(Stream):
-        pass
+        def __init__(self) -> None:
+            pass
 
-    dummy = object.__new__(DummyStream)
+    dummy = DummyStream()
     with pytest.raises(TypeError, match="invalid stream implementation"):
         list(stream_frames(dummy, Graph()))

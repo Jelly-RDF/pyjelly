@@ -4,8 +4,8 @@ from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
 from io import BytesIO
 from itertools import chain
-from typing import IO, Any, NamedTuple, TypeAlias
-from typing_extensions import Never, override
+from typing import IO, Any, TypeAlias
+from typing_extensions import Never, Self, override
 
 import rdflib
 from rdflib import BNode, Node, URIRef
@@ -22,7 +22,7 @@ from pyjelly.parse.ioutils import get_options_and_frames
 GraphName: TypeAlias = URIRef | BNode | str
 
 
-class Triple(NamedTuple):
+class Triple(tuple[Node, Node, Node]):
     """
     Describe RDFLib triple.
 
@@ -34,12 +34,25 @@ class Triple(NamedTuple):
 
     """
 
-    s: Node
-    p: Node
-    o: Node
+    __slots__ = ()
+
+    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
+        return tuple.__new__(cls, (s, p, o))
+
+    @property
+    def s(self) -> Node:
+        return self[0]
+
+    @property
+    def p(self) -> Node:
+        return self[1]
+
+    @property
+    def o(self) -> Node:
+        return self[2]
 
 
-class Quad(NamedTuple):
+class Quad(tuple[Node, Node, Node, GraphName]):
     """
     Describe RDFLib quad.
 
@@ -52,16 +65,32 @@ class Quad(NamedTuple):
 
     """
 
-    s: Node
-    p: Node
-    o: Node
-    g: GraphName
+    __slots__ = ()
+
+    def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
+        return tuple.__new__(cls, (s, p, o, g))
+
+    @property
+    def s(self) -> Node:
+        return self[0]
+
+    @property
+    def p(self) -> Node:
+        return self[1]
+
+    @property
+    def o(self) -> Node:
+        return self[2]
+
+    @property
+    def g(self) -> GraphName:
+        return self[3]
 
 
 Statement = Triple | Quad
 
 
-class Prefix(NamedTuple):
+class Prefix(tuple[str, rdflib.URIRef]):
     """
     Describe RDF Prefix(i.e, namespace declaration).
 
@@ -74,8 +103,18 @@ class Prefix(NamedTuple):
 
     """
 
-    prefix: str
-    iri: rdflib.URIRef
+    __slots__ = ()
+
+    def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
+        return tuple.__new__(cls, (prefix, iri))
+
+    @property
+    def prefix(self) -> str:
+        return self[0]
+
+    @property
+    def iri(self) -> rdflib.URIRef:
+        return self[1]
 
 
 class RDFLibAdapter(Adapter):
