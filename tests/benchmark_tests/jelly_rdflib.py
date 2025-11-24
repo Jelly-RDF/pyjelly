@@ -35,7 +35,7 @@ def parse_jelly_quads_bytes(jelly_bytes: bytes) -> Dataset:
 def serialize_nt_stream(g: Graph) -> int:
     sink = NullCounter()
     buf = io.BufferedWriter(sink)
-    g.serialize(destination=buf, format="nquads", encoding="utf-8")
+    g.serialize(destination=buf, format="nt", encoding="utf-8")
     buf.flush()
     with suppress(io.UnsupportedOperation, ValueError):
         buf.detach()
