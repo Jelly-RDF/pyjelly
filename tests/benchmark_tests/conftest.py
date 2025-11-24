@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import io
+from itertools import islice
 from pathlib import Path
 
 import pytest
 from rdflib import Dataset, Graph
-from itertools import islice
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
