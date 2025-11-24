@@ -7,6 +7,11 @@ from pathlib import Path
 import pytest
 from rdflib import Dataset, Graph
 
+pytest.importorskip(
+    "pytest_benchmark",
+    reason="Install bench dependency group and run with -m benchmark",
+)
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     g = parser.getgroup("benchmark")
