@@ -185,7 +185,9 @@ class GenericStatementSink:
         return bool(self._store) and len(self._store[0]) == TRIPLE_ARITY
 
     def parse(self, input_file: IO[bytes]) -> None:
-        from pyjelly.integrations.generic.parse import parse_jelly_to_graph
+        from pyjelly.integrations.generic.parse import (  # noqa: PLC0415
+            parse_jelly_to_graph,
+        )
 
         parsed_result = parse_jelly_to_graph(input_file)
         self._store = parsed_result._store
@@ -193,6 +195,8 @@ class GenericStatementSink:
         self._identifier = parsed_result._identifier
 
     def serialize(self, output_file: IO[bytes]) -> None:
-        from pyjelly.integrations.generic.serialize import grouped_stream_to_file
+        from pyjelly.integrations.generic.serialize import (  # noqa: PLC0415
+            grouped_stream_to_file,
+        )
 
         grouped_stream_to_file((sink for sink in [self]), output_file)
