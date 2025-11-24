@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from rdflib import Dataset, Graph
+from itertools import islice
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -43,10 +44,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def _slice_lines_to_bytes(path: Path, limit: int) -> bytes:
     buf = io.BytesIO()
     with path.open("rb") as f:
-        for i, line in enumerate(f):
-            buf.write(line)
-            if i + 1 >= limit:
-                break
+        buf.writelines(islice(f, limit))
     return buf.getvalue()
 
 
