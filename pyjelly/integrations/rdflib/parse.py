@@ -545,7 +545,7 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp: BytesIO = source.getByteStream()  # type: ignore[assignment]
+        inp: BytesIO = source.getByteStream()  # type: ignore[no-untyped-call]
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)

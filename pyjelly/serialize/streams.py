@@ -146,7 +146,7 @@ class Stream:
         if cls is Stream:
             msg = "Stream is an abstract base class, use a subclass instead"
             raise TypeError(msg)
-        from pyjelly.integrations.rdflib.serialize import (  # noqa: PLC0415
+        from pyjelly.integrations.rdflib.serialize import (
             RDFLibTermEncoder,
         )
 
