@@ -1,8 +1,8 @@
 [build-system]
 requires = [
-  "hatchling>=1.24",
-  "hatch-mypyc; platform_python_implementation == 'CPython'",
-  "mypy>=1.8; platform_python_implementation == 'CPython'",
+    "hatchling>=1.24",
+    "hatch-mypyc; platform_python_implementation == 'CPython'",
+    "mypy>=1.8; platform_python_implementation == 'CPython'",
 ]
 build-backend = "hatchling.build"
 
@@ -10,11 +10,11 @@ build-backend = "hatchling.build"
 only-include = ["pyjelly"]
 
 artifacts = [
-  "*__mypyc*.*",
-  "**/*__mypyc*.*",
-  "**/*.so",
-  "**/*.pyd",
-  "**/*.dylib"
+    "*__mypyc*.*",
+    "**/*__mypyc*.*",
+    "**/*.so",
+    "**/*.pyd",
+    "**/*.dylib",
 ]
 
 
@@ -27,29 +27,31 @@ require-cpython = true
 modules = ["pyjelly"]
 
 include = [
-  "pyjelly/serialize/ioutils.py",
-  "pyjelly/integrations/generic/serialize.py",
-  "pyjelly/parse/lookup.py",
-  "pyjelly/parse/ioutils.py",
-  "pyjelly/serialize/streams.py",
-  "pyjelly/parse/decode.py",
-  "pyjelly/serialize/encode.py",
-  "pyjelly/serialize/lookup.py",
+    "pyjelly/serialize/ioutils.py",
+    "pyjelly/integrations/generic/serialize.py",
+    "pyjelly/parse/lookup.py",
+    "pyjelly/parse/ioutils.py",
+    "pyjelly/serialize/streams.py",
+    "pyjelly/parse/decode.py",
+    "pyjelly/serialize/encode.py",
+    "pyjelly/serialize/lookup.py",
 ]
 
-mypy-args = [
-  "--ignore-missing-imports",
-  "--no-warn-no-return"
-]
+mypy-args = ["--ignore-missing-imports", "--no-warn-no-return"]
 
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
-skip = ["*-win32"] 
+skip = ["*-win32"]
 test-extras = ["rdflib"]
 test-requires = [
-  "mypy-extensions",
-  "pytest", "hypothesis", "inline-snapshot", "pytest-mock",
-  "pytest-subtests", "pytest-accept", "detect-test-pollution"
+    "mypy-extensions",
+    "pytest",
+    "hypothesis",
+    "inline-snapshot",
+    "pytest-mock",
+    "pytest-subtests",
+    "pytest-accept",
+    "detect-test-pollution",
 ]
 test-command = "cp -r {project}/pyjelly /tmp/pyjelly && cp -r {project}/tests /tmp/tests && cd /tmp && PYTHONPATH=/tmp python -m pytest -q --import-mode=importlib tests"
 
@@ -67,9 +69,7 @@ name = "pyjelly"
 version = "0.0.0"
 readme = "README.md"
 description = "Jelly-RDF implementation for Python"
-authors = [
-    { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
-]
+authors = [{ name = "NeverBlink et al.", email = "contact@neverblink.eu" }]
 requires-python = ">=3.10, <3.15"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -146,9 +146,9 @@ docs = [
     "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
-# version 3.1 required for python 3.14 support
-ci = ["cibuildwheel>=3.1.0,<4 ; python_version >= '3.11'"]
-
+# version 3.11 required for python 3.14 support
+ci = ['cibuildwheel>=3.1.0,<4 ; python_version >= "3.11"']
+bench = ["pytest-benchmark>=5.2.1", "rdflib>=7.1.4"]
 
 [tool.uv]
 required-version = "~=0.9.0"
@@ -157,12 +157,7 @@ default-groups = ["dev", "extras", "test", "types"]
 [tool.mypy]
 strict = true
 explicit_package_bases = true
-exclude = [
-    "build/", 
-    "docs/", 
-    ".*_pb2(_grpc)?\\.pyi?", 
-    "examples/"
-]
+exclude = ["build/", "docs/", ".*_pb2(_grpc)?\\.pyi?", "examples/"]
 
 [[tool.mypy.overrides]]
 module = "google.protobuf.proto"
@@ -174,7 +169,16 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**"]
+addopts = [
+    "--import-mode=importlib",
+    "--doctest-modules",
+    "--ignore-glob=docs/examples/**",
+    "--ignore-glob=examples/**",
+    "--ignore-glob=tests/utils/benchmark_*",
+    "--ignore=tests/benchmark_tests",
+    "-m",
+    "not benchmark",
+]
 
 [tool.ruff]
 extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
@@ -184,9 +188,7 @@ packages = ["pyjelly"]
 
 [tool.ruff.lint]
 extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004"] }
-exclude = [
-    "**examples/**",
-]
+exclude = ["**examples/**"]
 select = ["ALL"]
 ignore = [
     # Description: Dynamically typed expressions (typing.Any) are disallowed
