@@ -78,18 +78,6 @@ jobs:
       with:
         enable-cache: true
 
-    - name: Update uv.lock if this is PR from dependabot
-      if: ${{ github.actor == 'dependabot[bot]' && !startsWith(matrix.version, 'pypy') }}
-      run: uv lock
-
-    - name: Commit updated uv.lock
-      if: ${{ github.actor == 'dependabot[bot]' && !startsWith(matrix.version, 'pypy') }}
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add uv.lock
-        git commit -m "auto-update uv.lock (dependabot)" || echo "No changes to commit"
-
     - name: Install
       id: install
       if: ${{ !startsWith(matrix.version, 'pypy') }}
