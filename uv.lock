@@ -1433,7 +1433,7 @@ test = [
     { name = "detect-test-pollution", specifier = ">=1.2.0" },
     { name = "hypothesis", specifier = ">=6.131.0" },
     { name = "inline-snapshot", specifier = ">=0.20.8" },
-    { name = "pytest", specifier = ">=8.3.4,<9.1.0" },
+    { name = "pytest", specifier = ">=8.3.4,<8.5.0" },
     { name = "pytest-accept", specifier = ">=0.1.12" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
