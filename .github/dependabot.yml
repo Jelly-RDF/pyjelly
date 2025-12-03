@@ -1,4 +1,8 @@
 version: 2
+multi-ecosystem-groups:
+  python-sync:
+    schedule:
+      interval: weekly
 updates:
 - package-ecosystem: gitsubmodule
   directory: /
@@ -10,10 +14,16 @@ updates:
     interval: monthly
 - package-ecosystem: pip
   directory: /
-  schedule:
-    interval: monthly
+  multi-ecosystem-group: python-sync
+  patterns:
+    - "*"
   groups:
     production:
       dependency-type: production
     development:
       dependency-type: development
+- package-ecosystem: uv
+  directory: /
+  multi-ecosystem-group: python-sync
+  patterns:
+    - "*"
