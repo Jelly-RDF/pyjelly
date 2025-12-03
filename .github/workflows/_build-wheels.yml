@@ -184,6 +184,10 @@ jobs:
           enable-cache: true
           python-version: "3.11"
 
+      - name: Ensure uv cache directory exists
+        shell: bash
+        run: mkdir -p "$UV_CACHE_DIR"
+
       - name: Set project version from input/tag
         if: ${{ inputs.version != '' }}
         shell: bash
