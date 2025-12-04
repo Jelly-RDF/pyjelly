@@ -181,12 +181,8 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
+          enable-cache: false
           python-version: "3.11"
-
-      - name: Ensure uv cache directory exists
-        shell: bash
-        run: mkdir -p "$UV_CACHE_DIR"
 
       - name: Set project version from input/tag
         if: ${{ inputs.version != '' }}
