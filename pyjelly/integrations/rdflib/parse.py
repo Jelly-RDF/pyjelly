@@ -4,7 +4,7 @@ from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
 from io import BytesIO
 from itertools import chain
-from typing import IO, Any, TypeAlias
+from typing import IO, Any, TypeAlias, cast
 from typing_extensions import Never, Self, override
 
 import rdflib
@@ -545,7 +545,11 @@ class RDFLibJellyParser(RDFLibParser):
             TypeError: raises error if invalid input
 
         """
-        inp: BytesIO = source.getByteStream()  # type: ignore[no-untyped-call]
+        byte_stream = source.getByteStream()
+        if byte_stream is None:
+            raise TypeError("expected source to be a stream of bytes")
+
+        inp = cast(IO[bytes], byte_stream)
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
