@@ -2,7 +2,8 @@
 requires = [
   "hatchling>=1.24",
   "hatch-mypyc; platform_python_implementation == 'CPython'",
-  "mypy>=1.8; platform_python_implementation == 'CPython'",
+  # mypy 1.19 is partially broken for us: https://github.com/python/mypy/issues/20329
+  "mypy>=1.8, != 1.19.*; platform_python_implementation == 'CPython'",
 ]
 build-backend = "hatchling.build"
 
@@ -116,7 +117,7 @@ jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 
 [dependency-groups]
-dev = ["mypy>=1.13.0", "pre-commit>=4.2.0", "ruff>=0.11.8"]
+dev = ["mypy>=1.13.0, != 1.19.*", "pre-commit>=4.2.0", "ruff>=0.11.8"]
 # grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
 protoc = ["grpcio-tools>=1.73.0; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
