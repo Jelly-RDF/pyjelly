@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
-from io import BytesIO
 from itertools import chain
 from typing import IO, Any, TypeAlias, cast
 from typing_extensions import Never, Self, override
@@ -547,7 +546,8 @@ class RDFLibJellyParser(RDFLibParser):
         """
         byte_stream = source.getByteStream()
         if byte_stream is None:
-            raise TypeError("expected source to be a stream of bytes")
+            msg = "expected source to be a stream of bytes"
+            raise TypeError(msg)
 
         inp = cast(IO[bytes], byte_stream)
         if inp is None:
