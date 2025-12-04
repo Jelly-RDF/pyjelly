@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, ClassVar
 from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly
-from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.serialize.encode import (
     Slot,
@@ -147,6 +146,7 @@ class Stream:
         if cls is Stream:
             msg = "Stream is an abstract base class, use a subclass instead"
             raise TypeError(msg)
+        from pyjelly.integrations.rdflib.serialize import RDFLibTermEncoder
 
         lookup_preset: LookupPreset | None = None
         if options is not None:
