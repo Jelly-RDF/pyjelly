@@ -186,6 +186,7 @@ class GenericStatementSink:
 
     def parse(self, input_file: IO[bytes]) -> None:
         from pyjelly.integrations.generic.parse import parse_jelly_to_graph  # noqa: PLC0415
+
         parsed_result = parse_jelly_to_graph(input_file)
         self._store = parsed_result._store
         self._namespaces = parsed_result._namespaces
@@ -193,4 +194,5 @@ class GenericStatementSink:
 
     def serialize(self, output_file: IO[bytes]) -> None:
         from pyjelly.integrations.generic.serialize import grouped_stream_to_file  # noqa: PLC0415
+
         grouped_stream_to_file((sink for sink in [self]), output_file)
