@@ -1620,7 +1620,7 @@ wheels = [
 
 [[package]]
 name = "pyjelly"
-version = "0.7.1"
+version = "0.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "mypy-extensions" },
