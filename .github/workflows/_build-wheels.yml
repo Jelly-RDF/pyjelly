@@ -105,7 +105,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: uv run --group ci -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.artifact_suffix }}
           path: wheelhouse/*.whl
@@ -166,7 +166,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: uv run --group ci -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.artifact_suffix }}
           path: wheelhouse/*.whl
@@ -208,7 +208,7 @@ jobs:
           SKIP_COMPILE: "1"
         run: python -m build --wheel -v
       - name: Upload pure wheel
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-pure
           path: dist/*.whl
