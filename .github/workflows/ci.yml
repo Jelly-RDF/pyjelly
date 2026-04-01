@@ -110,7 +110,7 @@ jobs:
       run: uv run pytest -vv --cov --cov-branch --cov-report=xml
 
     - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
