@@ -54,10 +54,6 @@ jobs:
           platform: ubuntu-latest
           conformance-tests: true
           backend: python
-        - version: pypy3.10
-          platform: ubuntu-latest  
-        - version: pypy3.11
-          platform: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v7
@@ -80,54 +76,43 @@ jobs:
 
     - name: Install
       id: install
-      if: ${{ !startsWith(matrix.version, 'pypy') }}
-      run: uv sync
-
-    - name: Install (PyPy)
-      id: install_pypy
-      if: ${{ startsWith(matrix.version, 'pypy') }}
-      env:
-        HATCH_BUILD_NO_HOOKS: "1"
-        HATCH_MYPYC_DISABLE: "1"
-        MYPYC_NO_BUILD: "1"
-        SKIP_COMPILE: "1"
       run: uv sync
 
     - name: Install jelly-cli
       uses: jelly-rdf/setup-cli@v1
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix['conformance-tests'] }}
 
     - name: Select protobuf Python backend
       if: ${{ matrix.backend == 'python' }}
       run: echo "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python" >> "$GITHUB_ENV"
 
     - name: Run unit tests
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && !matrix['conformance-tests'] }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && !matrix['conformance-tests'] }}
       run: uv run pytest -vv
 
     - name: Run unit tests (with conformance tests and coverage)
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix['conformance-tests'] }}
       run: uv run pytest -vv --cov --cov-branch --cov-report=xml
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') && matrix['conformance-tests'] }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix['conformance-tests'] }}
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Check formatting
       id: formatting
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
       run: uv run ruff format . --diff
 
     - name: Lint
       id: linting
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
       run: uv run ruff check --output-format github
 
     - name: Check type safety
       id: types
-      if: ${{ !cancelled() && (steps.install.conclusion == 'success' || steps.install_pypy.conclusion == 'success') }}
+      if: ${{ !cancelled() && steps.install.conclusion == 'success' }}
       run: uv run mypy .
 
   check-docs:

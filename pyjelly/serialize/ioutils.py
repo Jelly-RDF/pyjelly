@@ -6,7 +6,8 @@ from pyjelly import jelly
 
 
 def write_delimited(frame: jelly.RdfStreamFrame, output_stream: IO[bytes]) -> None:
-    serialize_length_prefixed(frame, output_stream)
+    # protobuf annotates `output` as io.BytesIO, but any IO[bytes] works at runtime.
+    serialize_length_prefixed(frame, output_stream)  # type: ignore[arg-type]
 
 
 def write_single(frame: jelly.RdfStreamFrame, output_stream: IO[bytes]) -> None:
