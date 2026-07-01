@@ -66,10 +66,8 @@ for node, deg in top5:
     print(f"{node}: {deg}")
 
 # Helper function
-norm = (
-    lambda n: str(n.value).strip().lower()
-    if isinstance(n, Literal)
-    else str(n).strip().lower()
+norm = lambda n: (
+    str(n.value).strip().lower() if isinstance(n, Literal) else str(n).strip().lower()
 )
 
 # Example calculation, shortest path between two nodes (provided at least two nodes)
