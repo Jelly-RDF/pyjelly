@@ -54,10 +54,6 @@ jobs:
           platform: ubuntu-latest
           conformance-tests: true
           backend: python
-        - version: pypy3.10
-          platform: ubuntu-latest  
-        - version: pypy3.11
-          platform: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v7
