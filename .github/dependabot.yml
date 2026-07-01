@@ -1,8 +1,4 @@
 version: 2
-multi-ecosystem-groups:
-  python-sync:
-    schedule:
-      interval: weekly
 updates:
 - package-ecosystem: gitsubmodule
   directory: /
@@ -12,18 +8,19 @@ updates:
   directory: /
   schedule:
     interval: monthly
-- package-ecosystem: pip
+  groups:
+    actions:
+      patterns:
+        - "*"
+# Only the uv ecosystem: it updates pyproject.toml AND uv.lock atomically,
+# which is required by our `uv sync --locked` CI. The pip ecosystem edited
+# pyproject.toml without touching uv.lock, breaking `--locked` and stalling PRs.
+- package-ecosystem: uv
   directory: /
-  multi-ecosystem-group: python-sync
-  patterns:
-    - "*"
+  schedule:
+    interval: weekly
   groups:
     production:
       dependency-type: production
     development:
       dependency-type: development
-- package-ecosystem: uv
-  directory: /
-  multi-ecosystem-group: python-sync
-  patterns:
-    - "*"
