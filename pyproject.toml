@@ -152,7 +152,7 @@ ci = ["cibuildwheel>=3.1.0,<4 ; python_version >= '3.11'"]
 
 
 [tool.uv]
-required-version = "~=0.9.0"
+required-version = ">=0.11,<0.12"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]

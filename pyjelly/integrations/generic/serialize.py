@@ -26,7 +26,7 @@ from pyjelly.serialize.streams import (
     SerializerOptions,
     Stream,
     TripleStream,
-)  # ruff: enable
+)
 
 QUAD_ARITY = 4
 
