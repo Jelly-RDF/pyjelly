@@ -55,7 +55,7 @@ def delimited_jelly_hint(header: bytes) -> bool:
 
 
 def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
-    # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works at runtime.
+    # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
     while frame := parse_length_prefixed(jelly.RdfStreamFrame, inp):  # type: ignore[arg-type]
         yield frame
 
