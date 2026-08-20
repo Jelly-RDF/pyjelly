@@ -218,6 +218,10 @@ ignore = [
     # Rationale: Conflicts with the formatter
     "COM812",
 
+    # Description: Missing copyright notice at top of file
+    # Rationale: incorrect expectation
+    "CPY001",
+
     # Description: File is part of an implicit namespace package. Add an `__init__.py`
     # Rationale: Implicit namespace packages are a feature
     "INP001",
