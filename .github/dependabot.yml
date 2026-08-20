@@ -19,8 +19,15 @@ updates:
   directory: /
   schedule:
     interval: weekly
+  # Without this, Dependabot only bumps what we declare in pyproject.toml, so
+  # transitive pins in uv.lock go stale.
+  allow:
+  - dependency-type: all
   groups:
     production:
       dependency-type: production
     development:
       dependency-type: development
+    indirect:
+      patterns:
+      - "*"
