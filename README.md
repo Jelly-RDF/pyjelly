@@ -74,4 +74,4 @@ The pyjelly library is licensed under the [Apache 2.0 license](https://www.apach
 
 ----
 
-The development of the Jelly protocol, its implementations, and supporting tooling was co-funded by the European Union. **[More details](https://w3id.org/jelly/dev/licensing/projects)**.
+The development of the Jelly protocol, its implementations, and supporting tooling was funded by commercial sponsors and the European Union. **[More details](https://w3id.org/jelly/dev/licensing/projects)**.
