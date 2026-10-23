@@ -6,7 +6,7 @@ on:
       cibw_build:
         required: false
         type: string
-        default: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+        default: "cp310-* cp311-* cp312-* cp313-* cp314-* cp315-*"
       version:
         required: false
         type: string
