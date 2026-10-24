@@ -2,8 +2,7 @@
 requires = [
   "hatchling>=1.24",
   "hatch-mypyc; platform_python_implementation == 'CPython'",
-  # mypy 1.19 is partially broken for us: https://github.com/python/mypy/issues/20329
-  "mypy>=1.8, != 1.19.*; platform_python_implementation == 'CPython'",
+  "mypy[mypyc]>=2.4; platform_python_implementation == 'CPython'",
 ]
 build-backend = "hatchling.build"
 
@@ -44,7 +43,7 @@ mypy-args = [
 ]
 
 [tool.cibuildwheel]
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*"]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "cp314-*", "cp315-*"]
 skip = ["*-win32"] 
 test-extras = ["rdflib"]
 test-requires = [
@@ -71,7 +70,7 @@ description = "Jelly-RDF implementation for Python"
 authors = [
     { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
-requires-python = ">=3.10, <3.15"
+requires-python = ">=3.10, <3.16"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -83,6 +82,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Environment :: Console",
     "Environment :: Plugins",
     "Topic :: Database",
@@ -117,7 +117,7 @@ jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 
 [dependency-groups]
-dev = ["mypy>=1.13.0, != 1.19.*", "pre-commit>=4.2.0", "ruff>=0.11.8"]
+dev = ["mypy>=2.4", "pre-commit>=4.2.0", "ruff>=0.11.8"]
 # grpc doesn't support PyPy at the time of writing, see grpc/grpc#4221
 protoc = ["grpcio-tools>=1.73.0; implementation_name != 'pypy'"]
 profiling = ["scalene>=1.5.51", "memray>=1.16.0"]
@@ -147,12 +147,12 @@ docs = [
     "markupsafe<4.0.0",
     "linkchecker~=10.6.0",
 ]
-# version 3.1 required for python 3.14 support
-ci = ["cibuildwheel>=3.1.0,<4 ; python_version >= '3.11'"]
+# Version 4.3.1 includes the final Python 3.15 release.
+ci = ["cibuildwheel>=4.3.1,<5 ; python_version >= '3.11'"]
 
 
 [tool.uv]
-required-version = ">=0.11,<0.12"
+required-version = ">=0.13.4,<0.14"
 default-groups = ["dev", "extras", "test", "types"]
 
 [tool.mypy]
