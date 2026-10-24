@@ -67,3 +67,7 @@ dmypy.json
 
 # Temporary files for testing
 temp/
+
+# Datasets and results of the benchmarks
+benchmarks/data/
+benchmarks/results/
