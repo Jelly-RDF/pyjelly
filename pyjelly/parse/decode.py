@@ -106,6 +106,7 @@ class Adapter(metaclass=ABCMeta):
     # Obligatory abstract methods--all adapters must implement these
     @abstractmethod
     def iri(self, iri: str) -> Any:
+        """Return an IRI term. The decoder reuses it, so it must be immutable."""
         raise NotImplementedError
 
     @abstractmethod
@@ -157,6 +158,15 @@ class Adapter(metaclass=ABCMeta):
         return None
 
 
+class _CachedIri:
+    """The IRI term last decoded for a name table entry, and what it was made of."""
+
+    def __init__(self, name: str, prefix: str, term: Any) -> None:
+        self.name = name
+        self.prefix = prefix
+        self.term = term
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class Decoder:
     _ROW_HANDLER_NAMES: ClassVar[Mapping[type[Any], str]] = {
@@ -201,6 +211,12 @@ class Decoder:
             lookup_size=self.options.lookup_preset.max_datatypes
         )
         self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
+        # One IRI term per name table entry, as in Jelly-JVM: an IRI is mostly
+        # used with the same prefix again, so its term can be reused. Index 0 is
+        # unused, as table indices start from 1
+        self.iri_cache: list[_CachedIri | None] = [None] * (
+            self.options.lookup_preset.max_names + 1
+        )
 
         self.row_handlers: dict[type[Any], RowHandler] = {
             t: getattr(self, name) for t, name in self._ROW_HANDLER_NAMES.items()
@@ -322,6 +338,9 @@ class Decoder:
         """
         Decode RdfIri message to IRI using a custom adapter.
 
+        The term is reused if the same name and prefix entries were decoded
+        before, so the adapter's IRI terms must be immutable.
+
         Args:
             iri (jelly.RdfIri): RdfIri message
 
@@ -329,9 +348,18 @@ class Decoder:
             Any: IRI, based on adapter implementation, e.g., rdflib.term.URIRef
 
         """
-        name = self.names.decode_name_term_index(iri.name_id)
+        names = self.names
+        name_index = iri.name_id or names.last_reused_index + 1
+        name = names.decode_name_term_index(name_index)
         prefix = self.prefixes.decode_prefix_term_index(iri.prefix_id)
-        return self.adapter.iri(iri=prefix + name)
+        # The lookup tables keep the strings they were given, so the same objects
+        # mean the same entries (or at least equal strings, which is just as good)
+        cached = self.iri_cache[name_index]
+        if cached is not None and cached.name is name and cached.prefix is prefix:
+            return cached.term
+        term = self.adapter.iri(iri=prefix + name)
+        self.iri_cache[name_index] = _CachedIri(name, prefix, term)
+        return term
 
     def decode_default_graph(self, _: jelly.RdfDefaultGraph) -> Any:
         return self.adapter.default_graph()
