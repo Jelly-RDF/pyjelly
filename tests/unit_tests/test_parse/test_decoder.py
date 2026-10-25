@@ -1,8 +1,8 @@
 import pytest
 
 from pyjelly import jelly
+from pyjelly.integrations.generic.decode import GenericTriplesAdapter
 from pyjelly.integrations.generic.generic_sink import IRI, Literal
-from pyjelly.integrations.generic.parse import GenericTriplesAdapter
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import Decoder, ParserOptions
 
