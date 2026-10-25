@@ -2,7 +2,7 @@
 
 Throughput and size benchmarks of Jelly-RDF in pyjelly, compared with the RDF formats of rdflib.
 
-The method follows the [Jelly-JVM benchmarks](https://github.com/Jelly-RDF/jelly-jvm/tree/main/jmh) as closely as Python allows, so that the results can be read the same way. Differences are listed below.
+The method follows the [Jelly-JVM benchmarks](https://github.com/Jelly-RDF/jelly-jvm/tree/main/jmh) as closely as Python allows, so that the results can be read the same way.
 
 ## Running
 
@@ -36,7 +36,7 @@ uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sw
 
 ### Getting stable results
 
-- Use a recent CPython (3.14 for the latest results) and check that pyjelly is compiled with mypyc. The saved results say so in `pyjelly_compiled_with_mypyc`. An editable install compiles it, but the compiled modules are only for the Python version that built them.
+- Use a recent CPython and check that pyjelly is compiled with mypyc. The saved results indicate that in `pyjelly_compiled_with_mypyc`. An editable install compiles it, but the compiled modules are only for the Python version that built them.
 - On a CPU with performance and efficiency cores, pin the benchmark to the performance cores. On the NVIDIA DGX Spark, we use cores 15–19: `taskset -c 15-19 uv run python -m benchmarks run read`.
 - Don't run anything else heavy at the same time.
 
@@ -92,9 +92,9 @@ All Jelly methods use pyjelly's default options: the "big" lookup preset (4000 n
 - **Read**: the parser reads bytes from memory and gives statements back, which are only counted. Throughput counts the statements actually in the bytes: a writer that drops duplicates leaves fewer to read.
 - **Size**: bytes of the written output, plain, with gzip (level 6) and with zstd (level 3), divided by 100,000 statements.
 
-rdflib can only write Turtle, RDF/XML, JSON-LD and Jelly (through its plugin API) from a whole Graph or Dataset. The graph is built from the list before measuring, with the dataset's prefixes, so only `serialize` is measured. A graph has no duplicates, so these writers write fewer statements (e.g., 70,468 of 100,000 in assist-iot-weather), and their throughput counts only those. They also write statements in the graph's own order, not the dataset's. This differs from Jelly-JVM, which measures filling the graph too.
+rdflib can only write Turtle, RDF/XML, JSON-LD and Jelly (through its plugin API) from a whole Graph or Dataset. The graph is built from the list before measuring, with the dataset's prefixes, so only `serialize` is measured. A graph has no duplicates, so these writers write fewer statements (e.g., 70,468 of 100,000 in assist-iot-weather), and their throughput counts only those. They also write statements in the graph's own order, not the dataset's.
 
-rdflib's parsers can only add statements to a Graph or Dataset. To measure only the parser, the graph uses a store that just counts statements. What's left of the graph's work is the type checks in `Graph.add`, about 2–5% of the time.
+rdflib's parsers can only add statements to a Graph or Dataset. To measure only the parser, the graph uses a store that just counts statements.
 
 Before measuring, each case writes the data, reads it back and compares the statements (as sets for writers that drop duplicates, blank node labels ignored). A difference is printed as `ROUND-TRIP WARNING`. A method that can't read its own output is skipped.
 
@@ -105,9 +105,3 @@ Before measuring, each case writes the data, reads it back and compares the stat
 - Before each iteration, the garbage collector runs, outside the timing. The data prepared before measuring is frozen with `gc.freeze()`, so the collector doesn't go through it again and again during the measurement.
 - A sweep runs every case once. There are 3 sweeps. The result is the median of the sweeps. Values whose sweeps differ by more than 10% are marked with `*`.
 - Averages over datasets are geometric means. A method that couldn't run on all datasets has the number of datasets it ran on next to its mean.
-
-### Differences from Jelly-JVM
-
-- Parsers and writers can't be set to skip checks the way Jena and RDF4J can. For example, rdflib always checks IRIs when making a `URIRef`, which is part of every read with rdflib terms.
-- Jelly-JVM 4 uses frames of 1024 rows, pyjelly 250. Both use their library's default.
-- Jelly-JVM 4 writes Jelly-RDF 1.2 streams (protocol version 3, the column layout). pyjelly doesn't support Jelly-RDF 1.2 yet: it writes version 1, or version 2 when the stream has namespace declarations. So the Jelly results here are for the older format, which Jelly-JVM's results show to be bigger and slower to read than 1.2. The saved results record the highest version pyjelly supports in `pyjelly_max_jelly_version`.
