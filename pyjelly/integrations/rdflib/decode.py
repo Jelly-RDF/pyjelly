@@ -27,13 +27,22 @@ class RDFLibAdapter(Adapter):
     RDFLib adapter class, is extended by triples and quads implementations.
 
     Args:
-        Adapter (): abstract adapter class
+        options (ParserOptions): options of the stream
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     """
 
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options)
+        self.validate_iris = validate_iris
+
     @override
     def iri(self, iri: str) -> rdflib.URIRef:
-        return rdflib.URIRef(iri)
+        if self.validate_iris:
+            return rdflib.URIRef(iri)
+        # The same term, without the check
+        return str.__new__(rdflib.URIRef, iri)
 
     @override
     def bnode(self, bnode: str) -> rdflib.BNode:
@@ -68,11 +77,8 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     Notes: returns triple/namespace declaration as soon as receives them.
     """
 
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
@@ -83,8 +89,8 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(self, options: ParserOptions) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -120,11 +126,8 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 
     _graph_id: str | None
 
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
         self._graph_id = None
 
     @property
