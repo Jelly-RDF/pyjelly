@@ -55,7 +55,8 @@ class RDFLibTermEncoder(TermEncoder):
             type(node) is not Literal and isinstance(node, URIRef)
         ):
             iri = self.get_iri_field(statement, slot)
-            self.encode_iri(node, iri)
+            # A plain str, so that the IRI cache never calls rdflib's __eq__
+            self.encode_iri(str(node), iri)
             return
 
         if type(node) is Literal or isinstance(node, Literal):
@@ -90,7 +91,7 @@ class RDFLibTermEncoder(TermEncoder):
             return
 
         if isinstance(term, rdflib.URIRef):
-            self.encode_iri(term, statement.g_iri)
+            self.encode_iri(str(term), statement.g_iri)
             return
 
         if isinstance(term, rdflib.BNode):
