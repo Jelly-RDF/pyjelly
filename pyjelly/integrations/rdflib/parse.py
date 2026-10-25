@@ -144,7 +144,10 @@ class RDFLibAdapter(Adapter):
         language: str | None = None,
         datatype: str | None = None,
     ) -> rdflib.Literal:
-        return rdflib.Literal(lex, lang=language, datatype=datatype)
+        # normalize=False keeps the lexical form exactly as written. rdflib would
+        # otherwise turn it into a Python value and back, which is slow and can
+        # change it (e.g., "01" as an xsd:integer would become "1")
+        return rdflib.Literal(lex, lang=language, datatype=datatype, normalize=False)
 
     @override
     def namespace_declaration(self, name: str, iri: str) -> Prefix:
