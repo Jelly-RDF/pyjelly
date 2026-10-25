@@ -74,6 +74,14 @@ class TermEncoder:
         # Cleared when full, so that a long stream doesn't grow it without bound
         self.iri_cache_size = max(4 * lookup_preset.max_names, 1024)
 
+    def same_term(self, a: object, b: object) -> bool:
+        """
+        Return whether two terms are equal, for repeated terms.
+
+        Integrations can make it faster for their term classes.
+        """
+        return a is b or a == b
+
     def new_epoch(self) -> None:
         """
         Start encoding a new statement (or other row with terms).
@@ -295,19 +303,15 @@ def encode_spo(
 
     """
     s = next(terms)
-    # Terms are often the same object. `is` is a fast path then.
-    previous = repeated_terms[Slot.subject]
-    if previous is not s and previous != s:
+    if not term_encoder.same_term(repeated_terms[Slot.subject], s):
         term_encoder.encode_spo(s, Slot.subject, statement)
         repeated_terms[Slot.subject] = s
     p = next(terms)
-    previous = repeated_terms[Slot.predicate]
-    if previous is not p and previous != p:
+    if not term_encoder.same_term(repeated_terms[Slot.predicate], p):
         term_encoder.encode_spo(p, Slot.predicate, statement)
         repeated_terms[Slot.predicate] = p
     o = next(terms)
-    previous = repeated_terms[Slot.object]
-    if previous is not o and previous != o:
+    if not term_encoder.same_term(repeated_terms[Slot.object], o):
         term_encoder.encode_spo(o, Slot.object, statement)
         repeated_terms[Slot.object] = o
 
@@ -356,8 +360,7 @@ def encode_quad(
     terms = iter(terms)
     encode_spo(terms, term_encoder, repeated_terms, buffer)
     g = next(terms)
-    previous = repeated_terms[Slot.graph]
-    if previous is not g and previous != g:
+    if not term_encoder.same_term(repeated_terms[Slot.graph], g):
         term_encoder.encode_graph(g, buffer)
         repeated_terms[Slot.graph] = g
     term_encoder.flow.new_row().quad.CopyFrom(buffer)

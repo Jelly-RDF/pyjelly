@@ -1,5 +1,5 @@
 import pytest
-from rdflib import XSD, Literal, URIRef
+from rdflib import XSD, BNode, Literal, URIRef
 
 from pyjelly import jelly
 from pyjelly.integrations.rdflib.encode import RDFLibTermEncoder
@@ -53,3 +53,28 @@ def test_subclasses_encode_like_their_base_class(
         enc.encode_spo(t, Slot.object, triple)
         triples.append((list(enc.flow.rows), triple))
     assert triples[0] == triples[1]
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "same"),
+    [
+        (URIRef("http://ex/a"), URIRef("http://ex/a"), True),
+        (URIRef("http://ex/a"), URIRef("http://ex/b"), False),
+        (BNode("a"), BNode("a"), True),
+        (URIRef("a"), BNode("a"), False),
+        (URIRef("a"), Literal("a"), False),
+        (Literal("1", datatype=XSD.integer), Literal("1", datatype=XSD.integer), True),
+        (Literal("1", datatype=XSD.integer), Literal("1"), False),
+        (Literal("a", lang="en"), Literal("a", lang="de"), False),
+        (
+            MyURIRef("http://ex/a"),
+            URIRef("http://ex/a"),
+            URIRef("http://ex/a") == MyURIRef("http://ex/a"),
+        ),
+        (None, URIRef("a"), False),
+    ],
+)
+def test_same_term_agrees_with_rdflib(a: object, b: object, *, same: bool) -> None:
+    enc = RDFLibTermEncoder(lookup_preset=LookupPreset())
+    assert enc.same_term(a, b) is same
+    assert enc.same_term(b, a) is same

@@ -7,7 +7,7 @@ to the type checker here.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import rdflib
 from mypy_extensions import mypyc_attr
@@ -19,6 +19,23 @@ from pyjelly.serialize.encode import HasGraph, Slot, Statement, TermEncoder
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibTermEncoder(TermEncoder):
+    def same_term(self, a: object, b: object) -> bool:
+        """
+        Return whether two terms are equal, for repeated terms.
+
+        rdflib's __eq__ is slow Python code. For two terms of the same exact class
+        URIRef or BNode it only compares their strings, so this does that directly.
+        """
+        if a is b:
+            return True
+        cls = type(a)
+        if cls is type(b) and (cls is URIRef or cls is rdflib.BNode):
+            # Typed as str, compiled to a plain string comparison
+            a_str: str = cast("str", a)
+            b_str: str = cast("str", b)
+            return a_str == b_str
+        return a == b
+
     def encode_spo(self, term: object, slot: Slot, statement: Statement) -> None:
         """
         Encode s/p/o term based on its RDFLib object.
