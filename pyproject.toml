@@ -188,7 +188,7 @@ extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}", "submodules", "tests/conformance
 packages = ["pyjelly"]
 
 [tool.ruff.lint]
-extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004"], "benchmarks/**" = ["T201"] }
+extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004", "S311"], "benchmarks/**" = ["T201"] }
 exclude = [
     "**examples/**",
 ]
