@@ -6,7 +6,7 @@ from typing import Any, IO
 from typing_extensions import override
 from itertools import chain
 
-from pyjelly.integrations.rdflib.parse import Quad, Triple
+from pyjelly.integrations.rdflib.statements import Quad, Triple
 from pyjelly.integrations.rdflib.walk import (
     gspo_trees,
     spo_tree,

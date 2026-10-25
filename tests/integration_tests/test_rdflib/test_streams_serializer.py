@@ -6,7 +6,6 @@ from collections.abc import Generator
 from rdflib import Dataset, Graph, Literal, Namespace, URIRef
 
 from pyjelly import jelly
-from pyjelly.integrations.rdflib.parse import Quad, Triple
 from pyjelly.integrations.rdflib.serialize import (
     flat_stream_to_file,
     flat_stream_to_frames,
@@ -14,6 +13,7 @@ from pyjelly.integrations.rdflib.serialize import (
     grouped_stream_to_frames,
     quads_stream_frames,
 )
+from pyjelly.integrations.rdflib.statements import Quad, Triple
 from pyjelly.options import StreamParameters
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import QuadStream, SerializerOptions

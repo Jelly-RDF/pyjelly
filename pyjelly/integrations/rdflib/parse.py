@@ -2,264 +2,30 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
-from itertools import chain
-from typing import IO, Any, TypeAlias, cast
-from typing_extensions import Never, Self, override
+from typing import IO, cast
 
-import rdflib
-from rdflib import BNode, Node, URIRef
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, ConjunctiveGraph, Dataset, Graph
+from rdflib import Node
+from rdflib.graph import ConjunctiveGraph, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
-from pyjelly.options import StreamTypes
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
+from pyjelly.integrations.rdflib.decode import (
+    RDFLibGraphsAdapter,
+    RDFLibQuadsAdapter,
+    RDFLibQuadsBaseAdapter,
+    RDFLibTriplesAdapter,
+)
+from pyjelly.integrations.rdflib.statements import (
+    GraphName,
+    Prefix,
+    Quad,
+    Statement,
+    Triple,
+)
+from pyjelly.parse.decode import Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
-
-GraphName: TypeAlias = URIRef | BNode | str
-
-
-class Triple(tuple[Node, Node, Node]):
-    """
-    Describe RDFLib triple.
-
-    Args:
-        tuple (Node, Node, Node): s/p/o tuple of RDFLib Nodes.
-
-    Returns:
-        Triple: triple as tuple.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
-        return tuple.__new__(cls, (s, p, o))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-
-class Quad(tuple[Node, Node, Node, GraphName]):
-    """
-    Describe RDFLib quad.
-
-    Args:
-        tuple (Node, Node, Node, GraphName):
-            s/p/o/g as a tuple of RDFLib nodes and a GraphName,
-
-    Returns:
-        Quad: quad as tuple.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
-        return tuple.__new__(cls, (s, p, o, g))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-    @property
-    def g(self) -> GraphName:
-        return self[3]
-
-
-Statement = Triple | Quad
-
-
-class Prefix(tuple[str, rdflib.URIRef]):
-    """
-    Describe RDF Prefix(i.e, namespace declaration).
-
-    Args:
-        tuple (str, rdflib.URIRef): expects prefix as a string,
-            and full namespace URI as Rdflib.URIRef.
-
-    Returns:
-        Prefix: prefix as tuple(prefix, iri).
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
-        return tuple.__new__(cls, (prefix, iri))
-
-    @property
-    def prefix(self) -> str:
-        return self[0]
-
-    @property
-    def iri(self) -> rdflib.URIRef:
-        return self[1]
-
-
-class RDFLibAdapter(Adapter):
-    """
-    RDFLib adapter class, is extended by triples and quads implementations.
-
-    Args:
-        Adapter (): abstract adapter class
-
-    """
-
-    @override
-    def iri(self, iri: str) -> rdflib.URIRef:
-        return rdflib.URIRef(iri)
-
-    @override
-    def bnode(self, bnode: str) -> rdflib.BNode:
-        return rdflib.BNode(bnode)
-
-    @override
-    def default_graph(self) -> rdflib.URIRef:
-        return DATASET_DEFAULT_GRAPH_ID
-
-    @override
-    def literal(
-        self,
-        lex: str,
-        language: str | None = None,
-        datatype: str | None = None,
-    ) -> rdflib.Literal:
-        # normalize=False keeps the lexical form exactly as written. rdflib would
-        # otherwise turn it into a Python value and back, which is slow and can
-        # change it (e.g., "01" as an xsd:integer would become "1")
-        return rdflib.Literal(lex, lang=language, datatype=datatype, normalize=False)
-
-    @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
-
-
-def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
-    """
-    Raise error if functionality is missing in adapter.
-
-    Args:
-        feature (str): function which is not implemented
-        stream_types (StreamTypes): what combination of physical/logical types
-            triggered the error
-
-    Raises:
-        NotImplementedError: raises error with message with missing functionality
-            and types encountered
-
-    Returns:
-        Never: only raises errors
-
-    """
-    physical_type_name = jelly.PhysicalStreamType.Name(stream_types.physical_type)
-    logical_type_name = jelly.LogicalStreamType.Name(stream_types.logical_type)
-    msg = (
-        f"adapter with {physical_type_name} and {logical_type_name} "
-        f"does not implement {feature}"
-    )
-    raise NotImplementedError(msg)
-
-
-class RDFLibTriplesAdapter(RDFLibAdapter):
-    """
-    Triples adapter RDFLib implementation.
-
-    Notes: returns triple/namespace declaration as soon as receives them.
-    """
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Triple:
-        # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
-        # decoder always gives the right number of terms
-        return tuple.__new__(Triple, terms)
-
-
-class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(self, options: ParserOptions) -> None:
-        super().__init__(options=options)
-
-
-class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
-    """
-    Extended RDFLib adapter for the QUADS physical type.
-
-    Args:
-        RDFLibQuadsBaseAdapter (RDFLibAdapter): base quads adapter
-            (shared with graphs physical type)
-
-    """
-
-    @override
-    def quad(self, terms: Iterable[Any]) -> Quad:
-        return tuple.__new__(Quad, terms)
-
-
-class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
-    """
-    Extension of RDFLibQuadsBaseAdapter for the GRAPHS physical type.
-
-    Notes: introduces graph start/end, checks if graph exists.
-
-    Args:
-        RDFLibQuadsBaseAdapter (RDFLibAdapter): base adapter for quads management.
-
-    Raises:
-        JellyConformanceError: if no graph_start was encountered
-
-    """
-
-    _graph_id: str | None
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-        self._graph_id = None
-
-    @property
-    def graph(self) -> None:
-        if self._graph_id is None:
-            msg = "new graph was not started"
-            raise JellyConformanceError(msg)
-
-    @override
-    def graph_start(self, graph_id: str) -> None:
-        self._graph_id = graph_id
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*chain(terms, [self._graph_id]))
-
-    @override
-    def graph_end(self) -> None:
-        self._graph_id = None
 
 
 def parse_triples_stream(
