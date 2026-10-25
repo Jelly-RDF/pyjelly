@@ -17,7 +17,7 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 ### Supported stream types
 
-pyjelly supports all [physical stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}): `TRIPLES`, `QUADS` and `GRAPHS`.
+pyjelly supports all [physical stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}): `TRIPLES`, `QUADS` and `GRAPHS` (read-only).
 
 See the full [stream type matrix]({{ proto_link("specification/serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
 
