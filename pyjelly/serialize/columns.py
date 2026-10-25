@@ -57,36 +57,6 @@ def _kind_of(term: EncodedTerm) -> int:
     return KIND_TRIPLE
 
 
-def _compress_ids(ids: list[int]) -> list[int]:
-    """
-    Return the prefix indices of a column's IRIs, as they are written.
-
-    If all are the same, it is written once (or not at all, if it is 0, no
-    prefix). Otherwise, 0 means "the same as the IRI before".
-    """
-    first = ids[0]
-    for i in range(1, len(ids)):
-        if ids[i] != first:
-            break
-    else:
-        return [first] if first else []
-    compressed = [first]
-    previous = first
-    for index in ids[1:]:
-        compressed.append(0 if index == previous else index)
-        previous = index
-    return compressed
-
-
-def _compress_kinds(kinds: list[int]) -> list[int]:
-    """Return the literal kinds of a column, written once if all are the same."""
-    first = kinds[0]
-    for kind in kinds:
-        if kind != first:
-            return kinds
-    return [first] if first else []
-
-
 class Column:
     """The cells of one statement position in the frame being built."""
 
@@ -109,14 +79,21 @@ class Column:
         # in a byte, from the lowest bits
         self.kinds_used = 0
         self.kinds: list[int] | None = None
-        # IRIs: name indices (0 if the previous one + 1) and prefix indices
+        # IRIs: name indices (0 if the previous one + 1) and prefix indices (0 if
+        # the same as the previous one). If all prefix indices are the same, the
+        # first is written alone.
         self.name_ids: list[int] = []
         self.prefix_ids: list[int] = []
         self.last_name_id = 0
+        self.last_prefix_id = -1
+        self.prefix_ids_differ = False
         # Literals: lexical forms and literal kinds, and the language tags they
-        # refer to, with their base directions
+        # refer to, with their base directions. If all literal kinds are the same,
+        # the first is written alone.
         self.lex_values: list[str] = []
         self.literal_kinds: list[int] = []
+        self.last_literal_kind = -1
+        self.literal_kinds_differ = False
         self.langtags: list[str] = []
         self.langtag_directions: list[int] = []
         # Index of each language tag in langtags, one dict per base direction
@@ -141,24 +118,39 @@ class Column:
                     kinds.append(kind)
         self.value_count += 1
         if kind == KIND_IRI:
-            name_id = term.second
-            self.name_ids.append(0 if name_id == self.last_name_id + 1 else name_id)
-            self.last_name_id = name_id
-            self.prefix_ids.append(term.first)
+            self._add_iri(term.first, term.second)
         elif kind == KIND_LITERAL:
-            self.lex_values.append(term.text)
-            if term.lang:
-                literal_kind = 2 * self._langtag_index(term.lang, term.direction) + 2
-            elif term.first:
-                literal_kind = 2 * term.first - 1
-            else:
-                literal_kind = 0
-            self.literal_kinds.append(literal_kind)
+            self._add_literal(term)
         elif kind == KIND_BNODE:
             self.bnodes.append(term.text)
         else:
             assert term.triple_term is not None
             self.triple_terms.append(term.triple_term)
+
+    def _add_iri(self, prefix_id: int, name_id: int) -> None:
+        self.name_ids.append(0 if name_id == self.last_name_id + 1 else name_id)
+        self.last_name_id = name_id
+        if prefix_id == self.last_prefix_id:
+            self.prefix_ids.append(0)
+        else:
+            if self.last_prefix_id >= 0:
+                self.prefix_ids_differ = True
+            self.prefix_ids.append(prefix_id)
+            self.last_prefix_id = prefix_id
+
+    def _add_literal(self, term: EncodedTerm) -> None:
+        self.lex_values.append(term.text)
+        if term.lang:
+            literal_kind = 2 * self._langtag_index(term.lang, term.direction) + 2
+        elif term.first:
+            literal_kind = 2 * term.first - 1
+        else:
+            literal_kind = 0
+        if literal_kind != self.last_literal_kind:
+            if self.last_literal_kind >= 0:
+                self.literal_kinds_differ = True
+            self.last_literal_kind = literal_kind
+        self.literal_kinds.append(literal_kind)
 
     def _new_kind(self, kind: int, used: int) -> None:
         """Note the first value of a type, after values of other types."""
@@ -221,15 +213,9 @@ class Column:
         if self.layouts:
             column.layouts.extend(self.layouts)
         if self.name_ids:
-            column.name_ids.extend(self.name_ids)
-            column.prefix_ids.extend(_compress_ids(self.prefix_ids))
+            self._write_iris(column)
         if self.lex_values:
-            column.lex_values.extend(self.lex_values)
-            column.literal_kinds.extend(_compress_kinds(self.literal_kinds))
-        if self.langtags:
-            column.langtags.extend(self.langtags)
-            if any(self.langtag_directions):
-                column.langtag_directions.extend(self.langtag_directions)
+            self._write_literals(column)
         if self.bnodes:
             column.bnodes.extend(self.bnodes)
         if self.triple_terms:
@@ -237,6 +223,24 @@ class Column:
         if self.kinds is not None:
             column.kinds = bytes(self.kinds)
         self.clear()
+
+    def _write_iris(self, column: jelly.RdfColumn) -> None:
+        column.name_ids.extend(self.name_ids)
+        if self.prefix_ids_differ:
+            column.prefix_ids.extend(self.prefix_ids)
+        elif self.last_prefix_id:
+            column.prefix_ids.append(self.last_prefix_id)
+
+    def _write_literals(self, column: jelly.RdfColumn) -> None:
+        column.lex_values.extend(self.lex_values)
+        if self.literal_kinds_differ:
+            column.literal_kinds.extend(self.literal_kinds)
+        elif self.last_literal_kind:
+            column.literal_kinds.append(self.last_literal_kind)
+        if self.langtags:
+            column.langtags.extend(self.langtags)
+            if any(self.langtag_directions):
+                column.langtag_directions.extend(self.langtag_directions)
 
     def clear(self) -> None:
         self.run_term = None
@@ -250,8 +254,12 @@ class Column:
         self.name_ids = []
         self.prefix_ids = []
         self.last_name_id = 0
+        self.last_prefix_id = -1
+        self.prefix_ids_differ = False
         self.lex_values = []
         self.literal_kinds = []
+        self.last_literal_kind = -1
+        self.literal_kinds_differ = False
         if self.langtags:
             self.langtags = []
             self.langtag_directions = []
