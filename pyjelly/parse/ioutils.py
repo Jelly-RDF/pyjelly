@@ -155,13 +155,6 @@ def delimited_jelly_hint(header: bytes) -> bool:
     first byte. Given fewer bytes than the check needs, the stream is reported
     as non-delimited.
 
-    In rare cases the answer is wrong: a non-delimited frame that does not
-    start with the stream options can by chance also be a valid delimited
-    stream. Frames written by pyjelly never have this problem, as their fields
-    come in field-number order, so the first frame of a stream starts with the
-    stream options. If you write frames some other way, and you know whether
-    they are delimited, do not rely on the detection.
-
     Args:
         header (bytes): first bytes of the stream
 
