@@ -11,6 +11,7 @@ memory needed does not depend on the row count that the frame declares.
 from __future__ import annotations
 
 from collections.abc import Iterator
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Final
 
 from pyjelly import jelly
@@ -26,13 +27,13 @@ if TYPE_CHECKING:
 
 
 class MessageEnd:
-    """The end of an RDF Message, among the rows that Decoder.iter_rows() yields."""
+    """The end of an RDF Message, among the rows of Decoder.iter_rows()."""
 
     def __repr__(self) -> str:
         return "MESSAGE_END"
 
 
-#: Yielded by Decoder.iter_rows() at the end of each RDF Message
+#: Among the rows of Decoder.iter_rows(), at the end of each RDF Message
 MESSAGE_END: Final = MessageEnd()
 
 #: The most statements a frame can have
@@ -212,7 +213,13 @@ class ColumnDecoder:
         self.rows_in_message = 0
 
     def iter_frame(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
-        """Yield the namespace declarations and statements of a frame."""
+        """
+        Return the namespace declarations and statements of a frame.
+
+        The stream options and the lookup entries of the frame are read right away,
+        the statements as they are iterated.
+        """
+        message_ended = False
         rows = frame.rows
         if rows:
             if len(rows) > 1 or _ROW_WHICH_ONEOF(rows[0], "row") != "options":
@@ -222,15 +229,18 @@ class ColumnDecoder:
                 )
                 raise JellyConformanceError(msg)
             if self.options_read:
-                if self.restate_options(rows[0].options):
-                    yield MESSAGE_END
+                message_ended = self.restate_options(rows[0].options)
             else:
                 self.options_read = True
-        if _FRAME_HAS_FIELD(frame, "columns"):
-            if not self.options_read:
-                msg = "the stream has statements before the stream options"
-                raise JellyConformanceError(msg)
-            yield from self.iter_batch(frame.columns)
+        if not _FRAME_HAS_FIELD(frame, "columns"):
+            return iter((MESSAGE_END,) if message_ended else ())
+        if not self.options_read:
+            msg = "the stream has statements before the stream options"
+            raise JellyConformanceError(msg)
+        batch_rows = self.iter_batch(frame.columns)
+        if message_ended:
+            return chain((MESSAGE_END,), batch_rows)
+        return batch_rows
 
     def restate_options(self, options: jelly.RdfStreamOptions) -> bool:
         """
@@ -264,6 +274,7 @@ class ColumnDecoder:
             yield MESSAGE_END
 
     def iter_batch(self, batch: jelly.RdfColumnBatch) -> Iterator[Any]:
+        """Return the namespace declarations and statements of a batch."""
         rows = batch.row_count
         if rows > MAX_ROWS:
             msg = f"a frame can have at most {MAX_ROWS} statements, not {rows}"
@@ -271,8 +282,7 @@ class ColumnDecoder:
         lengths = self.message_lengths(batch, rows)
         # All lookup entries come first, so that the columns can refer to them
         self.ingest_entries(batch)
-        if batch.namespaces:
-            yield from self.namespaces(batch)
+        namespaces = self.namespaces(batch) if batch.namespaces else []
         has_graphs = _BATCH_HAS_FIELD(batch, "graphs")
         if has_graphs and not self.quads:
             msg = "a stream of triples cannot have a graphs column"
@@ -289,17 +299,16 @@ class ColumnDecoder:
                 graphs.add(None, rows)
             graphs.set_unbound(self.decoder.adapter.default_graph())
 
-        # The statements, with an RDF Message ending at each boundary
-        start = 0
-        for length in lengths:
-            yield from self.statements(length, subjects, predicates, objects, graphs)
-            yield MESSAGE_END
-            start += length
-        yield from self.statements(rows - start, subjects, predicates, objects, graphs)
+        # The statements of each RDF Message that ends in the batch, and the rest
+        counts = [*lengths, rows - sum(lengths)]
         if lengths:
-            self.rows_in_message = rows - start
+            self.rows_in_message = counts[-1]
         else:
             self.rows_in_message += rows
+        statements = self.statements(counts, subjects, predicates, objects, graphs)
+        if namespaces:
+            return chain(namespaces, statements)
+        return statements
 
     def message_lengths(self, batch: jelly.RdfColumnBatch, rows: int) -> list[int]:
         """Return the lengths of the RDF Messages that end in a batch."""
@@ -327,38 +336,51 @@ class ColumnDecoder:
                     raise JellyConformanceError(msg)
         _apply_entries(batch.datatypes, decoder.datatypes)
 
-    def namespaces(self, batch: jelly.RdfColumnBatch) -> Iterator[Any]:
+    def namespaces(self, batch: jelly.RdfColumnBatch) -> list[Any]:
         adapter = self.decoder.adapter
         # The IRIs of the declarations are a sequence of their own
         iris = IriSequence(self.decoder)
+        declarations = []
         for declaration in batch.namespaces:
             if not _DECLARATION_HAS_FIELD(declaration, "value"):
                 msg = f"the namespace declaration {declaration.name!r} has no IRI"
                 raise JellyConformanceError(msg)
-            yield adapter.namespace_declaration(
-                declaration.name, iris.term(declaration.value)
+            declarations.append(
+                adapter.namespace_declaration(
+                    declaration.name, iris.term(declaration.value)
+                )
             )
+        return declarations
 
     def statements(
         self,
-        count: int,
+        counts: list[int],
         subjects: _Runs,
         predicates: _Runs,
         objects: _Runs,
         graphs: _Runs | None,
     ) -> Iterator[Any]:
-        """Yield the next statements, from the next cells of the columns."""
+        """Yield the statements, `counts` at a time, with MESSAGE_END in between."""
         adapter = self.decoder.adapter
-        if graphs is None:
-            for _ in range(count):
-                yield adapter.triple(
-                    (subjects.next(), predicates.next(), objects.next())
-                )
-        else:
-            for _ in range(count):
-                yield adapter.quad(
-                    (subjects.next(), predicates.next(), objects.next(), graphs.next())
-                )
+        last = len(counts) - 1
+        for i, count in enumerate(counts):
+            if graphs is None:
+                for _ in range(count):
+                    yield adapter.triple(
+                        (subjects.next(), predicates.next(), objects.next())
+                    )
+            else:
+                for _ in range(count):
+                    yield adapter.quad(
+                        (
+                            subjects.next(),
+                            predicates.next(),
+                            objects.next(),
+                            graphs.next(),
+                        )
+                    )
+            if i < last:
+                yield MESSAGE_END
 
     def runs(
         self, column: jelly.RdfColumn, rows: int, allowed: int, position: str
