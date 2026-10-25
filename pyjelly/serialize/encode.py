@@ -53,6 +53,17 @@ class TermEncoder:
         self.prefixes = LookupEncoder(lookup_size=lookup_preset.max_prefixes)
         self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
 
+    def new_epoch(self) -> None:
+        """
+        Start encoding a new statement (or other row with terms).
+
+        Until the next epoch, the lookup entries it uses are not evicted: the row
+        still refers to them.
+        """
+        self.names.lookup.new_epoch()
+        self.prefixes.lookup.new_epoch()
+        self.datatypes.lookup.new_epoch()
+
     def encode_iri_indices(self, iri_string: str) -> tuple[Rows, int, int]:
         """
         Encode lookup indices for IRI.
@@ -306,6 +317,7 @@ def encode_triple(
         list[jelly.RdfStreamRow]: list of rows to add to the current flow.
 
     """
+    term_encoder.new_epoch()
     triple = jelly.RdfTriple()
     terms = iter(terms)
     rows = encode_spo(terms, term_encoder, repeated_terms, triple)
@@ -331,6 +343,7 @@ def encode_quad(
         list[jelly.RdfStreamRow]: list of messages to append to current flow.
 
     """
+    term_encoder.new_epoch()
     terms = iter(terms)
     quad = jelly.RdfQuad()
     rows = encode_spo(terms, term_encoder, repeated_terms, quad)
@@ -362,6 +375,7 @@ def encode_namespace_declaration(
         list[jelly.RdfStreamRow]: list of messages to append to current flow.
 
     """
+    term_encoder.new_epoch()
     iri = jelly.RdfIri()
     [*rows] = term_encoder.encode_iri(value, iri=iri)
     declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)

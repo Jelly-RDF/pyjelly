@@ -1,25 +1,34 @@
 from __future__ import annotations
 
-from collections import OrderedDict
 from dataclasses import dataclass
-from typing import final
+from typing import Final, final
 
 from mypy_extensions import mypyc_attr
+
+from pyjelly.errors import JellyConformanceError
+
+# epoch_start until the first epoch starts: no entry is pinned
+_NO_EPOCH: Final = 1 << 62
+
+# How many indices Lookup.victim() looks at when the next index in order is not cold
+_SAMPLES: Final = 4
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 @final
 class Lookup:
     """
-    Fixed-size 1-based string-to-index mapping with LRU eviction.
+    Fixed-size 1-based string-to-index mapping.
 
     - Assigns incrementing indices starting from 1.
-    - After reaching the maximum size, reuses the existing indices from evicting
-      the least-recently-used entries.
+    - When full, evicts entries in index order, skipping those used recently. This
+      way new entries mostly take the previous index + 1, which Jelly writes as 0,
+      making files smaller. The same strategy as in Jelly-JVM.
     - Index 0 is reserved for delta encoding in Jelly streams.
 
-    To check if a key exists, use `.move(key)` and catch `KeyError`.
-    If `KeyError` is raised, the key can be inserted with `.insert(key)`.
+    An entry is *cold* if it was not used in the last `max_size // 2` uses. An entry
+    is *pinned* if it was used in the current epoch (see `new_epoch()`): what is
+    being encoded still refers to it, so it must not be evicted.
 
     Parameters
     ----------
@@ -29,26 +38,90 @@ class Lookup:
     """
 
     def __init__(self, max_size: int) -> None:
-        self.data = OrderedDict[str, int]()
+        self.data: dict[str, int] = {}
         self.max_size = max_size
-        self._evicting = False
+        # By index, starting with an unused index 0: the key, and when the entry
+        # was last used or added, counted in uses of this lookup (`now`)
+        self.keys: list[str] = [""]
+        self.last_use: list[int] = [0]
+        self.now = 0
+        self.epoch_start = _NO_EPOCH
+        self.cold_age = max_size >> 1
+        # The index of the last entry that replaced an evicted one, 0 if none yet
+        self.last_evicted = 0
 
-    def make_last_to_evict(self, key: str) -> None:
-        self.data.move_to_end(key)
+    def new_epoch(self) -> None:
+        """Start a new epoch: only the entries used from now on are pinned."""
+        self.epoch_start = self.now
+
+    def use(self, key: str) -> int:
+        """Mark the entry as used, and return its index, or 0 if there is none."""
+        index = self.data.get(key, 0)
+        if index:
+            self.now += 1
+            self.last_use[index] = self.now
+        return index
 
     def insert(self, key: str) -> int:
         if not self.max_size:
             msg = "lookup is zero, cannot insert"
             raise IndexError(msg)
         assert key not in self.data, f"key {key!r} already present"
-        if self._evicting:
-            _, index = self.data.popitem(last=False)
-            self.data[key] = index
+        index = len(self.keys)
+        if index <= self.max_size:
+            # Not full yet: the next index
+            self.keys.append(key)
+            self.last_use.append(0)
         else:
-            index = len(self.data) + 1
-            self.data[key] = index
-            self._evicting = index == self.max_size
+            index = self.victim()
+            del self.data[self.keys[index]]
+            self.keys[index] = key
+            self.last_evicted = index
+        self.data[key] = index
+        self.now += 1
+        self.last_use[index] = self.now
         return index
+
+    def victim(self) -> int:
+        """
+        Return the index of the entry to evict from the full lookup.
+
+        That is the next index in order (after the last evicted one), if it is cold
+        and not pinned. Else, the least recently used one that is not pinned among
+        a few indices spread evenly over the table, starting with that next index.
+        The next eviction then goes on from the index picked, which is usually
+        among a run of other old entries.
+        """
+        size = self.max_size
+        last_use = self.last_use
+        epoch_start = self.epoch_start
+        index = self.last_evicted + 1 if 1 <= self.last_evicted < size else 1
+        last = last_use[index]
+        if self.now - last >= self.cold_age and last <= epoch_start:
+            return index
+        best = 0
+        best_last = _NO_EPOCH
+        step = max(1, size // _SAMPLES)
+        for _ in range(min(_SAMPLES, size)):
+            last = last_use[index]
+            if last < best_last and last <= epoch_start:
+                best = index
+                best_last = last
+            index += step
+            if index > size:
+                index -= size
+        if best:
+            return best
+        # The epoch pins every index sampled: the first index that it does not pin
+        for _ in range(size):
+            if last_use[index] <= epoch_start:
+                return index
+            index = 1 if index == size else index + 1
+        msg = (
+            f"a lookup of size {size} is too small to encode a single statement: "
+            "the statement uses every one of its entries"
+        )
+        raise JellyConformanceError(msg)
 
     def __repr__(self) -> str:
         max_size, data = self.max_size, self.data
@@ -80,7 +153,9 @@ class LookupEncoder:
 
     def encode_entry_index(self, key: str) -> int | None:
         """
-        Get or assign the index to use in an entry.
+        Get or assign the index to use in an entry, and mark the entry as used.
+
+        Call it once for every use of the key, before encode_*_term_index().
 
         Returns
         -------
@@ -94,19 +169,17 @@ class LookupEncoder:
         and should be emitted.
 
         """
-        try:
-            self.lookup.make_last_to_evict(key)
-            return None  # noqa: TRY300
-        except KeyError:
-            previous_index = self.last_assigned_index
-            index = self.lookup.insert(key)
-            self.last_assigned_index = index
-            if index == previous_index + 1:
-                return 0
-            return index
+        if self.lookup.use(key):
+            return None
+        previous_index = self.last_assigned_index
+        index = self.lookup.insert(key)
+        self.last_assigned_index = index
+        if index == previous_index + 1:
+            return 0
+        return index
 
     def encode_term_index(self, value: str) -> int:
-        self.lookup.make_last_to_evict(value)
+        # The entry was already marked as used by encode_entry_index()
         current_index = self.lookup.data[value]
         self.last_reused_index = current_index
         return current_index

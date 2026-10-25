@@ -1,6 +1,7 @@
 import pytest
 from inline_snapshot import snapshot
 
+from pyjelly.errors import JellyConformanceError
 from pyjelly.serialize.lookup import Lookup
 
 
@@ -66,58 +67,45 @@ def test_insert_asserts_fresh_key() -> None:
         lookup.insert("foo")
 
 
-def test_make_last_to_evict() -> None:
-    lookup = Lookup(3)
-    a = lookup.insert("a")
-    # evict order: a
+def test_evicts_in_index_order_skipping_recently_used() -> None:
+    lookup = Lookup(4)  # an entry is cold if not used in the last 2 uses
+    for key in "abcd":
+        lookup.insert(key)  # indices 1-4
 
-    b = lookup.insert("b")
-    # evict order: a, b
-
-    lookup.make_last_to_evict("a")
-    # b, a
-
-    c = lookup.insert("c")
-    # b, a, c
-
-    d = lookup.insert("d")  # evicts b
-    # a, c, d
-
-    assert d == b
-
-    e = lookup.insert("e")  # evicts a
-    # c, d, e
-
-    assert e == a
-
-    f = lookup.insert("f")  # evicts c
-    # d, e, f
-
-    assert f == c
-
-    lookup.make_last_to_evict("e")
-    # d, f, e
-
-    g = lookup.insert("g")  # evicts d
-    # f, e, g
-
-    assert g == d
-
-    h = lookup.insert("h")  # evicts f
-    # e, g, h
-
-    assert h == f
-
-    i = lookup.insert("i")  # evicts e
-    # g, h, i
-
-    assert i == e
+    # "a" (index 1) is next in order, but was just used: the least recently used
+    # one is taken instead
+    assert lookup.use("a") == 1
+    assert lookup.insert("e") == 2
+    # Then eviction goes on in order from there
+    assert lookup.insert("f") == 3
+    assert lookup.insert("g") == 4
+    assert lookup.data == {"a": 1, "e": 2, "f": 3, "g": 4}
 
 
-def test_make_last_to_evict_for_existing_key_raises() -> None:
-    lookup = Lookup(1)
-    with pytest.raises(KeyError, match="key1"):
-        lookup.make_last_to_evict("key1")
+def test_does_not_evict_entries_of_the_current_statement() -> None:
+    lookup = Lookup(2)
+    lookup.insert("a")
+    lookup.insert("b")
+
+    lookup.new_epoch()
+    lookup.use("a")  # pins "a"
+    assert lookup.insert("c") == 2  # evicts "b", not "a"
+    assert "a" in lookup.data
+
+    # Both entries are pinned now, so there's nothing to evict
+    with pytest.raises(JellyConformanceError, match="too small"):
+        lookup.insert("d")
+
+    # In the next statement, they can be evicted again
+    lookup.new_epoch()
+    assert lookup.insert("d") in (1, 2)
+
+
+def test_use_marks_and_returns_index() -> None:
+    lookup = Lookup(2)
+    assert lookup.use("a") == 0
+    lookup.insert("a")
+    assert lookup.use("a") == 1
 
 
 def test_lookup_repr() -> None:

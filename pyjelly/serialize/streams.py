@@ -281,6 +281,7 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
+        self.encoder.new_epoch()
         triple = jelly.RdfTriple()
         rows = self.encode_changed_spo(triple)
         rows.append(jelly.RdfStreamRow(triple=triple))
@@ -326,6 +327,7 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
+        self.encoder.new_epoch()
         quad = jelly.RdfQuad()
         rows = self.encode_changed_spo(quad)
         # The graph comes last, as in the parser
