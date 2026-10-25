@@ -108,47 +108,68 @@ def _kinds_mismatch(position: str, kind: int) -> JellyConformanceError:
 
 class _Runs:
     """
-    The runs of a column: the term of each run, and how many cells it takes.
+    The cells of a column, in runs.
 
-    First the runs are added, then the cells are read with next(), in order.
+    A run is values that take one cell each, one value in many cells, or unbound
+    cells. First the runs are added, then the cells are read with next(), in order.
     """
 
-    def __init__(self, rows: int, position: str) -> None:
+    def __init__(self, values: list[Any], rows: int, position: str) -> None:
+        self.values = values
         self.rows = rows
         self.position = position
+        # Of each run: the index in values of its first value if they take one
+        # cell each (else -1), the value in all its cells (None if unbound), and
+        # how many cells it has
+        self.starts: list[int] = []
         self.terms: list[Any] = []
         self.counts: list[int] = []
         self.cells = 0
-        # Reading: the next run, and the cells left of the current one
-        self.index = 0
+        # Reading: the next run, and in the current one, the cells left, the index
+        # of the next value (or -1), and the value in all cells
+        self.run = 0
         self.left = 0
+        self.position_in_values = -1
         self.term: Any = None
 
-    def add(self, term: Any, count: int) -> None:
-        """Add a run. Unbound cells have the term None."""
+    def _add(self, start: int, term: Any, count: int) -> None:
         self.cells += count
         if self.cells > self.rows:
             msg = f"the {self.position} column has more cells than the frame has rows"
             raise JellyConformanceError(msg)
+        self.starts.append(start)
         self.terms.append(term)
         self.counts.append(count)
 
-    def add_cells(self, terms: list[Any]) -> None:
-        """Add terms of one cell each."""
-        for term in terms:
-            self.add(term, 1)
+    def add(self, term: Any, count: int) -> None:
+        """Add a run of one value in many cells, or of unbound cells (None)."""
+        self._add(-1, term, count)
+
+    def add_values(self, start: int, count: int) -> None:
+        """Add a run of values that take one cell each, starting from values[start]."""
+        if count:
+            self._add(start, None, count)
 
     def set_unbound(self, term: Any) -> None:
         """Use a term for the unbound cells."""
-        self.terms = [term if t is None else t for t in self.terms]
+        self.terms = [
+            term if start < 0 and t is None else t
+            for start, t in zip(self.starts, self.terms, strict=True)
+        ]
 
     def next(self) -> Any:
         if not self.left:
-            self.term = self.terms[self.index]
-            self.left = self.counts[self.index]
-            self.index += 1
+            run = self.run
+            self.run = run + 1
+            self.left = self.counts[run]
+            self.position_in_values = self.starts[run]
+            self.term = self.terms[run]
         self.left -= 1
-        return self.term
+        index = self.position_in_values
+        if index < 0:
+            return self.term
+        self.position_in_values = index + 1
+        return self.values[index]
 
 
 class IriSequence:
@@ -264,7 +285,7 @@ class ColumnDecoder:
             if has_graphs:
                 graphs = self.runs(batch.graphs, rows, _RESOURCES, "graph")
             else:
-                graphs = _Runs(rows, "graph")
+                graphs = _Runs([], rows, "graph")
                 graphs.add(None, rows)
             graphs.set_unbound(self.decoder.adapter.default_graph())
 
@@ -345,8 +366,8 @@ class ColumnDecoder:
         """Decode a column into its runs, whose cells add up to the row count."""
         values = self.run_values(column, allowed, position)
         unbound_allowed = position == "graph"
-        layouts = column.layouts
-        runs = _Runs(rows, position)
+        layouts: list[int] = list(column.layouts)
+        runs = _Runs(values, rows, position)
         index = 0
         k = 0
         while k < len(layouts):
@@ -367,7 +388,7 @@ class ColumnDecoder:
                     f"corrupt layout of the {position} column: it skips past its values"
                 )
                 raise JellyConformanceError(msg)
-            runs.add_cells(values[index : index + skip])
+            runs.add_values(index, skip)
             index += skip
             if token & _UNBOUND:
                 if not unbound_allowed:
@@ -382,7 +403,7 @@ class ColumnDecoder:
                     "past its values"
                 )
                 raise JellyConformanceError(msg)
-        runs.add_cells(values[index:])
+        runs.add_values(index, len(values) - index)
         if runs.cells < rows:
             if not unbound_allowed:
                 raise _unbound(position)
