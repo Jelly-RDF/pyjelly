@@ -2,56 +2,276 @@ import io
 import os
 from collections.abc import Generator, Iterator
 from itertools import chain
-from typing import IO
+from typing import IO, Final, cast
 
+from google.protobuf.descriptor import Descriptor, FieldDescriptor
 from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.parse.decode import ParserOptions, options_from_frame
 
+# Protobuf wire types. Fields of any other type use a varint.
+_WIRE_VARINT: Final = 0
+_WIRE_FIXED64: Final = 1
+_WIRE_LENGTH_DELIMITED: Final = 2
+_WIRE_FIXED32: Final = 5
+
+_WIRE_TYPE_MASK: Final = 0b111
+_VARINT_CONTINUATION: Final = 0b1000_0000
+_VARINT_PAYLOAD: Final = 0b0111_1111
+# A protobuf varint is at most 5 bytes long when it encodes a length.
+_MAX_VARINT_SHIFT: Final = 35
+
+# Fields numbered above this need more than one byte for their tag.
+_MAX_SINGLE_BYTE_FIELD: Final = 15
+
+_WIRE_TYPES: Final = {
+    FieldDescriptor.TYPE_MESSAGE: _WIRE_LENGTH_DELIMITED,
+    FieldDescriptor.TYPE_STRING: _WIRE_LENGTH_DELIMITED,
+    FieldDescriptor.TYPE_BYTES: _WIRE_LENGTH_DELIMITED,
+    FieldDescriptor.TYPE_GROUP: _WIRE_LENGTH_DELIMITED,
+    FieldDescriptor.TYPE_DOUBLE: _WIRE_FIXED64,
+    FieldDescriptor.TYPE_FIXED64: _WIRE_FIXED64,
+    FieldDescriptor.TYPE_SFIXED64: _WIRE_FIXED64,
+    FieldDescriptor.TYPE_FLOAT: _WIRE_FIXED32,
+    FieldDescriptor.TYPE_FIXED32: _WIRE_FIXED32,
+    FieldDescriptor.TYPE_SFIXED32: _WIRE_FIXED32,
+}
+
+
+def single_byte_tags(descriptor: Descriptor) -> frozenset[int]:
+    """
+    Return the single-byte tags that a message's fields can have.
+
+    Only fields numbered 1 to 15 have a one-byte tag. A repeated scalar field
+    may be written packed or not, so both of its tags are returned.
+
+    Args:
+        descriptor (Descriptor): descriptor of the message
+
+    Returns:
+        frozenset[int]: tag bytes of the message's fields
+
+    """
+    tags = set()
+    for field in descriptor.fields:
+        if field.number > _MAX_SINGLE_BYTE_FIELD:
+            continue
+        tags.add((field.number << 3) | _WIRE_TYPES.get(field.type, _WIRE_VARINT))
+        if field.is_repeated:
+            tags.add((field.number << 3) | _WIRE_LENGTH_DELIMITED)
+    return frozenset(tags)
+
+
+FRAME_TAGS: Final = single_byte_tags(
+    cast("Descriptor", jelly.RdfStreamFrame.DESCRIPTOR)
+)
+"""Tag bytes a non-delimited frame can start with (currently 0x0A, 0x12, 0x7A)."""
+
+
+def hint_bytes_needed(first_byte: int) -> int:
+    """
+    Return how many bytes `delimited_jelly_hint` needs to decide.
+
+    Args:
+        first_byte (int): first byte of the stream
+
+    Returns:
+        int: number of bytes to read from the start of the stream, at most 128
+
+    >>> hint_bytes_needed(0x11)
+    1
+
+    >>> hint_bytes_needed(0x0A)
+    11
+
+    """
+    if first_byte in FRAME_TAGS:
+        return first_byte + 1
+    return 1
+
+
+def _is_frame_fields(data: bytes) -> bool:
+    """
+    Check whether `data` is exactly a sequence of fields of a stream frame.
+
+    Args:
+        data (bytes): candidate frame body
+
+    Returns:
+        bool: True if the bytes make up whole fields and nothing is left over
+
+    """
+    pos = 0
+    end = len(data)
+    while pos < end:
+        tag = data[pos]
+        pos += 1
+        if tag not in FRAME_TAGS:
+            return False
+        wire_type = tag & _WIRE_TYPE_MASK
+        if wire_type == _WIRE_VARINT:
+            while pos < end and data[pos] & _VARINT_CONTINUATION:
+                pos += 1
+            pos += 1
+        elif wire_type == _WIRE_FIXED64:
+            pos += 8
+        elif wire_type == _WIRE_FIXED32:
+            pos += 4
+        else:
+            # Length-delimited. The length must fit in what we have, so it is short.
+            length = 0
+            shift = 0
+            ended = False
+            while pos < end and shift < _MAX_VARINT_SHIFT:
+                byte = data[pos]
+                pos += 1
+                length |= (byte & _VARINT_PAYLOAD) << shift
+                shift += 7
+                if not byte & _VARINT_CONTINUATION:
+                    ended = True
+                    break
+            if not ended or length > end - pos:
+                return False
+            pos += length
+    return pos == end
+
 
 def delimited_jelly_hint(header: bytes) -> bool:
     """
-    Detect whether a Jelly file is delimited from its first 3 bytes.
+    Detect whether a Jelly stream is delimited, from its first bytes.
 
-    Truth table (notation: `0A` = `0x0A`, `NN` = `not 0x0A`, `??` = _don't care_):
+    A non-delimited stream is a single frame, so it starts with the tag of one
+    of the frame's fields -- any of them, because a writer may put the fields
+    in any order. A delimited stream starts with the size of its first frame.
+    So, if the first byte is not a frame tag, the stream is delimited.
+    Otherwise it may still be the size of a small first frame, of at most 127
+    bytes: the stream is then delimited if the bytes after it are exactly that
+    many bytes of frame fields.
 
-    | Byte 1 | Byte 2 | Byte 3 | Result                                   |
-    |--------|--------|--------|------------------------------------------|
-    | `NN`   |  `??`  |  `??`  | Delimited                                |
-    | `0A`   |  `NN`  |  `??`  | Non-delimited                            |
-    | `0A`   |  `0A`  |  `NN`  | Delimited (size = 10)                    |
-    | `0A`   |  `0A`  |  `0A`  | Non-delimited (stream options size = 10) |
+    Pass as much of the start of the stream as you have, up to 128 bytes --
+    `hint_bytes_needed` tells you how much is actually needed once you have the
+    first byte. Given fewer bytes than the check needs, the stream is reported
+    as non-delimited.
+
+    Args:
+        header (bytes): first bytes of the stream
+
+    Returns:
+        bool: True if the stream is delimited
+
+    An empty stream is an empty non-delimited frame:
+
+    >>> delimited_jelly_hint(b"")
+    False
+
+    0x11 is not a frame tag, so it is the size of the first frame:
+
+    >>> delimited_jelly_hint(bytes([0x11, 0x0A, 0x0F, 0x0A, 0x0D]))
+    True
+
+    A 10-byte frame holding one name entry, written non-delimited. It starts
+    with the tag of the rows field, and the 9 bytes after it are not a whole
+    frame of 10 bytes:
+
+    >>> frame = bytes([0x0A, 0x08, 0x4A, 0x06, 0x12, 0x04, 0x6E, 0x61, 0x6D, 0x65])
+    >>> delimited_jelly_hint(frame)
+    False
+
+    The same frame written delimited. Its size, 10, is also the tag of the rows
+    field, but the 10 bytes after it are exactly one frame's worth of fields:
+
+    >>> delimited_jelly_hint(bytes([0x0A]) + frame)
+    True
+
+    A stream of empty delimited frames is delimited too -- 0 is never a tag:
 
     >>> delimited_jelly_hint(bytes([0x00, 0x00, 0x00]))
     True
 
-    >>> delimited_jelly_hint(bytes([0x00, 0x00, 0x0A]))
-    True
+    Two bytes of garbage are not enough to tell, so they count as a frame:
 
-    >>> delimited_jelly_hint(bytes([0x00, 0x0A, 0x00]))
-    True
-
-    >>> delimited_jelly_hint(bytes([0x00, 0x0A, 0x0A]))
-    True
-
-    >>> delimited_jelly_hint(bytes([0x0A, 0x00, 0x00]))
+    >>> delimited_jelly_hint(bytes([0x12, 0x34]))
     False
 
-    >>> delimited_jelly_hint(bytes([0x0A, 0x00, 0x0A]))
-    False
-
-    >>> delimited_jelly_hint(bytes([0x0A, 0x0A, 0x00]))
-    True
-
-    >>> delimited_jelly_hint(bytes([0x0A, 0x0A, 0x0A]))
-    False
     """
-    magic = 0x0A
-    return len(header) >= 3 and (  # noqa: PLR2004
-        header[0] != magic or (header[1] == magic and header[2] != magic)
-    )
+    if not header:
+        return False
+    first = header[0]
+    if first not in FRAME_TAGS:
+        # Not a frame tag, so it is the size of the first frame. This includes
+        # 0, an empty frame: a stream of only empty frames is delimited too.
+        return True
+    if len(header) < first + 1:
+        return False
+    return _is_frame_fields(header[1 : first + 1])
+
+
+def _read_exactly(inp: IO[bytes], size: int) -> bytes:
+    """
+    Read `size` bytes, or fewer if the stream ends first.
+
+    Args:
+        inp (IO[bytes]): stream to read from
+        size (int): number of bytes wanted
+
+    Returns:
+        bytes: what was read
+
+    """
+    chunks = []
+    remaining = size
+    while remaining > 0:
+        chunk = inp.read(remaining)
+        if not chunk:
+            break
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def read_hint_header(inp: IO[bytes]) -> bytes:
+    """
+    Read just enough of the start of the stream to detect delimiting.
+
+    Reads one byte, and at most 128. Pass the result to `delimited_jelly_hint`.
+
+    Args:
+        inp (IO[bytes]): stream to read from
+
+    Returns:
+        bytes: bytes read from the start of the stream
+
+    """
+    header = inp.read(1)
+    if not header:
+        return header
+    remaining = hint_bytes_needed(header[0]) - 1
+    if remaining:
+        header += _read_exactly(inp, remaining)
+    return header
+
+
+class _StreamWithHeader:
+    """A stream that gives back `header` first, then the rest of `rest`."""
+
+    def __init__(self, header: bytes, rest: IO[bytes]) -> None:
+        self._header = header
+        self._rest = rest
+
+    def read(self, size: int = -1) -> bytes:
+        if not self._header:
+            return self._rest.read(size)
+        if size < 0:
+            data = self._header + self._rest.read()
+            self._header = b""
+            return data
+        taken = self._header[:size]
+        self._header = self._header[size:]
+        if len(taken) < size:
+            taken += self._rest.read(size - len(taken))
+        return taken
 
 
 def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
@@ -79,15 +299,17 @@ def get_options_and_frames(
             stream types, lookup presets and other stream options
 
     """
-    if not inp.seekable():
-        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
-        # it to determine if it's delimited.
-        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
-        inp = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
-        is_delimited = delimited_jelly_hint(inp.peek(3))
+    if inp.seekable():
+        header = read_hint_header(inp)
+        inp.seek(-len(header), os.SEEK_CUR)
     else:
-        is_delimited = delimited_jelly_hint(bytes_read := inp.read(3))
-        inp.seek(-len(bytes_read), os.SEEK_CUR)
+        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
+        # it and put the bytes we looked at back in front of it.
+        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
+        buffered = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
+        header = read_hint_header(buffered)
+        inp = _StreamWithHeader(header, buffered)  # type: ignore[assignment]
+    is_delimited = delimited_jelly_hint(header)
 
     if is_delimited:
         first_frame = None
