@@ -54,7 +54,7 @@ def load_from_jelly_manifest_cases(manifest_path: Path) -> list[FromJellyTestCas
     graph = Graph()
     graph.parse(manifest_path, format="turtle")
     manifest_dir = manifest_path.parent
-    base_uri_from_manifest = "https://w3id.org/jelly/dev/tests/rdf/from_jelly/"
+    base_uri_from_manifest = "https://w3id.org/jelly/dev/tests/rdf/v1_1/from_jelly/"
     test_cases = []
     test_type_map = {
         JELLYT.TestPositive: "positive",
