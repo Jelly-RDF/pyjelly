@@ -63,8 +63,12 @@ class GenericStatementSinkAdapter(Adapter):
         return Literal(lex, language, datatype)
 
     @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
+    def directional_literal(self, lex: str, language: str, direction: str) -> Literal:
+        return Literal(lex, language, None, direction)
+
+    @override
+    def namespace_declaration(self, name: str, iri: IRI) -> Prefix:
+        return Prefix(name, iri)
 
     @override
     def quoted_triple(self, terms: Iterable[Any]) -> Triple:

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pyjelly.errors import JellyAssertionError, JellyConformanceError
-from pyjelly.options import MAX_LOOKUP_SIZE
+from pyjelly.errors import JellyConformanceError
 
 
 @dataclass
@@ -24,9 +23,6 @@ class LookupDecoder:
     last_reused_index: int
 
     def __init__(self, *, lookup_size: int) -> None:
-        if lookup_size > MAX_LOOKUP_SIZE:
-            msg = f"lookup size cannot be larger than {MAX_LOOKUP_SIZE}"
-            raise JellyAssertionError(msg)
         self.lookup_size = lookup_size
         # A list, not a deque: indexing a deque walks through its blocks
         self.data: list[str | None] = [None] * lookup_size

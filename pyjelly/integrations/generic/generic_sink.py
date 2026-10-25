@@ -65,29 +65,44 @@ class Literal:
 
     Notes:
         Consists of: lexical form, and optional language tag and datatype.
-        All parts of literal are stored as strings.
+        A language-tagged string may also have a base direction, "ltr" or "rtl"
+        (RDF 1.2). All parts of literal are stored as strings.
 
     """
 
     def __init__(
-        self, lex: str, langtag: str | None = None, datatype: str | None = None
+        self,
+        lex: str,
+        langtag: str | None = None,
+        datatype: str | None = None,
+        direction: str | None = None,
     ) -> None:
         self._lex: str = lex
         self._langtag: str | None = langtag
         self._datatype: str | None = datatype
+        self._direction: str | None = direction
 
     def __str__(self) -> str:
+        lex = (
+            self._lex.replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n")
+            .replace("\r", "\\r")
+        )
         suffix = ""
         if self._langtag:
             suffix = f"@{self._langtag}"
+            if self._direction:
+                suffix += f"--{self._direction}"
         elif self._datatype:
             suffix = f"^^<{self._datatype}>"
-        return f'"{self._lex}"{suffix}'
+        return f'"{lex}"{suffix}'
 
     def __repr__(self) -> str:
+        direction = f", direction={self._direction!r}" if self._direction else ""
         return (
             f"Literal({self._lex!r}, langtag={self._langtag!r}, "
-            f"datatype={self._datatype!r})"
+            f"datatype={self._datatype!r}{direction})"
         )
 
     def __eq__(self, other: object) -> bool:
@@ -96,11 +111,12 @@ class Literal:
                 self._lex == other._lex
                 and self._langtag == other._langtag
                 and self._datatype == other._datatype
+                and self._direction == other._direction
             )
         return False
 
     def __hash__(self) -> int:
-        return hash((self._lex, self._langtag, self._datatype))
+        return hash((self._lex, self._langtag, self._datatype, self._direction))
 
 
 Node = Union[BlankNode, IRI, Literal, "Triple"]

@@ -9,7 +9,7 @@ from mypy_extensions import mypyc_attr
 from pyjelly import jelly, options
 from pyjelly.errors import JellyConformanceError
 from pyjelly.serialize.flows import FrameFlow, ManualFrameFlow
-from pyjelly.serialize.lookup import LookupEncoder
+from pyjelly.serialize.lookup import NO_BUDGET, LookupEncoder
 
 
 def split_iri(iri_string: str) -> tuple[str, str]:
@@ -58,14 +58,23 @@ TERM_LITERAL: Final = 3
 TERM_TRIPLE: Final = 4
 TERM_DEFAULT_GRAPH: Final = 5
 
+# Base directions of language-tagged strings, as RdfBaseDirection values
+_DIRECTIONS: Final = {
+    "ltr": jelly.RDF_BASE_DIRECTION_LTR,
+    "rtl": jelly.RDF_BASE_DIRECTION_RTL,
+}
+
+#: How deep triple terms can be nested in Jelly-RDF 1.2
+MAX_TRIPLE_TERM_DEPTH: Final = 32
+
 
 class EncodedTerm:
     """
     A term encoded for a statement, before it is written into the statement.
 
-    A statement is written in two steps: first its terms are encoded (adding rows
-    for new lookup entries to the frame), then the statement's row is added
-    after them and the terms are written into it. This way the row is filled in
+    A statement is written in two steps: first its terms are encoded (adding new
+    lookup entries to the frame), then the terms are written into the statement's
+    row (row layout) or columns (column layout). This way the row is filled in
     place, and never copied.
     """
 
@@ -80,8 +89,19 @@ class EncodedTerm:
         self.text = ""
         #: Literal: language tag, empty if none
         self.lang = ""
-        #: Quoted triple
+        #: Literal: base direction, as an RdfBaseDirection value, 0 if none
+        self.direction = 0
+        #: Quoted triple, in the row layout
         self.triple: jelly.RdfTriple | None = None
+        #: Triple term, in the column layout
+        self.triple_term: jelly.RdfTripleTerm | None = None
+
+
+def _budget(lookup: LookupEncoder, per_statement: int) -> int:
+    size = lookup.lookup.max_size
+    if not size:
+        return NO_BUDGET
+    return max(size - per_statement, 0)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -96,13 +116,29 @@ class TermEncoder:
         self.names = LookupEncoder(lookup_size=lookup_preset.max_names)
         self.prefixes = LookupEncoder(lookup_size=lookup_preset.max_prefixes)
         self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
-        # Where rows for new lookup entries go. A stream replaces it with its own.
+        # Where rows for new lookup entries go in the row layout. A stream replaces
+        # it with its own.
         self.flow: FrameFlow = ManualFrameFlow()
         self.iri_cache: dict[str, _CachedIri] = {}
         # Cleared when full, so that a long stream doesn't grow it without bound
         self.iri_cache_size = max(4 * lookup_preset.max_names, 1024)
         # The encoded subject, predicate, object and graph of the statement
         self.encoded = [EncodedTerm() for _ in range(4)]
+        # Set by streams of Jelly-RDF 1.2. Then IRIs are encoded with the indices of
+        # their entries, new entries are packed (see PackedEntries), and quoted
+        # triples are encoded as triple terms.
+        self.column_layout = False
+        # The RDF version that a Jelly-RDF 1.2 stream declares, which limits its terms
+        self.rdf_version: int = jelly.RDF_VERSION_UNSPECIFIED
+        # The IRI sequence of the triple terms of a frame (only the object column can
+        # have them): the indices of the last IRI. -1 makes the first IRI state its
+        # prefix.
+        self.triple_prefix_index = -1
+        self.triple_name_index = 0
+        # How deep the triple term being encoded is nested, and how many IRIs the
+        # outermost one has so far
+        self.triple_depth = 0
+        self.triple_iris = 0
 
     def same_term(self, a: object, b: object) -> bool:
         """
@@ -114,7 +150,7 @@ class TermEncoder:
 
     def new_epoch(self) -> None:
         """
-        Start encoding a new statement (or other row with terms).
+        Start encoding a new statement (or other row with terms) in the row layout.
 
         Until the next epoch, the lookup entries it uses are not evicted: the row
         still refers to them.
@@ -123,9 +159,41 @@ class TermEncoder:
         self.prefixes.lookup.new_epoch()
         self.datatypes.lookup.new_epoch()
 
-    def encode_iri_indices(self, iri_string: str) -> tuple[int, int]:
+    def new_frame(self, iris: int) -> None:
         """
-        Encode lookup indices for IRI, adding rows for new lookup entries.
+        Start encoding a new frame in the column layout.
+
+        The frame is one epoch of the lookups: all its entries must fit in them,
+        because they are all applied before its statements are read. So each lookup
+        gets a budget, which leaves room for one more statement (see has_room()).
+
+        Args:
+            iris (int): the most IRIs that one statement can have.
+
+        """
+        self.names.lookup.new_epoch(_budget(self.names, iris))
+        self.prefixes.lookup.new_epoch(_budget(self.prefixes, iris))
+        # Only the object can be a literal
+        self.datatypes.lookup.new_epoch(_budget(self.datatypes, 1))
+        self.triple_prefix_index = -1
+        self.triple_name_index = 0
+
+    def has_room(self) -> bool:
+        """Return whether one more statement fits in the frame, see new_frame()."""
+        return (
+            self.names.lookup.remaining >= 0
+            and self.prefixes.lookup.remaining >= 0
+            and self.datatypes.lookup.remaining >= 0
+        )
+
+    def reserve_iris(self, count: int) -> None:
+        """Take IRIs that later statements may need out of the frame's budget."""
+        self.names.lookup.remaining -= count
+        self.prefixes.lookup.remaining -= count
+
+    def iri_indices(self, iri_string: str) -> tuple[int, int]:
+        """
+        Return the indices of an IRI's prefix and name entries, adding new entries.
 
         Most IRIs repeat, so how an IRI splits into prefix and name, and the
         indices of their entries, are cached (see _CachedIri).
@@ -151,38 +219,78 @@ class TermEncoder:
         prefix_index = 0
         prefixes = self.prefixes
         if prefixes.lookup.max_size:
-            index = cached.prefix_index
-            if index and prefixes.lookup.keys[index] is cached.prefix:
-                prefixes.lookup.touch(index)
+            prefix_index = cached.prefix_index
+            if prefix_index and prefixes.lookup.keys[prefix_index] is cached.prefix:
+                prefixes.lookup.touch(prefix_index)
             else:
-                index, set_index = prefixes.encode_entry(cached.prefix)
-                if set_index >= 0:
-                    prefix_entry = self.flow.new_row().prefix
-                    prefix_entry.id = set_index
-                    prefix_entry.value = cached.prefix
-                cached.prefix_index = index
-                cached.prefix = prefixes.lookup.keys[index]
-            prefix_index = prefixes.prefix_index_to_write(
-                index, empty=not cached.prefix
-            )
+                prefix_index = self._new_prefix_index(cached)
 
         names = self.names
-        index = cached.name_index
-        if index and names.lookup.keys[index] is cached.name:
-            names.lookup.touch(index)
+        name_index = cached.name_index
+        if name_index and names.lookup.keys[name_index] is cached.name:
+            names.lookup.touch(name_index)
         else:
-            index, set_index = names.encode_entry(cached.name)
-            if set_index >= 0:
-                name_entry = self.flow.new_row().name
-                name_entry.id = set_index
-                name_entry.value = cached.name
-            cached.name_index = index
-            cached.name = names.lookup.keys[index]
-        return prefix_index, names.name_index_to_write(index)
+            name_index = self._new_name_index(cached)
+        return prefix_index, name_index
+
+    def _new_prefix_index(self, cached: _CachedIri) -> int:
+        """Find or add the entry of an IRI's prefix, which is not cached."""
+        prefixes = self.prefixes
+        index, set_index = prefixes.encode_entry(cached.prefix)
+        if set_index >= 0:
+            if self.column_layout:
+                prefixes.packed.add(index, cached.prefix)
+            else:
+                entry = self.flow.new_row().prefix
+                entry.id = set_index
+                entry.value = cached.prefix
+        cached.prefix_index = index
+        cached.prefix = prefixes.lookup.keys[index]
+        return index
+
+    def _new_name_index(self, cached: _CachedIri) -> int:
+        """Find or add the entry of an IRI's name, which is not cached."""
+        names = self.names
+        index, set_index = names.encode_entry(cached.name)
+        if set_index >= 0:
+            if self.column_layout:
+                names.packed.add(index, cached.name)
+            else:
+                entry = self.flow.new_row().name
+                entry.id = set_index
+                entry.value = cached.name
+        cached.name_index = index
+        cached.name = names.lookup.keys[index]
+        return index
+
+    def encode_iri_indices(self, iri_string: str) -> tuple[int, int]:
+        """
+        Encode lookup indices for IRI, as the row layout writes them.
+
+        The indices are relative to the IRI before (see RdfIri), so IRIs must be
+        encoded in the order they are written.
+
+        Args:
+            iri_string (str): full iri in string format.
+
+        Returns:
+            tuple[int, int]: indices in prefix and name tables.
+
+        """
+        prefix_index, name_index = self.iri_indices(iri_string)
+        prefixes = self.prefixes
+        if prefixes.lookup.max_size:
+            prefix_index = prefixes.prefix_index_to_write(
+                prefix_index, empty=not prefixes.lookup.keys[prefix_index]
+            )
+        return prefix_index, self.names.name_index_to_write(name_index)
 
     def encode_iri(self, iri_string: str, out: EncodedTerm) -> None:
-        """Encode iri into `out`, adding rows for new lookup entries."""
-        prefix_index, name_index = self.encode_iri_indices(iri_string)
+        """Encode iri into `out`, adding new lookup entries."""
+        if self.column_layout:
+            prefix_index, name_index = self.iri_indices(iri_string)
+        else:
+            prefix_index, name_index = self.encode_iri_indices(iri_string)
         out.kind = TERM_IRI
         out.first = prefix_index
         out.second = name_index
@@ -202,50 +310,88 @@ class TermEncoder:
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
+        direction: str | None = None,
         out: EncodedTerm,
     ) -> None:
         """
-        Encode literal into `out`, adding a row for a new datatype entry.
+        Encode literal into `out`, adding a new datatype entry.
 
         Args:
             lex (str): lexical form/literal value
             language (str | None, optional): langtag. Defaults to None.
             datatype (str | None, optional): data type if
             it is a typed literal. Defaults to None.
+            direction (str | None, optional): base direction of a language-tagged
+                string, "ltr" or "rtl". Defaults to None.
             out (EncodedTerm): where to put the encoded literal.
 
         Raises:
             JellyConformanceError: if datatype specified while
-                datatable is not used.
+                datatable is not used, or if the stream can't have the base
+                direction.
 
         """
-        datatype_id = 0
-
-        if datatype and datatype != options.STRING_DATATYPE_IRI:
-            if self.datatypes.lookup.max_size == 0:
-                msg = (
-                    f"can't encode literal with type {datatype}: "
-                    "datatype lookup cannot be used if disabled "
-                    "(its size was set to 0)"
-                )
-                raise JellyConformanceError(msg)
-            datatype_entry_id = self.datatypes.encode_entry_index(datatype)
-
-            if datatype_entry_id is not None:
-                entry = self.flow.new_row().datatype
-                entry.id = datatype_entry_id
-                entry.value = datatype
-
-            datatype_id = self.datatypes.encode_datatype_term_index(datatype)
-
+        datatype_index = 0
+        direction_value = 0
+        if language:
+            if direction:
+                direction_value = self.encode_direction(direction)
+        elif datatype and datatype != options.STRING_DATATYPE_IRI:
+            datatype_index = self.encode_datatype(datatype)
         out.kind = TERM_LITERAL
         out.text = lex
         out.lang = language or ""
-        out.first = datatype_id
+        out.first = datatype_index
+        out.direction = direction_value
+
+    def encode_direction(self, direction: str) -> int:
+        """Return the RdfBaseDirection value of a base direction."""
+        value = _DIRECTIONS.get(direction, 0)
+        if not value:
+            msg = f"unknown base direction: {direction!r}, expected 'ltr' or 'rtl'"
+            raise JellyConformanceError(msg)
+        if not self.column_layout:
+            msg = (
+                "literals with a base direction can only be written in Jelly-RDF 1.2 "
+                "(protocol version 3)"
+            )
+            raise JellyConformanceError(msg)
+        if self.rdf_version == jelly.RDF_VERSION_1_1:
+            msg = "the stream declares RDF 1.1, which has no base directions"
+            raise JellyConformanceError(msg)
+        return value
+
+    def encode_datatype(self, datatype: str) -> int:
+        """Return the index of a datatype, adding an entry if it's new."""
+        datatypes = self.datatypes
+        if datatypes.lookup.max_size == 0:
+            msg = (
+                f"can't encode literal with type {datatype}: "
+                "datatype lookup cannot be used if disabled "
+                "(its size was set to 0)"
+            )
+            raise JellyConformanceError(msg)
+        index, set_index = datatypes.encode_entry(datatype)
+        if set_index >= 0:
+            if not self.column_layout:
+                entry = self.flow.new_row().datatype
+                entry.id = set_index
+                entry.value = datatype
+            elif datatype in (
+                options.LANG_STRING_DATATYPE_IRI,
+                options.DIR_LANG_STRING_DATATYPE_IRI,
+            ):
+                msg = f"a literal with the datatype {datatype} must have a language tag"
+                raise JellyConformanceError(msg)
+            else:
+                datatypes.packed.add(index, datatype)
+        return index
 
     def encode_quoted_triple(self, terms: Iterable[object], out: EncodedTerm) -> None:
         """
-        Encode a quoted triple into `out`, adding rows for new lookup entries.
+        Encode a quoted triple into `out`, adding new lookup entries.
+
+        In the column layout, it is a triple term, see encode_triple_term().
 
         Notes:
             Although a triple, it is treated as a part of a statement.
@@ -256,6 +402,10 @@ class TermEncoder:
             out (EncodedTerm): where to put the encoded triple.
 
         """
+        if self.column_layout:
+            out.triple_term = self.encode_triple_term(terms)
+            out.kind = TERM_TRIPLE
+            return
         terms = iter(terms)
         triple = jelly.RdfTriple()
         for slot in range(3):
@@ -264,6 +414,81 @@ class TermEncoder:
             write_term(term, triple, slot)
         out.kind = TERM_TRIPLE
         out.triple = triple
+
+    def encode_triple_term(self, terms: Iterable[object]) -> jelly.RdfTripleTerm:
+        """
+        Encode a triple term of the column layout, adding new lookup entries.
+
+        Its IRIs are in the IRI sequence of the frame's triple terms, in the order
+        subject, predicate, object. `triple_iris` counts the IRIs of the outermost
+        triple term, nested ones included.
+
+        Args:
+            terms (Iterable[object]): the subject, predicate and object.
+
+        Returns:
+            jelly.RdfTripleTerm: the triple term.
+
+        """
+        depth = self.triple_depth
+        if not depth:
+            rdf_version = self.rdf_version
+            if rdf_version in (jelly.RDF_VERSION_1_1, jelly.RDF_VERSION_1_2_BASIC):
+                name = (
+                    "RDF 1.1"
+                    if rdf_version == jelly.RDF_VERSION_1_1
+                    else "RDF 1.2 Basic"
+                )
+                msg = f"the stream declares {name}, which has no triple terms"
+                raise JellyConformanceError(msg)
+            self.triple_iris = 0
+        elif depth >= MAX_TRIPLE_TERM_DEPTH:
+            msg = (
+                f"triple terms nested deeper than {MAX_TRIPLE_TERM_DEPTH} levels "
+                "are not supported"
+            )
+            raise JellyConformanceError(msg)
+        self.triple_depth = depth + 1
+        try:
+            triple = jelly.RdfTripleTerm()
+            terms = iter(terms)
+            term = EncodedTerm()
+            self.encode_spo(next(terms), term)
+            if term.kind == TERM_IRI:
+                self._triple_term_iri(term, triple.s_iri)
+            elif term.kind == TERM_BNODE:
+                triple.s_bnode = term.text
+            else:
+                msg = "the subject of a triple term must be an IRI or a blank node"
+                raise JellyConformanceError(msg)
+            self.encode_spo(next(terms), term)
+            if term.kind != TERM_IRI:
+                msg = "the predicate of a triple term must be an IRI"
+                raise JellyConformanceError(msg)
+            self._triple_term_iri(term, triple.p_iri)
+            self.encode_spo(next(terms), term)
+            if term.kind == TERM_IRI:
+                self._triple_term_iri(term, triple.o_iri)
+            elif term.kind == TERM_BNODE:
+                triple.o_bnode = term.text
+            elif term.kind == TERM_LITERAL:
+                _write_literal(term, triple.o_literal)
+            else:
+                assert term.triple_term is not None
+                triple.o_triple_term.CopyFrom(term.triple_term)
+        finally:
+            self.triple_depth = depth
+        return triple
+
+    def _triple_term_iri(self, term: EncodedTerm, iri: jelly.RdfIri) -> None:
+        prefix_index = term.first
+        name_index = term.second
+        # Assigning even 0 marks the IRI as set
+        iri.prefix_id = 0 if prefix_index == self.triple_prefix_index else prefix_index
+        iri.name_id = 0 if name_index == self.triple_name_index + 1 else name_index
+        self.triple_prefix_index = prefix_index
+        self.triple_name_index = name_index
+        self.triple_iris += 1
 
     def encode_spo(self, term: object, out: EncodedTerm) -> None:
         """Encode a subject, predicate or object into `out`."""
@@ -320,7 +545,9 @@ def _write_literal(term: EncodedTerm, literal: jelly.RdfLiteral) -> None:
     literal.lex = term.text
     if term.lang:
         literal.langtag = term.lang
-    if term.first:
+        if term.direction:
+            literal.direction = term.direction  # type: ignore[assignment]
+    elif term.first:
         literal.datatype = term.first
 
 
@@ -470,14 +697,25 @@ def encode_options(
         jelly.RdfStreamOptions: encoded stream options
 
     """
+    if options.is_row_layout(params.version):
+        return jelly.RdfStreamOptions(
+            stream_name=params.stream_name,
+            physical_type=stream_types.physical_type,
+            generalized_statements=params.generalized_statements,
+            rdf_star=params.rdf_star,
+            max_name_table_size=lookup_preset.max_names,
+            max_prefix_table_size=lookup_preset.max_prefixes,
+            max_datatype_table_size=lookup_preset.max_datatypes,
+            logical_type=stream_types.logical_type,
+            version=params.version,
+        )
     return jelly.RdfStreamOptions(
         stream_name=params.stream_name,
         physical_type=stream_types.physical_type,
-        generalized_statements=params.generalized_statements,
-        rdf_star=params.rdf_star,
+        stream_type=options.stream_type_for(params, stream_types.logical_type),
+        rdf_version=params.rdf_version,
         max_name_table_size=lookup_preset.max_names,
         max_prefix_table_size=lookup_preset.max_prefixes,
         max_datatype_table_size=lookup_preset.max_datatypes,
-        logical_type=stream_types.logical_type,
         version=params.version,
     )

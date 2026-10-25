@@ -1,12 +1,16 @@
 import importlib
 from pathlib import Path
 
+import pytest
 from rdflib import Graph, Literal, Namespace, URIRef
+
+from pyjelly.options import VERSION_1_1, VERSION_1_2
 
 rdflib_serialize = importlib.import_module("pyjelly.integrations.rdflib.serialize")
 
 
-def test_rdflib_roundtrip_keeps_prefixes(tmp_path: Path) -> None:
+@pytest.mark.parametrize("version", [VERSION_1_1, VERSION_1_2])
+def test_rdflib_roundtrip_keeps_prefixes(tmp_path: Path, version: int) -> None:
     g = Graph()
     ex_ns = Namespace("http://example.org/")
     g.namespace_manager.bind("ex", ex_ns)
@@ -17,6 +21,7 @@ def test_rdflib_roundtrip_keeps_prefixes(tmp_path: Path) -> None:
             generalized_statements=False,
             rdf_star=False,
             namespace_declarations=True,
+            version=version,
         )
     )
 

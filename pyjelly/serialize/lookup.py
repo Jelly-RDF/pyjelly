@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, final
+from typing import Any, Final, final
 
 from mypy_extensions import mypyc_attr
 
 from pyjelly.errors import JellyConformanceError
 
-# epoch_start until the first epoch starts: no entry is pinned
-_NO_EPOCH: Final = 1 << 62
+# epoch_start until the first epoch starts: no entry is pinned. Like NO_BUDGET, far
+# more than any count of uses, but still a short int for mypyc: larger ints are
+# Python objects, slow to compute with
+_NO_EPOCH: Final = 1 << 60
+# The budget of an epoch that may use any number of entries
+NO_BUDGET: Final = 1 << 60
 
 # How many indices Lookup.victim() looks at when the next index in order is not cold
 _SAMPLES: Final = 4
@@ -30,6 +34,10 @@ class Lookup:
     is *pinned* if it was used in the current epoch (see `new_epoch()`): what is
     being encoded still refers to it, so it must not be evicted.
 
+    An epoch may have a budget: how many entries it may use. `remaining` counts
+    down for every entry the epoch uses for the first time, and is negative once
+    the epoch went over its budget.
+
     Parameters
     ----------
     max_size
@@ -46,25 +54,33 @@ class Lookup:
         self.last_use: list[int] = [0]
         self.now = 0
         self.epoch_start = _NO_EPOCH
+        self.remaining = NO_BUDGET
         self.cold_age = max_size >> 1
         # The index of the last entry that replaced an evicted one, 0 if none yet
         self.last_evicted = 0
 
-    def new_epoch(self) -> None:
+    def new_epoch(self, budget: int = NO_BUDGET) -> None:
         """Start a new epoch: only the entries used from now on are pinned."""
         self.epoch_start = self.now
+        self.remaining = budget
 
     def touch(self, index: int) -> None:
         """Mark the entry at the index as used."""
+        last_use = self.last_use
+        if last_use[index] <= self.epoch_start:
+            self.remaining -= 1
         self.now += 1
-        self.last_use[index] = self.now
+        last_use[index] = self.now
 
     def use(self, key: str) -> int:
         """Mark the entry as used, and return its index, or 0 if there is none."""
         index = self.data.get(key, 0)
         if index:
+            last_use = self.last_use
+            if last_use[index] <= self.epoch_start:
+                self.remaining -= 1
             self.now += 1
-            self.last_use[index] = self.now
+            last_use[index] = self.now
         return index
 
     def insert(self, key: str) -> int:
@@ -82,6 +98,7 @@ class Lookup:
             self.keys[index] = key
             self.last_evicted = index
         self.data[key] = index
+        self.remaining -= 1
         self.now += 1
         self.last_use[index] = self.now
         return index
@@ -132,6 +149,44 @@ class Lookup:
         return f"Lookup({max_size=!r}, {data=!r})"
 
 
+class PackedEntries:
+    """
+    The new entries of a lookup for the next frame of a Jelly-RDF 1.2 stream.
+
+    Entries with consecutive indices are packed into one RdfLookupEntryPacked.
+    """
+
+    def __init__(self) -> None:
+        # The first index of each packed entry (0 if it follows the entry before),
+        # and the values of each
+        self.ids: list[int] = []
+        self.values: list[list[str]] = []
+        # The index of the last entry added, in this frame or an earlier one
+        self.last_index = 0
+
+    def add(self, index: int, value: str) -> None:
+        values = self.values
+        if index == self.last_index + 1:
+            if values:
+                values[-1].append(value)
+            else:
+                self.ids.append(0)
+                values.append([value])
+        else:
+            self.ids.append(index)
+            values.append([value])
+        self.last_index = index
+
+    def write(self, out: Any) -> None:
+        """Add the packed entries to a repeated RdfLookupEntryPacked field."""
+        for index, values in zip(self.ids, self.values, strict=True):
+            entry = out.add()
+            entry.id = index
+            entry.values.extend(values)
+        self.ids.clear()
+        self.values.clear()
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 @dataclass
 class LookupEncoder:
@@ -154,6 +209,7 @@ class LookupEncoder:
         self.lookup = Lookup(max_size=lookup_size)
         self.last_assigned_index = 0
         self.last_reused_index = 0
+        self.packed = PackedEntries()
 
     def encode_entry_index(self, key: str) -> int | None:
         """

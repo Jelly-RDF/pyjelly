@@ -56,12 +56,10 @@ def test_last_assigned_index() -> None:
 
     assert encoder.last_assigned_index == 0
 
-    passthrough = object()
-
-    with patch.object(encoder.lookup, "insert", return_value=passthrough):
+    with patch.object(encoder.lookup, "insert", return_value=7):
         encoder.encode_entry_index("foo")
 
-        assert encoder.last_assigned_index is passthrough
+        assert encoder.last_assigned_index == 7
 
 
 def test_last_reused_index() -> None:
