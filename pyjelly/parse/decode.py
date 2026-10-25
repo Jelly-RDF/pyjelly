@@ -12,7 +12,6 @@ from pyjelly import jelly
 from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.lookup import LookupDecoder
 
-RowHandler = Callable[[Any], Any | None]
 TermHandler = Callable[[Any], Any | None]
 RdfStreamOptions = jelly.RdfStreamOptions
 
@@ -191,18 +190,6 @@ class _CachedIri:
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class Decoder:
-    _ROW_HANDLER_NAMES: ClassVar[Mapping[type[Any], str]] = {
-        jelly.RdfStreamOptions: "validate_stream_options",
-        jelly.RdfPrefixEntry: "ingest_prefix_entry",
-        jelly.RdfNameEntry: "ingest_name_entry",
-        jelly.RdfDatatypeEntry: "ingest_datatype_entry",
-        jelly.RdfTriple: "decode_triple",
-        jelly.RdfQuad: "decode_quad",
-        jelly.RdfGraphStart: "decode_graph_start",
-        jelly.RdfGraphEnd: "decode_graph_end",
-        jelly.RdfNamespaceDeclaration: "decode_namespace_declaration",
-    }
-
     _TERM_HANDLER_NAMES: ClassVar[Mapping[type[Any], str]] = {
         jelly.RdfIri: "decode_iri",
         str: "decode_bnode",
@@ -244,9 +231,6 @@ class Decoder:
         # making one is often slow (rdflib parses the value)
         self.literal_cache: dict[tuple[str, str | None, str | None], Any] = {}
 
-        self.row_handlers: dict[type[Any], RowHandler] = {
-            t: getattr(self, name) for t, name in self._ROW_HANDLER_NAMES.items()
-        }
         self.term_handlers: dict[type[Any], TermHandler] = {
             t: getattr(self, name) for t, name in self._TERM_HANDLER_NAMES.items()
         }
@@ -265,38 +249,35 @@ class Decoder:
             Iterator[Any]: decoded rows
 
         """
+        # Rows are told apart by the name of their field, most common ones first
         for row_owner in frame.rows:
-            row = getattr(row_owner, _ROW_WHICH_ONEOF(row_owner, "row"))
-            decoded_row = self.decode_row(row)
-            if isinstance(
-                row, (jelly.RdfTriple, jelly.RdfQuad, jelly.RdfNamespaceDeclaration)
-            ):
-                yield decoded_row
+            kind: str | None = _ROW_WHICH_ONEOF(row_owner, "row")
+            if kind == "triple":
+                yield self.decode_triple(row_owner.triple)
+            elif kind == "quad":
+                yield self.decode_quad(row_owner.quad)
+            elif kind == "name":
+                self.ingest_name_entry(row_owner.name)
+            elif kind == "prefix":
+                self.ingest_prefix_entry(row_owner.prefix)
+            elif kind == "datatype":
+                self.ingest_datatype_entry(row_owner.datatype)
+            elif kind == "namespace":
+                yield self.decode_namespace_declaration(row_owner.namespace)
+            else:
+                self.decode_other_row(row_owner, kind)
 
-    def decode_row(self, row: Any) -> Any | None:
-        """
-        Decode a row based on its type.
-
-        Notes: uses custom adapters to decode triples/quads, namespace declarations,
-               graph start/end.
-
-        Args:
-            row (Any): protobuf row message
-
-        Raises:
-            TypeError: raises error if this type of protobuf message does not have
-                       a respective handler
-
-        Returns:
-            Any | None: decoded row -
-                        result from calling decode_row (row type appropriate handler)
-
-        """
-        handler = self.row_handlers.get(type(row))
-        if handler is None:
-            msg = f"decoder not implemented for {type(row)}"
-            raise TypeError(msg) from None
-        return handler(row)
+    def decode_other_row(self, row_owner: jelly.RdfStreamRow, kind: str | None) -> None:
+        """Decode a row that gives nothing to yield: graph start or end, options."""
+        if kind == "graph_start":
+            self.decode_graph_start(row_owner.graph_start)
+        elif kind == "graph_end":
+            self.decode_graph_end(row_owner.graph_end)
+        elif kind == "options":
+            self.validate_stream_options(row_owner.options)
+        else:
+            msg = f"decoder not implemented for row {kind}"
+            raise TypeError(msg)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
         stream_types, lookup_preset, params = self.options

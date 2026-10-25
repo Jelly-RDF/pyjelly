@@ -80,3 +80,9 @@ def test_repeated_terms_must_be_set_first() -> None:
         first[1],
         IRI("http://a/x"),
     )
+
+
+def test_empty_row_is_an_error() -> None:
+    frame = jelly.RdfStreamFrame(rows=[jelly.RdfStreamRow()])
+    with pytest.raises(TypeError, match="decoder not implemented for row None"):
+        list(make_decoder().iter_rows(frame))
