@@ -92,9 +92,12 @@ class Stream:
             else:
                 flow_class = self.default_delimited_flow_class
 
-            if self.options.logical_type in (
-                jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            if issubclass(flow_class, BoundedFrameFlow) and (
+                self.options.logical_type
+                in (
+                    jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+                    jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+                )
             ):
                 flow = flow_class(
                     logical_type=self.options.logical_type,

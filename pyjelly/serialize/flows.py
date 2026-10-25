@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 from typing_extensions import override
 
 from pyjelly import jelly
@@ -22,15 +21,18 @@ class FrameFlow:
     """
 
     logical_type: jelly.LogicalStreamType
+    #: The logical type of flows of this class, unless given when making one
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
 
     def __init__(
         self,
         *,
         logical_type: jelly.LogicalStreamType | None = None,
-        **__kwargs: Any,
     ) -> None:
-        self.logical_type = logical_type or self.__class__.logical_type
+        self.logical_type = logical_type or self.default_logical_type
         self.frame = jelly.RdfStreamFrame()
         self.rows = self.frame.rows
 
@@ -88,10 +90,11 @@ class ManualFrameFlow(FrameFlow):
     Used for non-delimited serialization.
     """
 
-    logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
 
 
-@dataclass
 class BoundedFrameFlow(FrameFlow):
     """
     Produce frames automatically when a fixed number of rows is reached.
@@ -99,10 +102,11 @@ class BoundedFrameFlow(FrameFlow):
     Used for delimited encoding (default mode).
     """
 
-    logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
     frame_size: int
 
-    @override
     def __init__(
         self,
         *,
@@ -127,15 +131,21 @@ class BoundedFrameFlow(FrameFlow):
 
 
 class FlatTriplesFrameFlow(BoundedFrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    )
 
 
 class FlatQuadsFrameFlow(BoundedFrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+    )
 
 
 class GraphsFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    )
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
@@ -150,7 +160,9 @@ class GraphsFrameFlow(FrameFlow):
 
 
 class DatasetsFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_DATASETS
+    )
 
     def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
         """

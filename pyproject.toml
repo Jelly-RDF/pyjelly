@@ -34,6 +34,7 @@ include = [
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
   "pyjelly/serialize/streams.py",
+  "pyjelly/serialize/flows.py",
   "pyjelly/parse/decode.py",
   "pyjelly/serialize/encode.py",
   "pyjelly/serialize/lookup.py",
