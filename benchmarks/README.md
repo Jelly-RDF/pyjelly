@@ -88,7 +88,7 @@ All Jelly methods use pyjelly's default options: the "big" lookup preset (4000 n
 
 ### Tasks
 
-- **Write**: the statements go from the list (or the graph, see below) to the writer, and the output to a stream that throws it away (like Java's `OutputStream.nullOutputStream()`). There's no extra buffering. Throughput counts the statements the writer writes: all 100,000 for writers that take the list.
+- **Write**: the statements go from the list (or the graph, see below) to the writer, and the output to a stream that throws it away (like Java's `OutputStream.nullOutputStream()`). There's no extra buffering. Throughput counts the statements the writer has actually written: 100,000 for stream writers, and possibly less for `Graph` writers.
 - **Read**: the parser reads bytes from memory and gives statements back, which are only counted. Throughput counts the statements actually in the bytes: a writer that drops duplicates leaves fewer to read.
 - **Size**: bytes of the written output, plain, with gzip (level 6) and with zstd (level 3), divided by 100,000 statements.
 
