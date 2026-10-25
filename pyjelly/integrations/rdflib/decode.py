@@ -46,7 +46,8 @@ class RDFLibAdapter(Adapter):
 
     @override
     def bnode(self, bnode: str) -> rdflib.BNode:
-        return rdflib.BNode(bnode)
+        # What BNode(bnode) makes, without running its __new__ in Python
+        return str.__new__(rdflib.BNode, bnode)
 
     @override
     def default_graph(self) -> rdflib.URIRef:
