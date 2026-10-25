@@ -16,6 +16,8 @@ from pyjelly.serialize.encode import (
     encode_options,
     encode_quad,
     encode_triple,
+    write_graph,
+    write_term,
 )
 from pyjelly.serialize.flows import (
     DEFAULT_FRAME_SIZE,
@@ -62,9 +64,6 @@ class Stream:
         self.flow = flow
         # The encoder adds rows for new lookup entries to the same flow
         encoder.flow = flow
-        # Statements are encoded into these first (see encode_triple())
-        self.triple_buffer = jelly.RdfTriple()
-        self.quad_buffer = jelly.RdfQuad()
         self.repeated_terms = [None] * len(Slot)
         # See set_subject()
         self.subject_changed = False
@@ -155,30 +154,47 @@ class Stream:
         self.repeated_terms[2] = o
         self.object_changed = True
 
-    def encode_changed_spo(self, statement: Statement) -> None:
+    def encode_changed_spo(self) -> int:
         """
         Encode the subject, predicate and object that were set since the last emit.
 
         They are encoded in this order no matter in which order they were set:
         IRIs are encoded relative to the IRI before them, in the order the parser
-        reads them.
+        reads them. Rows for new lookup entries are added to the flow.
 
-        Rows for new lookup entries are added to the flow.
-
-        Args:
-            statement (Statement): Triple/Quad to fill.
+        Returns:
+            int: which of them were encoded, as bits 0 (subject) to 2 (object).
 
         """
         terms = self.repeated_terms
+        encoded = self.encoder.encoded
+        changed = 0
         if self.subject_changed:
-            self.encoder.encode_spo(terms[0], Slot.subject, statement)
+            self.encoder.encode_spo(terms[0], encoded[0])
             self.subject_changed = False
+            changed = 1
         if self.predicate_changed:
-            self.encoder.encode_spo(terms[1], Slot.predicate, statement)
+            self.encoder.encode_spo(terms[1], encoded[1])
             self.predicate_changed = False
+            changed |= 2
         if self.object_changed:
-            self.encoder.encode_spo(terms[2], Slot.object, statement)
+            self.encoder.encode_spo(terms[2], encoded[2])
             self.object_changed = False
+            changed |= 4
+        return changed
+
+    def write_changed_spo(self, statement: Statement, changed: int) -> None:
+        """Write the terms encoded by encode_changed_spo() into the statement."""
+        encoded = self.encoder.encoded
+        if not changed:
+            # Every term is repeated: the row is an empty statement
+            statement.SetInParent()
+        if changed & 1:
+            write_term(encoded[0], statement, 0)
+        if changed & 2:
+            write_term(encoded[1], statement, 1)
+        if changed & 4:
+            write_term(encoded[2], statement, 2)
 
     @classmethod
     def for_rdflib(cls, options: SerializerOptions | None = None) -> Stream:
@@ -264,7 +280,7 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        encode_triple(terms, self.encoder, self.repeated_terms, self.triple_buffer)
+        encode_triple(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
     def emit_triple(self) -> jelly.RdfStreamFrame | None:
@@ -277,10 +293,9 @@ class TripleStream(Stream):
 
         """
         self.encoder.new_epoch()
-        triple = self.triple_buffer
-        self.encode_changed_spo(triple)
-        self.flow.new_row().triple.CopyFrom(triple)
-        triple.Clear()
+        # The terms first, as they add rows for new lookup entries
+        changed = self.encode_changed_spo()
+        self.write_changed_spo(self.flow.new_row().triple, changed)
         return self.flow.frame_from_bounds()
 
 
@@ -300,7 +315,7 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        encode_quad(terms, self.encoder, self.repeated_terms, self.quad_buffer)
+        encode_quad(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
     def set_graph(self, g: object) -> None:
@@ -318,14 +333,18 @@ class QuadStream(Stream):
 
         """
         self.encoder.new_epoch()
-        quad = self.quad_buffer
-        self.encode_changed_spo(quad)
-        # The graph comes last, as in the parser
-        if self.graph_changed:
-            self.encoder.encode_graph(self.repeated_terms[3], quad)
+        # The terms first, as they add rows for new lookup entries. The graph
+        # comes last, as in the parser.
+        changed = self.encode_changed_spo()
+        graph_changed = self.graph_changed
+        if graph_changed:
+            self.encoder.encode_graph(self.repeated_terms[3], self.encoder.encoded[3])
             self.graph_changed = False
-        self.flow.new_row().quad.CopyFrom(quad)
-        quad.Clear()
+            changed |= 8
+        quad = self.flow.new_row().quad
+        self.write_changed_spo(quad, changed)
+        if graph_changed:
+            write_graph(self.encoder.encoded[3], quad)
         return self.flow.frame_from_bounds()
 
 

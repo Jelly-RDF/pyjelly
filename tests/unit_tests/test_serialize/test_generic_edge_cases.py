@@ -24,7 +24,7 @@ from pyjelly.integrations.generic.serialize import (
     triples_stream_frames,
 )
 from pyjelly.options import LookupPreset, StreamParameters
-from pyjelly.serialize.encode import Slot
+from pyjelly.serialize.encode import EncodedTerm
 from pyjelly.serialize.streams import (
     QuadStream,
     SerializerOptions,
@@ -149,7 +149,7 @@ def test_quads_stream_frames_parametrized(*, with_namespace: bool) -> None:
 def test_encoder_unsupported_raises() -> None:
     enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
     with pytest.raises(NotImplementedError, match="unsupported term type"):
-        enc.encode_spo(object(), Slot.subject, jelly.RdfTriple())
+        enc.encode_spo(object(), EncodedTerm())
 
 
 def test_grouped_stream_to_frames_init_stream_guess_options() -> None:
@@ -172,5 +172,5 @@ def test_graph_not_implemented() -> None:
     with pytest.raises(NotImplementedError, match="unsupported term type"):
         enc.encode_graph(
             Triple(IRI("http://ex/s1"), IRI("http://ex/p1"), IRI("http://ex/o1")),
-            jelly.RdfQuad(),
+            EncodedTerm(),
         )

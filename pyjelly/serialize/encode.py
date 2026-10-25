@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable
 from enum import IntEnum
-from typing import TypeAlias, TypeVar
+from typing import Final, TypeAlias, TypeVar
 
 from mypy_extensions import mypyc_attr
 
@@ -56,6 +56,39 @@ class _CachedIri:
         self.name_index = 0
 
 
+# Kinds of EncodedTerm
+TERM_IRI: Final = 1
+TERM_BNODE: Final = 2
+TERM_LITERAL: Final = 3
+TERM_TRIPLE: Final = 4
+TERM_DEFAULT_GRAPH: Final = 5
+
+
+class EncodedTerm:
+    """
+    A term encoded for a statement, before it is written into the statement.
+
+    A statement is written in two steps: first its terms are encoded (adding rows
+    for new lookup entries to the frame), then the statement's row is added
+    after them and the terms are written into it. This way the row is filled in
+    place, and never copied.
+    """
+
+    def __init__(self) -> None:
+        #: One of the TERM_* constants
+        self.kind = 0
+        #: IRI: prefix index; literal: datatype index
+        self.first = 0
+        #: IRI: name index
+        self.second = 0
+        #: Literal: lexical form; blank node: label
+        self.text = ""
+        #: Literal: language tag, empty if none
+        self.lang = ""
+        #: Quoted triple
+        self.triple: jelly.RdfTriple | None = None
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class TermEncoder:
     def __init__(
@@ -73,6 +106,8 @@ class TermEncoder:
         self.iri_cache: dict[str, _CachedIri] = {}
         # Cleared when full, so that a long stream doesn't grow it without bound
         self.iri_cache_size = max(4 * lookup_preset.max_names, 1024)
+        # The encoded subject, predicate, object and graph of the statement
+        self.encoded = [EncodedTerm() for _ in range(4)]
 
     def same_term(self, a: object, b: object) -> bool:
         """
@@ -150,22 +185,21 @@ class TermEncoder:
             cached.name = names.lookup.keys[index]
         return prefix_index, names.name_index_to_write(index)
 
-    def encode_iri(self, iri_string: str, iri: jelly.RdfIri) -> None:
-        """
-        Encode iri, adding rows for new lookup entries.
-
-        Args:
-            iri_string (str): full iri in string format.
-            iri (jelly.RdfIri): iri to fill
-
-        """
+    def encode_iri(self, iri_string: str, out: EncodedTerm) -> None:
+        """Encode iri into `out`, adding rows for new lookup entries."""
         prefix_index, name_index = self.encode_iri_indices(iri_string)
-        iri.prefix_id = prefix_index
-        iri.name_id = name_index
+        out.kind = TERM_IRI
+        out.first = prefix_index
+        out.second = name_index
 
-    def encode_default_graph(self, g_default_graph: jelly.RdfDefaultGraph) -> None:
-        """Encode default graph."""
-        g_default_graph.CopyFrom(jelly.RdfDefaultGraph())
+    def encode_bnode(self, label: str, out: EncodedTerm) -> None:
+        """Encode a blank node into `out`."""
+        out.kind = TERM_BNODE
+        out.text = label
+
+    def encode_default_graph(self, out: EncodedTerm) -> None:
+        """Encode default graph into `out`."""
+        out.kind = TERM_DEFAULT_GRAPH
 
     def encode_literal(
         self,
@@ -173,24 +207,24 @@ class TermEncoder:
         lex: str,
         language: str | None = None,
         datatype: str | None = None,
-        literal: jelly.RdfLiteral,
+        out: EncodedTerm,
     ) -> None:
         """
-        Encode literal, adding a row for a new datatype entry.
+        Encode literal into `out`, adding a row for a new datatype entry.
 
         Args:
             lex (str): lexical form/literal value
             language (str | None, optional): langtag. Defaults to None.
             datatype (str | None, optional): data type if
             it is a typed literal. Defaults to None.
-            literal (jelly.RdfLiteral): literal to fill.
+            out (EncodedTerm): where to put the encoded literal.
 
         Raises:
             JellyConformanceError: if datatype specified while
                 datatable is not used.
 
         """
-        datatype_id = None
+        datatype_id = 0
 
         if datatype and datatype != options.STRING_DATATYPE_IRI:
             if self.datatypes.lookup.max_size == 0:
@@ -209,17 +243,14 @@ class TermEncoder:
 
             datatype_id = self.datatypes.encode_datatype_term_index(datatype)
 
-        literal.lex = lex
-        if language:
-            literal.langtag = language
-        if datatype_id:
-            literal.datatype = datatype_id
+        out.kind = TERM_LITERAL
+        out.text = lex
+        out.lang = language or ""
+        out.first = datatype_id
 
-    def encode_quoted_triple(
-        self, terms: Iterable[object], quoted_statement: jelly.RdfTriple
-    ) -> None:
+    def encode_quoted_triple(self, terms: Iterable[object], out: EncodedTerm) -> None:
         """
-        Encode a quoted triple, adding rows for new lookup entries.
+        Encode a quoted triple into `out`, adding rows for new lookup entries.
 
         Notes:
             Although a triple, it is treated as a part of a statement.
@@ -227,56 +258,27 @@ class TermEncoder:
 
         Args:
             terms (Iterable[object]): triple terms to encode.
-            quoted_statement (jelly.RdfTriple): quoted triple to fill.
+            out (EncodedTerm): where to put the encoded triple.
 
         """
         terms = iter(terms)
-        self.encode_spo(next(terms), Slot.subject, quoted_statement)
-        self.encode_spo(next(terms), Slot.predicate, quoted_statement)
-        self.encode_spo(next(terms), Slot.object, quoted_statement)
+        triple = jelly.RdfTriple()
+        for slot in range(3):
+            term = EncodedTerm()
+            self.encode_spo(next(terms), term)
+            write_term(term, triple, slot)
+        out.kind = TERM_TRIPLE
+        out.triple = triple
 
-    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> None:
+    def encode_spo(self, term: object, out: EncodedTerm) -> None:
+        """Encode a subject, predicate or object into `out`."""
         msg = f"unsupported term type: {type(term)}"
         raise NotImplementedError(msg)
 
-    def encode_graph(self, term: object, statement: HasGraph) -> None:
+    def encode_graph(self, term: object, out: EncodedTerm) -> None:
+        """Encode a graph name into `out`."""
         msg = f"unsupported term type: {type(term)}"
         raise NotImplementedError(msg)
-
-    def get_iri_field(self, statement: Statement, slot: Slot) -> jelly.RdfIri:
-        """Get IRI field directly based on slot."""
-        if slot == Slot.subject:
-            return statement.s_iri
-        if slot == Slot.predicate:
-            return statement.p_iri
-        return statement.o_iri
-
-    def get_literal_field(self, statement: Statement, slot: Slot) -> jelly.RdfLiteral:
-        """Get literal field directly based on slot."""
-        if slot == Slot.subject:
-            return statement.s_literal
-        if slot == Slot.predicate:
-            return statement.p_literal
-        return statement.o_literal
-
-    def set_bnode_field(
-        self, statement: Statement, slot: Slot, identifier: str
-    ) -> None:
-        """Set bnode field directly based on slot."""
-        if slot == Slot.subject:
-            statement.s_bnode = identifier
-        elif slot == Slot.predicate:
-            statement.p_bnode = identifier
-        else:
-            statement.o_bnode = identifier
-
-    def get_triple_field(self, statement: Statement, slot: Slot) -> jelly.RdfTriple:
-        """Get triple term field directly based on slot."""
-        if slot == Slot.subject:
-            return statement.s_triple_term
-        if slot == Slot.predicate:
-            return statement.p_triple_term
-        return statement.o_triple_term
 
 
 class Slot(IntEnum):
@@ -286,41 +288,82 @@ class Slot(IntEnum):
     graph = 3
 
 
-def encode_spo(
-    terms: Iterator[object],
-    term_encoder: TermEncoder,
-    repeated_terms: list[object | None],
-    statement: Statement,
-) -> None:
-    """
-    Encode the s/p/o of a statement, adding rows for new lookup entries.
+def _iri_field(statement: Statement, slot: int) -> jelly.RdfIri:
+    if slot == 0:
+        return statement.s_iri
+    if slot == 1:
+        return statement.p_iri
+    return statement.o_iri
 
-    Args:
-        terms (Iterator[object]): iterator for original terms to encode
-        term_encoder (TermEncoder): encoder with lookup tables
-        repeated_terms (list[object | None): list of repeated terms.
-        statement (Statement): Triple/Quad to fill.
 
-    """
-    s = next(terms)
-    if not term_encoder.same_term(repeated_terms[Slot.subject], s):
-        term_encoder.encode_spo(s, Slot.subject, statement)
-        repeated_terms[Slot.subject] = s
-    p = next(terms)
-    if not term_encoder.same_term(repeated_terms[Slot.predicate], p):
-        term_encoder.encode_spo(p, Slot.predicate, statement)
-        repeated_terms[Slot.predicate] = p
-    o = next(terms)
-    if not term_encoder.same_term(repeated_terms[Slot.object], o):
-        term_encoder.encode_spo(o, Slot.object, statement)
-        repeated_terms[Slot.object] = o
+def _literal_field(statement: Statement, slot: int) -> jelly.RdfLiteral:
+    if slot == 0:
+        return statement.s_literal
+    if slot == 1:
+        return statement.p_literal
+    return statement.o_literal
+
+
+def _triple_field(statement: Statement, slot: int) -> jelly.RdfTriple:
+    if slot == 0:
+        return statement.s_triple_term
+    if slot == 1:
+        return statement.p_triple_term
+    return statement.o_triple_term
+
+
+def _set_bnode(statement: Statement, slot: int, label: str) -> None:
+    if slot == 0:
+        statement.s_bnode = label
+    elif slot == 1:
+        statement.p_bnode = label
+    else:
+        statement.o_bnode = label
+
+
+def _write_literal(term: EncodedTerm, literal: jelly.RdfLiteral) -> None:
+    literal.lex = term.text
+    if term.lang:
+        literal.langtag = term.lang
+    if term.first:
+        literal.datatype = term.first
+
+
+def write_term(term: EncodedTerm, statement: Statement, slot: int) -> None:
+    """Write an encoded subject (slot 0), predicate (1) or object (2)."""
+    kind = term.kind
+    if kind == TERM_IRI:
+        iri = _iri_field(statement, slot)
+        iri.prefix_id = term.first
+        iri.name_id = term.second
+    elif kind == TERM_LITERAL:
+        _write_literal(term, _literal_field(statement, slot))
+    elif kind == TERM_BNODE:
+        _set_bnode(statement, slot, term.text)
+    elif kind == TERM_TRIPLE:
+        assert term.triple is not None
+        _triple_field(statement, slot).CopyFrom(term.triple)
+
+
+def write_graph(term: EncodedTerm, quad: jelly.RdfQuad) -> None:
+    """Write an encoded graph name."""
+    kind = term.kind
+    if kind == TERM_IRI:
+        iri = quad.g_iri
+        iri.prefix_id = term.first
+        iri.name_id = term.second
+    elif kind == TERM_DEFAULT_GRAPH:
+        quad.g_default_graph.SetInParent()
+    elif kind == TERM_BNODE:
+        quad.g_bnode = term.text
+    elif kind == TERM_LITERAL:
+        _write_literal(term, quad.g_literal)
 
 
 def encode_triple(
     terms: Iterable[object],
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
-    buffer: jelly.RdfTriple,
 ) -> None:
     """
     Encode one triple, adding its rows to the encoder's flow.
@@ -329,22 +372,33 @@ def encode_triple(
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
         repeated_terms (list[object | None]): list of repeated terms.
-        buffer (jelly.RdfTriple): empty triple to encode into, empty again after.
-            The triple can only be added to the flow after the rows for its new
-            lookup entries, which encoding it adds.
 
     """
     term_encoder.new_epoch()
-    encode_spo(iter(terms), term_encoder, repeated_terms, buffer)
-    term_encoder.flow.new_row().triple.CopyFrom(buffer)
-    buffer.Clear()
+    encoded = term_encoder.encoded
+    terms = iter(terms)
+    # First encode the terms that changed, which adds rows for new lookup
+    # entries, then add the triple's row after them and write the terms
+    changed = 0
+    for slot in range(3):
+        term = next(terms)
+        if not term_encoder.same_term(repeated_terms[slot], term):
+            term_encoder.encode_spo(term, encoded[slot])
+            repeated_terms[slot] = term
+            changed |= 1 << slot
+    triple = term_encoder.flow.new_row().triple
+    if not changed:
+        # Every term is repeated: the row is an empty triple
+        triple.SetInParent()
+    for slot in range(3):
+        if changed & (1 << slot):
+            write_term(encoded[slot], triple, slot)
 
 
 def encode_quad(
     terms: Iterable[object],
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
-    buffer: jelly.RdfQuad,
 ) -> None:
     """
     Encode one quad, adding its rows to the encoder's flow.
@@ -353,18 +407,32 @@ def encode_quad(
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
         repeated_terms (list[object | None]): list of repeated terms.
-        buffer (jelly.RdfQuad): empty quad to encode into, see encode_triple().
 
     """
     term_encoder.new_epoch()
+    encoded = term_encoder.encoded
     terms = iter(terms)
-    encode_spo(terms, term_encoder, repeated_terms, buffer)
+    # See encode_triple()
+    changed = 0
+    for slot in range(3):
+        term = next(terms)
+        if not term_encoder.same_term(repeated_terms[slot], term):
+            term_encoder.encode_spo(term, encoded[slot])
+            repeated_terms[slot] = term
+            changed |= 1 << slot
     g = next(terms)
-    if not term_encoder.same_term(repeated_terms[Slot.graph], g):
-        term_encoder.encode_graph(g, buffer)
-        repeated_terms[Slot.graph] = g
-    term_encoder.flow.new_row().quad.CopyFrom(buffer)
-    buffer.Clear()
+    if not term_encoder.same_term(repeated_terms[3], g):
+        term_encoder.encode_graph(g, encoded[3])
+        repeated_terms[3] = g
+        changed |= 1 << 3
+    quad = term_encoder.flow.new_row().quad
+    if not changed:
+        quad.SetInParent()
+    for slot in range(3):
+        if changed & (1 << slot):
+            write_term(encoded[slot], quad, slot)
+    if changed & (1 << 3):
+        write_graph(encoded[3], quad)
 
 
 def encode_namespace_declaration(

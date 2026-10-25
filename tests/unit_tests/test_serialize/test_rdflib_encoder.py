@@ -4,7 +4,7 @@ from rdflib import XSD, BNode, Literal, URIRef
 from pyjelly import jelly
 from pyjelly.integrations.rdflib.encode import RDFLibTermEncoder
 from pyjelly.options import LookupPreset
-from pyjelly.serialize.encode import Slot
+from pyjelly.serialize.encode import EncodedTerm, write_term
 
 
 def test_graph_not_implemented() -> None:
@@ -12,7 +12,7 @@ def test_graph_not_implemented() -> None:
     with pytest.raises(NotImplementedError, match="unsupported term type"):
         enc.encode_graph(
             (URIRef("http://ex/s1"), URIRef("http://ex/p1"), URIRef("http://ex/o1")),
-            jelly.RdfQuad(),
+            EncodedTerm(),
         )
 
 
@@ -21,8 +21,7 @@ def test_spo_not_implemented() -> None:
     with pytest.raises(NotImplementedError, match="unsupported term type"):
         enc.encode_spo(
             (URIRef("http://ex/s1"), URIRef("http://ex/p1"), URIRef("http://ex/o1")),
-            Slot.subject,
-            jelly.RdfQuad(),
+            EncodedTerm(),
         )
 
 
@@ -50,7 +49,9 @@ def test_subclasses_encode_like_their_base_class(
     for t in (term, subclass_term):
         enc = RDFLibTermEncoder(lookup_preset=LookupPreset())
         triple = jelly.RdfTriple()
-        enc.encode_spo(t, Slot.object, triple)
+        encoded = EncodedTerm()
+        enc.encode_spo(t, encoded)
+        write_term(encoded, triple, 2)
         triples.append((list(enc.flow.rows), triple))
     assert triples[0] == triples[1]
 

@@ -17,7 +17,7 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import Slot, TermEncoder, HasGraph, Statement
+from pyjelly.serialize.encode import EncodedTerm, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
     QuadStream,
@@ -30,60 +30,52 @@ QUAD_ARITY = 4
 
 
 class GenericSinkTermEncoder(TermEncoder):
-    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> None:
+    def encode_spo(self, term: object, out: EncodedTerm) -> None:
         """
         Encode term based on its GenericSink object.
 
         Args:
             term (object): term to encode
-            slot (Slot): its place in statement.
-            statement (Statement): Triple/Quad/GraphStart message to fill with terms.
+            out (EncodedTerm): where to put the encoded term.
 
         """
         if isinstance(term, IRI):
-            iri = self.get_iri_field(statement, slot)
-            self.encode_iri(term._iri, iri)
+            self.encode_iri(term._iri, out)
             return
 
         if isinstance(term, Literal):
-            literal = self.get_literal_field(statement, slot)
             self.encode_literal(
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
-                literal=literal,
+                out=out,
             )
             return
 
         if isinstance(term, BlankNode):
-            self.set_bnode_field(
-                statement,
-                slot,
-                term._identifier,
-            )
+            self.encode_bnode(term._identifier, out)
             return
 
         if isinstance(term, Triple):
-            quoted_statement = self.get_triple_field(statement, slot)
-            self.encode_quoted_triple(term, quoted_statement)
+            self.encode_quoted_triple(term, out)
             return
 
-        super().encode_spo(term, slot, statement)  # raises: not handled
+        super().encode_spo(term, out)  # raises: not handled
 
-    def encode_graph(self, term: object, statement: HasGraph) -> None:
+    def encode_graph(self, term: object, out: EncodedTerm) -> None:
         """
         Encode graph term based on its GenericSink object.
 
         Args:
             term (object): term to encode
-            statement (HasGraph): Quad/GraphStart message to fill g_{} in.
+            out (EncodedTerm): where to put the encoded graph name.
 
         """
-        if term == DefaultGraph:
-            self.encode_default_graph(statement.g_default_graph)
+        if term is DefaultGraph:
+            self.encode_default_graph(out)
             return
         if isinstance(term, IRI):
-            self.encode_iri(term._iri, statement.g_iri)
+            self.encode_iri(term._iri, out)
             return
 
         if isinstance(term, Literal):
@@ -91,14 +83,14 @@ class GenericSinkTermEncoder(TermEncoder):
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
-                literal=statement.g_literal,
+                out=out,
             )
             return
 
         if isinstance(term, BlankNode):
-            statement.g_bnode = term._identifier
+            self.encode_bnode(term._identifier, out)
             return
-        super().encode_graph(term, statement)  # raises: not handled
+        super().encode_graph(term, out)  # raises: not handled
 
 
 def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:
