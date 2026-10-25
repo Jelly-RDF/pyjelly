@@ -173,6 +173,36 @@ class _Runs:
         return self.values[index]
 
 
+class _LiteralKind:
+    """A literal kind of a column, resolved, and the recent literals of that kind."""
+
+    def __init__(
+        self,
+        decoder: Decoder,
+        language: str | None,
+        datatype: str | None,
+        direction: str | None,
+    ) -> None:
+        self.decoder = decoder
+        self.language = language
+        self.datatype = datatype
+        self.direction = direction
+        # Literals with a base direction are not cached
+        self.cache = None if direction else decoder.literal_cache(language, datatype)
+
+    def term(self, lex: str) -> Any:
+        """Return the literal of this kind with the lexical form."""
+        cache = self.cache
+        if cache is None:
+            return self.decoder.literal_term(
+                lex, self.language, self.datatype, self.direction
+            )
+        term = cache.get(lex)
+        if term is None:
+            term = self.decoder.new_literal(lex, self.language, self.datatype, cache)
+        return term
+
+
 class IriSequence:
     """
     IRIs written as RdfIri messages, in the order they are read.
@@ -555,45 +585,31 @@ class ColumnDecoder:
             raise JellyConformanceError(msg)
         if not count:
             return []
-        decoder = self.decoder
-        terms: list[Any] = []
         if kind_count > 1:
             # Each literal kind is resolved once
-            resolved: dict[int, tuple[str | None, str | None, str | None]] = {}
+            resolved: dict[int, _LiteralKind] = {}
+            terms: list[Any] = []
             for lex, kind in zip(lex_values, literal_kinds, strict=True):
-                parts = resolved.get(kind)
-                if parts is None:
-                    parts = resolved[kind] = self.literal_kind(
+                literal_kind = resolved.get(kind)
+                if literal_kind is None:
+                    literal_kind = resolved[kind] = self.literal_kind(
                         kind, langtags, directions
                     )
-                language, datatype, direction = parts
-                terms.append(decoder.literal_term(lex, language, datatype, direction))
+                terms.append(literal_kind.term(lex))
             return terms
-        language, datatype, direction = self.literal_kind(
+        literal_kind = self.literal_kind(
             literal_kinds[0] if kind_count else 0, langtags, directions
         )
-        if direction:
-            return [
-                decoder.literal_term(lex, language, datatype, direction)
-                for lex in lex_values
-            ]
-        # As Decoder.literal_term(), for each literal
-        cache = decoder.literal_cache(language, datatype)
-        for lex in lex_values:
-            term = cache.get(lex)
-            if term is None:
-                term = decoder.new_literal(lex, language, datatype, cache)
-            terms.append(term)
-        return terms
+        return [literal_kind.term(lex) for lex in lex_values]
 
-    def literal_kind(
-        self, kind: int, langtags: Any, directions: Any
-    ) -> tuple[str | None, str | None, str | None]:
-        """Return the language tag, datatype and base direction of a literal kind."""
+    def literal_kind(self, kind: int, langtags: Any, directions: Any) -> _LiteralKind:
+        """Resolve a literal kind: its language tag, datatype and base direction."""
+        decoder = self.decoder
         if not kind:
-            return None, None, None
+            return _LiteralKind(decoder, None, None, None)
         if kind & 1:
-            return None, self.decoder.datatypes.at((kind + 1) >> 1), None
+            datatype = decoder.datatypes.at((kind + 1) >> 1)
+            return _LiteralKind(decoder, None, datatype, None)
         index = (kind >> 1) - 1
         if index >= len(langtags):
             msg = f"a literal kind refers to language tag {index}, which is not there"
@@ -601,7 +617,7 @@ class ColumnDecoder:
         direction = None
         if directions and directions[index]:
             direction = self.direction(directions[index])
-        return langtags[index] or None, None, direction
+        return _LiteralKind(decoder, langtags[index] or None, None, direction)
 
     def direction(self, value: int) -> str:
         """Return a base direction read from the stream."""
