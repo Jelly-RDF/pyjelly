@@ -23,13 +23,11 @@ def split_iri(iri_string: str) -> tuple[str, str]:
         tuple[str, str]: iri's prefix and name.
 
     """
-    name = iri_string
-    prefix = ""
-    for sep in "#", "/":
-        prefix, char, name = iri_string.rpartition(sep)
-        if char:
-            return prefix + char, name
-    return prefix, name
+    # After the last "#", or else the last "/". Without either, all is the name.
+    i = iri_string.rfind("#")
+    if i < 0:
+        i = iri_string.rfind("/")
+    return iri_string[: i + 1], iri_string[i + 1 :]
 
 
 Statement: TypeAlias = jelly.RdfQuad | jelly.RdfTriple
