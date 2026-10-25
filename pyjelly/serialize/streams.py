@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -294,6 +294,21 @@ class TripleStream(Stream):
         encode_triple(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
+    def triples(
+        self, statements: Iterable[Iterable[object]]
+    ) -> Iterator[jelly.RdfStreamFrame]:
+        """
+        Process triples, see triple().
+
+        Yields:
+            jelly.RdfStreamFrame: full frames.
+
+        """
+        for terms in statements:
+            frame = self.triple(terms)
+            if frame is not None:
+                yield frame
+
     def emit(self) -> jelly.RdfStreamFrame | None:
         """
         Add a triple made of the terms set with the cursor API.
@@ -328,6 +343,21 @@ class QuadStream(Stream):
         """
         encode_quad(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
+
+    def quads(
+        self, statements: Iterable[Iterable[object]]
+    ) -> Iterator[jelly.RdfStreamFrame]:
+        """
+        Process quads, see quad().
+
+        Yields:
+            jelly.RdfStreamFrame: full frames.
+
+        """
+        for terms in statements:
+            frame = self.quad(terms)
+            if frame is not None:
+                yield frame
 
     def set_graph(self, g: object) -> None:
         """Set the graph name of the next quad (see Stream.set_subject)."""

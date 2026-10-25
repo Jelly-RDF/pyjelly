@@ -1,6 +1,6 @@
 # ruff: noqa: I001
 from __future__ import annotations
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from functools import singledispatch
 from typing import Any, IO
 from typing_extensions import override
@@ -40,7 +40,7 @@ def namespace_declarations(store: Graph, stream: Stream) -> None:
 @singledispatch
 def stream_frames(
     stream: Stream,
-    data: Graph | Generator[Quad | Triple],  # noqa: ARG001
+    data: Graph | Iterable[Quad | Triple],  # noqa: ARG001
 ) -> Generator[jelly.RdfStreamFrame]:
     msg = f"invalid stream implementation {stream}"
     raise TypeError(msg)
@@ -49,14 +49,14 @@ def stream_frames(
 @stream_frames.register(TripleStream)
 def triples_stream_frames(
     stream: TripleStream,
-    data: Graph | Dataset | Generator[Triple],
+    data: Graph | Dataset | Iterable[Triple],
 ) -> Generator[jelly.RdfStreamFrame]:
     """
     Serialize a Graph/Dataset into jelly frames.
 
     Args:
         stream (TripleStream): stream that specifies triples processing
-        data (Graph | Dataset | Generator[Triple]):
+        data (Graph | Dataset | Iterable[Triple]):
             Graph/Dataset/Statements to serialize.
 
     Notes:
@@ -79,9 +79,7 @@ def triples_stream_frames(
             yield from write_tree(stream, tree)
         else:
             # Any other store, or a generator of triples, in its own order
-            for terms in graph:
-                if frame := stream.triple(terms):
-                    yield frame
+            yield from stream.triples(graph)
         if frame := stream.flow.frame_from_graph():
             yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -91,7 +89,7 @@ def triples_stream_frames(
 @stream_frames.register(QuadStream)
 def quads_stream_frames(
     stream: QuadStream,
-    data: Dataset | Generator[Quad],
+    data: Dataset | Iterable[Quad],
 ) -> Generator[jelly.RdfStreamFrame]:
     """
     Serialize a Dataset into jelly frames.
@@ -101,7 +99,7 @@ def quads_stream_frames(
 
     Args:
         stream (QuadStream): stream that specifies quads processing
-        data (Dataset | Generator[Quad]): Dataset to serialize.
+        data (Dataset | Iterable[Quad]): Dataset to serialize.
 
     Yields:
         Generator[jelly.RdfStreamFrame]: jelly frames
@@ -119,9 +117,7 @@ def quads_stream_frames(
         quads = (
             data.quads((None, None, None, None)) if isinstance(data, Dataset) else data
         )
-        for terms in quads:
-            if frame := stream.quad(terms):
-                yield frame
+        yield from stream.quads(quads)
     if frame := stream.flow.frame_from_dataset():
         yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -292,11 +288,7 @@ def flat_stream_to_frames(
         options = guess_options(sink)
     stream = guess_stream(options, sink)
 
-    combined: Generator[Triple | Quad] | Graph = (
-        item for item in chain([first], statements)
-    )
-
-    yield from stream_frames(stream, combined)
+    yield from stream_frames(stream, chain([first], statements))
 
 
 def flat_stream_to_file(
