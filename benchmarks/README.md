@@ -40,6 +40,18 @@ uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sw
 - On a CPU with performance and efficiency cores, pin the benchmark to the performance cores. On the NVIDIA DGX Spark, we use cores 15–19: `taskset -c 15-19 uv run python -m benchmarks run read`.
 - Don't run anything else heavy at the same time.
 
+### Comparing Python versions
+
+An editable install keeps pyjelly's compiled modules in the repository, and building for one Python version removes those of another. To run several versions side by side, install pyjelly as a wheel in each environment, and run the benchmarks from a folder that has only a link to `benchmarks/`, so that Python doesn't import pyjelly's sources from the repository instead of the wheel:
+
+```bash
+UV_PROJECT_ENVIRONMENT=/tmp/venv315 uv sync -p 3.15 --group benchmark --no-editable
+mkdir -p /tmp/runner && ln -sfn "$PWD/benchmarks" /tmp/runner/benchmarks
+cd /tmp/runner && /tmp/venv315/bin/python -m benchmarks run read
+```
+
+Building the wheel needs the `submodules/protobuf` submodule: `git submodule update --init`.
+
 ### Profiling one case
 
 `case` runs one task, dataset and method in the current process. With `--profile`, the measured iterations run under cProfile, the top functions are printed, and the stats are saved for tools like `snakeviz`:

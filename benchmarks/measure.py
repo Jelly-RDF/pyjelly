@@ -31,6 +31,8 @@ from benchmarks.data import load
 from benchmarks.methods import METHODS, NullOutput, round_trip
 from pyjelly.options import MAX_VERSION
 
+# The folder that has the `benchmarks` package, where the cases run. With a
+# symlink to the package, it isn't the repository, see README.md.
 REPO_DIR = Path(__file__).parent.parent
 
 
@@ -153,7 +155,7 @@ def environment() -> dict[str, Any]:
         ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
         capture_output=True,
         text=True,
-        cwd=REPO_DIR,
+        cwd=Path(__file__).resolve().parent,
         check=False,
     ).stdout.strip()
     affinity = os.sched_getaffinity(0) if hasattr(os, "sched_getaffinity") else None
