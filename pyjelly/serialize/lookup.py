@@ -54,6 +54,11 @@ class Lookup:
         """Start a new epoch: only the entries used from now on are pinned."""
         self.epoch_start = self.now
 
+    def touch(self, index: int) -> None:
+        """Mark the entry at the index as used."""
+        self.now += 1
+        self.last_use[index] = self.now
+
     def use(self, key: str) -> int:
         """Mark the entry as used, and return its index, or 0 if there is none."""
         index = self.data.get(key, 0)
@@ -169,12 +174,48 @@ class LookupEncoder:
         and should be emitted.
 
         """
-        if self.lookup.use(key):
-            return None
+        _, set_index = self.encode_entry(key)
+        return None if set_index < 0 else set_index
+
+    def encode_entry(self, key: str) -> tuple[int, int]:
+        """
+        Get or add the entry for the key, and mark it as used.
+
+        Returns
+        -------
+        tuple[int, int]
+            The entry's index, and the index to write in a new entry row: -1 if
+            the entry was already there (no row needed), 0 if the new index is
+            sequential (`last_assigned_index + 1`), else the index.
+
+        """
+        index = self.lookup.use(key)
+        if index:
+            return index, -1
         previous_index = self.last_assigned_index
         index = self.lookup.insert(key)
         self.last_assigned_index = index
         if index == previous_index + 1:
+            return index, 0
+        return index, index
+
+    def name_index_to_write(self, index: int) -> int:
+        """Return how to write a reference to the name entry at the index."""
+        previous_index = self.last_reused_index
+        self.last_reused_index = index
+        if index == previous_index + 1:
+            return 0
+        return index
+
+    def prefix_index_to_write(self, index: int, *, empty: bool) -> int:
+        """Return how to write a reference to the prefix entry at the index."""
+        previous_index = self.last_reused_index
+        if empty and previous_index == 0:
+            return 0
+        self.last_reused_index = index
+        if previous_index == 0:
+            return index
+        if index == previous_index:
             return 0
         return index
 

@@ -40,6 +40,22 @@ Terms: TypeAlias = (
 )
 
 
+class _CachedIri:
+    """
+    How an IRI was encoded last time: its prefix and name, and their indices.
+
+    An index is still valid if the lookup holds the very same string object at it
+    (the strings are the lookup's own, see TermEncoder.encode_iri_indices()). If
+    the entry was evicted since, the string there is another one. 0 means none.
+    """
+
+    def __init__(self, prefix: str, name: str) -> None:
+        self.prefix = prefix
+        self.name = name
+        self.prefix_index = 0
+        self.name_index = 0
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class TermEncoder:
     def __init__(
@@ -54,6 +70,9 @@ class TermEncoder:
         self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
         # Where rows for new lookup entries go. A stream replaces it with its own.
         self.flow: FrameFlow = ManualFrameFlow()
+        self.iri_cache: dict[str, _CachedIri] = {}
+        # Cleared when full, so that a long stream doesn't grow it without bound
+        self.iri_cache_size = max(4 * lookup_preset.max_names, 1024)
 
     def new_epoch(self) -> None:
         """
@@ -70,6 +89,9 @@ class TermEncoder:
         """
         Encode lookup indices for IRI, adding rows for new lookup entries.
 
+        Most IRIs repeat, so how an IRI splits into prefix and name, and the
+        indices of their entries, are cached (see _CachedIri).
+
         Args:
             iri_string (str): full iri in string format.
 
@@ -77,25 +99,48 @@ class TermEncoder:
             tuple[int, int]: indices in prefix and name tables.
 
         """
-        prefix, name = split_iri(iri_string)
-        if self.prefixes.lookup.max_size:
-            prefix_entry_index = self.prefixes.encode_entry_index(prefix)
-            if prefix_entry_index is not None:
-                prefix_entry = self.flow.new_row().prefix
-                prefix_entry.id = prefix_entry_index
-                prefix_entry.value = prefix
+        cached = self.iri_cache.get(iri_string)
+        if cached is None:
+            if len(self.iri_cache) >= self.iri_cache_size:
+                self.iri_cache.clear()
+            if self.prefixes.lookup.max_size:
+                prefix, name = split_iri(iri_string)
+            else:
+                prefix, name = "", iri_string
+            cached = _CachedIri(prefix, name)
+            self.iri_cache[iri_string] = cached
+
+        prefix_index = 0
+        prefixes = self.prefixes
+        if prefixes.lookup.max_size:
+            index = cached.prefix_index
+            if index and prefixes.lookup.keys[index] is cached.prefix:
+                prefixes.lookup.touch(index)
+            else:
+                index, set_index = prefixes.encode_entry(cached.prefix)
+                if set_index >= 0:
+                    prefix_entry = self.flow.new_row().prefix
+                    prefix_entry.id = set_index
+                    prefix_entry.value = cached.prefix
+                cached.prefix_index = index
+                cached.prefix = prefixes.lookup.keys[index]
+            prefix_index = prefixes.prefix_index_to_write(
+                index, empty=not cached.prefix
+            )
+
+        names = self.names
+        index = cached.name_index
+        if index and names.lookup.keys[index] is cached.name:
+            names.lookup.touch(index)
         else:
-            name = iri_string
-
-        name_entry_index = self.names.encode_entry_index(name)
-        if name_entry_index is not None:
-            name_entry = self.flow.new_row().name
-            name_entry.id = name_entry_index
-            name_entry.value = name
-
-        prefix_index = self.prefixes.encode_prefix_term_index(prefix)
-        name_index = self.names.encode_name_term_index(name)
-        return prefix_index, name_index
+            index, set_index = names.encode_entry(cached.name)
+            if set_index >= 0:
+                name_entry = self.flow.new_row().name
+                name_entry.id = set_index
+                name_entry.value = cached.name
+            cached.name_index = index
+            cached.name = names.lookup.keys[index]
+        return prefix_index, names.name_index_to_write(index)
 
     def encode_iri(self, iri_string: str, iri: jelly.RdfIri) -> None:
         """
