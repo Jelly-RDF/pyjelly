@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import UserList
-from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 from typing_extensions import override
@@ -11,11 +9,13 @@ from pyjelly import jelly
 DEFAULT_FRAME_SIZE = 250
 
 
-class FrameFlow(UserList[jelly.RdfStreamRow]):
+class FrameFlow:
     """
     Abstract base class for producing Jelly frames from RDF stream rows.
 
-    Collects stream rows and assembles them into RdfStreamFrame objects when ready.
+    Rows are added straight into the frame being built (see `new_row()`), so they
+    never have to be copied: protobuf copies a message by serializing it and
+    parsing it again.
 
     Allows for passing LogicalStreamType, required for
         logical subtypes and non-delimited streams.
@@ -26,20 +26,21 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
 
     def __init__(
         self,
-        initlist: Iterable[jelly.RdfStreamRow] | None = None,
         *,
         logical_type: jelly.LogicalStreamType | None = None,
         **__kwargs: Any,
     ) -> None:
-        super().__init__(initlist)
         self.logical_type = logical_type or self.__class__.logical_type
+        self.frame = jelly.RdfStreamFrame()
+        self.rows = self.frame.rows
 
-    # The methods below are called for every row, so they work on the underlying
-    # list directly. Going through UserList is much slower.
+    def new_row(self) -> jelly.RdfStreamRow:
+        """Add an empty row at the end of the current frame, and return it."""
+        return self.rows.add()
 
-    @override
-    def extend(self, other: Iterable[jelly.RdfStreamRow]) -> None:
-        self.data.extend(other)
+    def __len__(self) -> int:
+        """Return how many rows the current frame has."""
+        return len(self.rows)
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
@@ -62,19 +63,17 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
         """
-        Create stream frame from flow content.
-
-        Notes:
-            Clears flow content after creating the frame.
+        Return the current frame, and start a new one.
 
         Returns:
-            jelly.RdfStreamFrame | None: stream frame
+            jelly.RdfStreamFrame | None: stream frame, None if it has no rows
 
         """
-        if not self.data:
+        if not len(self.rows):
             return None
-        frame = jelly.RdfStreamFrame(rows=self.data)
-        self.data.clear()
+        frame = self.frame
+        self.frame = jelly.RdfStreamFrame()
+        self.rows = self.frame.rows
         return frame
 
 
@@ -106,12 +105,11 @@ class BoundedFrameFlow(FrameFlow):
     @override
     def __init__(
         self,
-        initlist: Iterable[jelly.RdfStreamRow] | None = None,
-        logical_type: jelly.LogicalStreamType | None = None,
         *,
+        logical_type: jelly.LogicalStreamType | None = None,
         frame_size: int | None = None,
     ) -> None:
-        super().__init__(initlist, logical_type=logical_type)
+        super().__init__(logical_type=logical_type)
         self.frame_size = frame_size or DEFAULT_FRAME_SIZE
 
     @override
@@ -123,7 +121,7 @@ class BoundedFrameFlow(FrameFlow):
             jelly.RdfStreamFrame | None: stream frame
 
         """
-        if len(self.data) >= self.frame_size:
+        if len(self.rows) >= self.frame_size:
             return self.to_stream_frame()
         return None
 

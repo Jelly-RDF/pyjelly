@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator
 from enum import IntEnum
 from typing import TypeAlias, TypeVar
 
@@ -8,6 +8,7 @@ from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly, options
 from pyjelly.errors import JellyConformanceError
+from pyjelly.serialize.flows import FrameFlow, ManualFrameFlow
 from pyjelly.serialize.lookup import LookupEncoder
 
 
@@ -32,7 +33,6 @@ def split_iri(iri_string: str) -> tuple[str, str]:
 
 
 T = TypeVar("T")
-Rows: TypeAlias = Sequence[jelly.RdfStreamRow]
 Statement: TypeAlias = jelly.RdfQuad | jelly.RdfTriple
 HasGraph: TypeAlias = jelly.RdfQuad | jelly.RdfGraphStart
 Terms: TypeAlias = (
@@ -52,6 +52,8 @@ class TermEncoder:
         self.names = LookupEncoder(lookup_size=lookup_preset.max_names)
         self.prefixes = LookupEncoder(lookup_size=lookup_preset.max_prefixes)
         self.datatypes = LookupEncoder(lookup_size=lookup_preset.max_datatypes)
+        # Where rows for new lookup entries go. A stream replaces it with its own.
+        self.flow: FrameFlow = ManualFrameFlow()
 
     def new_epoch(self) -> None:
         """
@@ -64,67 +66,53 @@ class TermEncoder:
         self.prefixes.lookup.new_epoch()
         self.datatypes.lookup.new_epoch()
 
-    def encode_iri_indices(self, iri_string: str) -> tuple[Rows, int, int]:
+    def encode_iri_indices(self, iri_string: str) -> tuple[int, int]:
         """
-        Encode lookup indices for IRI.
+        Encode lookup indices for IRI, adding rows for new lookup entries.
 
         Args:
             iri_string (str): full iri in string format.
 
         Returns:
-            tuple[Rows, int, int]: additional rows (if any) and
-                indices in prefix and name tables.
+            tuple[int, int]: indices in prefix and name tables.
 
         """
         prefix, name = split_iri(iri_string)
         if self.prefixes.lookup.max_size:
             prefix_entry_index = self.prefixes.encode_entry_index(prefix)
+            if prefix_entry_index is not None:
+                prefix_entry = self.flow.new_row().prefix
+                prefix_entry.id = prefix_entry_index
+                prefix_entry.value = prefix
         else:
             name = iri_string
-            prefix_entry_index = None
 
         name_entry_index = self.names.encode_entry_index(name)
-        term_rows = []
-
-        if prefix_entry_index is not None:
-            prefix_entry = jelly.RdfPrefixEntry(id=prefix_entry_index, value=prefix)
-            term_rows.append(jelly.RdfStreamRow(prefix=prefix_entry))
-
         if name_entry_index is not None:
-            name_entry = jelly.RdfNameEntry(id=name_entry_index, value=name)
-            term_rows.append(jelly.RdfStreamRow(name=name_entry))
+            name_entry = self.flow.new_row().name
+            name_entry.id = name_entry_index
+            name_entry.value = name
 
         prefix_index = self.prefixes.encode_prefix_term_index(prefix)
         name_index = self.names.encode_name_term_index(name)
-        return term_rows, prefix_index, name_index
+        return prefix_index, name_index
 
-    def encode_iri(self, iri_string: str, iri: jelly.RdfIri) -> Rows:
+    def encode_iri(self, iri_string: str, iri: jelly.RdfIri) -> None:
         """
-        Encode iri.
+        Encode iri, adding rows for new lookup entries.
 
         Args:
             iri_string (str): full iri in string format.
             iri (jelly.RdfIri): iri to fill
 
-        Returns:
-            Rows: extra rows for prefix and name tables, if any.
-
         """
-        term_rows, prefix_index, name_index = self.encode_iri_indices(iri_string)
+        prefix_index, name_index = self.encode_iri_indices(iri_string)
         iri.prefix_id = prefix_index
         iri.name_id = name_index
-        return term_rows
 
-    def encode_default_graph(self, g_default_graph: jelly.RdfDefaultGraph) -> Rows:
-        """
-        Encode default graph.
-
-        Returns:
-            Rows: empty extra rows (for API consistency)
-
-        """
+    def encode_default_graph(self, g_default_graph: jelly.RdfDefaultGraph) -> None:
+        """Encode default graph."""
         g_default_graph.CopyFrom(jelly.RdfDefaultGraph())
-        return ()
 
     def encode_literal(
         self,
@@ -133,9 +121,9 @@ class TermEncoder:
         language: str | None = None,
         datatype: str | None = None,
         literal: jelly.RdfLiteral,
-    ) -> Rows:
+    ) -> None:
         """
-        Encode literal.
+        Encode literal, adding a row for a new datatype entry.
 
         Args:
             lex (str): lexical form/literal value
@@ -148,12 +136,8 @@ class TermEncoder:
             JellyConformanceError: if datatype specified while
                 datatable is not used.
 
-        Returns:
-            Rows: extra rows (i.e., datatype entries).
-
         """
         datatype_id = None
-        term_rows: tuple[()] | tuple[jelly.RdfStreamRow] = ()
 
         if datatype and datatype != options.STRING_DATATYPE_IRI:
             if self.datatypes.lookup.max_size == 0:
@@ -166,8 +150,9 @@ class TermEncoder:
             datatype_entry_id = self.datatypes.encode_entry_index(datatype)
 
             if datatype_entry_id is not None:
-                entry = jelly.RdfDatatypeEntry(id=datatype_entry_id, value=datatype)
-                term_rows = (jelly.RdfStreamRow(datatype=entry),)
+                entry = self.flow.new_row().datatype
+                entry.id = datatype_entry_id
+                entry.value = datatype
 
             datatype_id = self.datatypes.encode_datatype_term_index(datatype)
 
@@ -176,13 +161,12 @@ class TermEncoder:
             literal.langtag = language
         if datatype_id:
             literal.datatype = datatype_id
-        return term_rows
 
     def encode_quoted_triple(
         self, terms: Iterable[object], quoted_statement: jelly.RdfTriple
-    ) -> Rows:
+    ) -> None:
         """
-        Encode a quoted triple.
+        Encode a quoted triple, adding rows for new lookup entries.
 
         Notes:
             Although a triple, it is treated as a part of a statement.
@@ -192,26 +176,17 @@ class TermEncoder:
             terms (Iterable[object]): triple terms to encode.
             quoted_statement (jelly.RdfTriple): quoted triple to fill.
 
-        Returns:
-            Rows: additional stream rows with preceeding
-                information (prefixes, names, datatypes rows, if any).
-
         """
-        rows: list[jelly.RdfStreamRow] = []
         terms = iter(terms)
-        extra_rows = self.encode_spo(next(terms), Slot.subject, quoted_statement)
-        rows.extend(extra_rows)
-        extra_rows = self.encode_spo(next(terms), Slot.predicate, quoted_statement)
-        rows.extend(extra_rows)
-        extra_rows = self.encode_spo(next(terms), Slot.object, quoted_statement)
-        rows.extend(extra_rows)
-        return rows
+        self.encode_spo(next(terms), Slot.subject, quoted_statement)
+        self.encode_spo(next(terms), Slot.predicate, quoted_statement)
+        self.encode_spo(next(terms), Slot.object, quoted_statement)
 
-    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
+    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> None:
         msg = f"unsupported term type: {type(term)}"
         raise NotImplementedError(msg)
 
-    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+    def encode_graph(self, term: object, statement: HasGraph) -> None:
         msg = f"unsupported term type: {type(term)}"
         raise NotImplementedError(msg)
 
@@ -263,9 +238,9 @@ def encode_spo(
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
     statement: Statement,
-) -> list[jelly.RdfStreamRow]:
+) -> None:
     """
-    Encode the s/p/o of a statement.
+    Encode the s/p/o of a statement, adding rows for new lookup entries.
 
     Args:
         terms (Iterator[object]): iterator for original terms to encode
@@ -273,122 +248,105 @@ def encode_spo(
         repeated_terms (list[object | None): list of repeated terms.
         statement (Statement): Triple/Quad to fill.
 
-    Returns:
-        list[jelly.RdfStreamRow] extra rows to append.
-
     """
-    rows: list[jelly.RdfStreamRow] = []
     s = next(terms)
     # Terms are often the same object. `is` is a fast path then.
     previous = repeated_terms[Slot.subject]
     if previous is not s and previous != s:
-        extra_rows = term_encoder.encode_spo(s, Slot.subject, statement)
-        rows.extend(extra_rows)
+        term_encoder.encode_spo(s, Slot.subject, statement)
         repeated_terms[Slot.subject] = s
     p = next(terms)
     previous = repeated_terms[Slot.predicate]
     if previous is not p and previous != p:
-        extra_rows = term_encoder.encode_spo(p, Slot.predicate, statement)
-        rows.extend(extra_rows)
+        term_encoder.encode_spo(p, Slot.predicate, statement)
         repeated_terms[Slot.predicate] = p
     o = next(terms)
     previous = repeated_terms[Slot.object]
     if previous is not o and previous != o:
-        extra_rows = term_encoder.encode_spo(o, Slot.object, statement)
-        rows.extend(extra_rows)
+        term_encoder.encode_spo(o, Slot.object, statement)
         repeated_terms[Slot.object] = o
-    return rows
 
 
 def encode_triple(
     terms: Iterable[object],
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
-) -> list[jelly.RdfStreamRow]:
+    buffer: jelly.RdfTriple,
+) -> None:
     """
-    Encode one triple.
+    Encode one triple, adding its rows to the encoder's flow.
 
     Args:
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
         repeated_terms (list[object | None]): list of repeated terms.
-
-    Returns:
-        list[jelly.RdfStreamRow]: list of rows to add to the current flow.
+        buffer (jelly.RdfTriple): empty triple to encode into, empty again after.
+            The triple can only be added to the flow after the rows for its new
+            lookup entries, which encoding it adds.
 
     """
     term_encoder.new_epoch()
-    triple = jelly.RdfTriple()
-    terms = iter(terms)
-    rows = encode_spo(terms, term_encoder, repeated_terms, triple)
-    row = jelly.RdfStreamRow(triple=triple)
-    rows.append(row)
-    return rows
+    encode_spo(iter(terms), term_encoder, repeated_terms, buffer)
+    term_encoder.flow.new_row().triple.CopyFrom(buffer)
+    buffer.Clear()
 
 
 def encode_quad(
     terms: Iterable[object],
     term_encoder: TermEncoder,
     repeated_terms: list[object | None],
-) -> list[jelly.RdfStreamRow]:
+    buffer: jelly.RdfQuad,
+) -> None:
     """
-    Encode one quad.
+    Encode one quad, adding its rows to the encoder's flow.
 
     Args:
         terms (Iterable[object]): original terms to encode
         term_encoder (TermEncoder): current encoder with lookup tables
         repeated_terms (list[object | None]): list of repeated terms.
-
-    Returns:
-        list[jelly.RdfStreamRow]: list of messages to append to current flow.
+        buffer (jelly.RdfQuad): empty quad to encode into, see encode_triple().
 
     """
     term_encoder.new_epoch()
     terms = iter(terms)
-    quad = jelly.RdfQuad()
-    rows = encode_spo(terms, term_encoder, repeated_terms, quad)
+    encode_spo(terms, term_encoder, repeated_terms, buffer)
     g = next(terms)
     previous = repeated_terms[Slot.graph]
     if previous is not g and previous != g:
-        extra_rows = term_encoder.encode_graph(g, quad)
-        rows.extend(extra_rows)
+        term_encoder.encode_graph(g, buffer)
         repeated_terms[Slot.graph] = g
-    row = jelly.RdfStreamRow(quad=quad)
-    rows.append(row)
-    return rows
+    term_encoder.flow.new_row().quad.CopyFrom(buffer)
+    buffer.Clear()
 
 
 def encode_namespace_declaration(
     name: str,
     value: str,
     term_encoder: TermEncoder,
-) -> list[jelly.RdfStreamRow]:
+) -> None:
     """
-    Encode namespace declaration.
+    Encode namespace declaration, adding its rows to the encoder's flow.
 
     Args:
         name (str): namespace prefix label
         value (str): namespace iri
         term_encoder (TermEncoder): current encoder
 
-    Returns:
-        list[jelly.RdfStreamRow]: list of messages to append to current flow.
-
     """
     term_encoder.new_epoch()
-    iri = jelly.RdfIri()
-    [*rows] = term_encoder.encode_iri(value, iri=iri)
-    declaration = jelly.RdfNamespaceDeclaration(name=name, value=iri)
-    row = jelly.RdfStreamRow(namespace=declaration)
-    rows.append(row)
-    return rows
+    # The rows for new lookup entries go first
+    prefix_index, name_index = term_encoder.encode_iri_indices(value)
+    declaration = term_encoder.flow.new_row().namespace
+    declaration.name = name
+    declaration.value.prefix_id = prefix_index
+    declaration.value.name_id = name_index
 
 
 def encode_options(
     lookup_preset: options.LookupPreset,
     stream_types: options.StreamTypes,
     params: options.StreamParameters,
-) -> jelly.RdfStreamRow:
+) -> jelly.RdfStreamOptions:
     """
     Encode stream options to ProtoBuf message.
 
@@ -398,19 +356,17 @@ def encode_options(
         params (options.StreamParameters): other params.
 
     Returns:
-        jelly.RdfStreamRow: encoded stream options row
+        jelly.RdfStreamOptions: encoded stream options
 
     """
-    return jelly.RdfStreamRow(
-        options=jelly.RdfStreamOptions(
-            stream_name=params.stream_name,
-            physical_type=stream_types.physical_type,
-            generalized_statements=params.generalized_statements,
-            rdf_star=params.rdf_star,
-            max_name_table_size=lookup_preset.max_names,
-            max_prefix_table_size=lookup_preset.max_prefixes,
-            max_datatype_table_size=lookup_preset.max_datatypes,
-            logical_type=stream_types.logical_type,
-            version=params.version,
-        )
+    return jelly.RdfStreamOptions(
+        stream_name=params.stream_name,
+        physical_type=stream_types.physical_type,
+        generalized_statements=params.generalized_statements,
+        rdf_star=params.rdf_star,
+        max_name_table_size=lookup_preset.max_names,
+        max_prefix_table_size=lookup_preset.max_prefixes,
+        max_datatype_table_size=lookup_preset.max_datatypes,
+        logical_type=stream_types.logical_type,
+        version=params.version,
     )

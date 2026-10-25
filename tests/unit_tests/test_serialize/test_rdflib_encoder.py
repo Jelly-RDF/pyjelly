@@ -50,6 +50,6 @@ def test_subclasses_encode_like_their_base_class(
     for t in (term, subclass_term):
         enc = RDFLibTermEncoder(lookup_preset=LookupPreset())
         triple = jelly.RdfTriple()
-        rows = enc.encode_spo(t, Slot.object, triple)
-        triples.append((list(rows), triple))
+        enc.encode_spo(t, Slot.object, triple)
+        triples.append((list(enc.flow.rows), triple))
     assert triples[0] == triples[1]

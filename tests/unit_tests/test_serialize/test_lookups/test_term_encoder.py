@@ -49,7 +49,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
 
     with subtests.test("xsd:string is skipped by datatype lookup → no error"):
         statement = jelly.RdfTriple()
-        _ = encoder.encode_literal(
+        encoder.encode_literal(
             lex="foo",
             datatype="http://www.w3.org/2001/XMLSchema#string",
             literal=statement.s_literal,
@@ -60,7 +60,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
 
     with subtests.test("no datatype or langtag"):
         statement = jelly.RdfTriple()
-        _ = encoder.encode_literal(
+        encoder.encode_literal(
             lex="bar",
             literal=statement.s_literal,
         )
@@ -70,7 +70,7 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
 
     with subtests.test("no datatype but langtag"):
         statement = jelly.RdfTriple()
-        _ = encoder.encode_literal(
+        encoder.encode_literal(
             lex="baz",
             language="en",
             literal=statement.s_literal,
@@ -82,9 +82,9 @@ def test_encode_literal_ok_with_string_and_langtag(subtests: SubTests) -> None:
 
 def test_encode_namespace_declaration() -> None:
     encoder = TermEncoder()
-    rows = encode_namespace_declaration("ex", "http://example.org/A", encoder)
+    encode_namespace_declaration("ex", "http://example.org/A", encoder)
+    rows = list(encoder.flow.rows)
 
-    assert isinstance(rows[-1].namespace, jelly.RdfNamespaceDeclaration)
-
-    assert any(r.prefix for r in rows[:-1])
-    assert any(r.name for r in rows[:-1])
+    # The rows for the new lookup entries come first
+    assert [row.WhichOneof("row") for row in rows] == ["prefix", "name", "namespace"]
+    assert rows[-1].namespace.name == "ex"

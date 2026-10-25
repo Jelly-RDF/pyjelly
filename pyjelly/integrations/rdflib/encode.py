@@ -14,12 +14,12 @@ from mypy_extensions import mypyc_attr
 from rdflib import Literal, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 
-from pyjelly.serialize.encode import HasGraph, Rows, Slot, Statement, TermEncoder
+from pyjelly.serialize.encode import HasGraph, Slot, Statement, TermEncoder
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibTermEncoder(TermEncoder):
-    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
+    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> None:
         """
         Encode s/p/o term based on its RDFLib object.
 
@@ -27,9 +27,6 @@ class RDFLibTermEncoder(TermEncoder):
             term (object): term to encode
             slot (Slot): its place in statement.
             statement (Statement): Triple/Quad message to fill with s/p/o terms.
-
-        Returns:
-            Rows: encoded extra rows
 
         """
         # Exact type checks first, as rdflib almost always makes terms of these
@@ -41,11 +38,12 @@ class RDFLibTermEncoder(TermEncoder):
             type(node) is not Literal and isinstance(node, URIRef)
         ):
             iri = self.get_iri_field(statement, slot)
-            return self.encode_iri(node, iri)
+            self.encode_iri(node, iri)
+            return
 
         if type(node) is Literal or isinstance(node, Literal):
             literal = self.get_literal_field(statement, slot)
-            return self.encode_literal(
+            self.encode_literal(
                 lex=str(node),
                 language=node.language,
                 # `datatype` is cast to `str` explicitly because
@@ -53,14 +51,15 @@ class RDFLibTermEncoder(TermEncoder):
                 datatype=node.datatype and str(node.datatype),
                 literal=literal,
             )
+            return
 
         if isinstance(term, rdflib.BNode):
             self.set_bnode_field(statement, slot, str(term))
-            return ()
+            return
 
-        return super().encode_spo(term, slot, statement)  # error if not handled
+        super().encode_spo(term, slot, statement)  # raises: not handled
 
-    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+    def encode_graph(self, term: object, statement: HasGraph) -> None:
         """
         Encode graph name term based on its RDFLib object.
 
@@ -68,17 +67,16 @@ class RDFLibTermEncoder(TermEncoder):
             term (object): term to encode
             statement (HasGraph): Quad/GraphStart message to fill g_{} in.
 
-        Returns:
-            Rows: encoded extra rows
-
         """
         if term == DATASET_DEFAULT_GRAPH_ID:
-            return self.encode_default_graph(statement.g_default_graph)
+            self.encode_default_graph(statement.g_default_graph)
+            return
 
         if isinstance(term, rdflib.URIRef):
-            return self.encode_iri(term, statement.g_iri)
+            self.encode_iri(term, statement.g_iri)
+            return
 
         if isinstance(term, rdflib.BNode):
             statement.g_bnode = str(term)
-            return ()
-        return super().encode_graph(term, statement)  # error if not handled
+            return
+        super().encode_graph(term, statement)  # raises: not handled

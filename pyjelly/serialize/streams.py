@@ -60,6 +60,11 @@ class Stream:
         if flow is None:
             flow = self.infer_flow()
         self.flow = flow
+        # The encoder adds rows for new lookup entries to the same flow
+        encoder.flow = flow
+        # Statements are encoded into these first (see encode_triple())
+        self.triple_buffer = jelly.RdfTriple()
+        self.quad_buffer = jelly.RdfQuad()
         self.repeated_terms = [None] * len(Slot)
         # See set_subject()
         self.subject_changed = False
@@ -109,7 +114,7 @@ class Stream:
 
     def stream_options(self) -> None:
         """Encode and append stream options row to the current flow."""
-        self.flow.append(
+        self.flow.new_row().options.CopyFrom(
             encode_options(
                 stream_types=self.stream_types,
                 params=self.options.params,
@@ -126,12 +131,7 @@ class Stream:
             iri (str): namespace iri
 
         """
-        rows = encode_namespace_declaration(
-            name=name,
-            value=iri,
-            term_encoder=self.encoder,
-        )
-        self.flow.extend(rows)
+        encode_namespace_declaration(name=name, value=iri, term_encoder=self.encoder)
 
     # Cursor API: instead of passing whole statements, the caller sets only the
     # terms that changed since the previous statement, and then emits it.
@@ -152,7 +152,7 @@ class Stream:
         self.repeated_terms[2] = o
         self.object_changed = True
 
-    def encode_changed_spo(self, statement: Statement) -> list[jelly.RdfStreamRow]:
+    def encode_changed_spo(self, statement: Statement) -> None:
         """
         Encode the subject, predicate and object that were set since the last emit.
 
@@ -160,25 +160,22 @@ class Stream:
         IRIs are encoded relative to the IRI before them, in the order the parser
         reads them.
 
+        Rows for new lookup entries are added to the flow.
+
         Args:
             statement (Statement): Triple/Quad to fill.
 
-        Returns:
-            list[jelly.RdfStreamRow]: extra rows (lookup entries) to add first.
-
         """
-        rows: list[jelly.RdfStreamRow] = []
         terms = self.repeated_terms
         if self.subject_changed:
-            rows.extend(self.encoder.encode_spo(terms[0], Slot.subject, statement))
+            self.encoder.encode_spo(terms[0], Slot.subject, statement)
             self.subject_changed = False
         if self.predicate_changed:
-            rows.extend(self.encoder.encode_spo(terms[1], Slot.predicate, statement))
+            self.encoder.encode_spo(terms[1], Slot.predicate, statement)
             self.predicate_changed = False
         if self.object_changed:
-            rows.extend(self.encoder.encode_spo(terms[2], Slot.object, statement))
+            self.encoder.encode_spo(terms[2], Slot.object, statement)
             self.object_changed = False
-        return rows
 
     @classmethod
     def for_rdflib(cls, options: SerializerOptions | None = None) -> Stream:
@@ -264,12 +261,7 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        new_rows = encode_triple(
-            terms,
-            term_encoder=self.encoder,
-            repeated_terms=self.repeated_terms,
-        )
-        self.flow.extend(new_rows)
+        encode_triple(terms, self.encoder, self.repeated_terms, self.triple_buffer)
         return self.flow.frame_from_bounds()
 
     def emit_triple(self) -> jelly.RdfStreamFrame | None:
@@ -282,10 +274,10 @@ class TripleStream(Stream):
 
         """
         self.encoder.new_epoch()
-        triple = jelly.RdfTriple()
-        rows = self.encode_changed_spo(triple)
-        rows.append(jelly.RdfStreamRow(triple=triple))
-        self.flow.extend(rows)
+        triple = self.triple_buffer
+        self.encode_changed_spo(triple)
+        self.flow.new_row().triple.CopyFrom(triple)
+        triple.Clear()
         return self.flow.frame_from_bounds()
 
 
@@ -305,12 +297,7 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        new_rows = encode_quad(
-            terms,
-            term_encoder=self.encoder,
-            repeated_terms=self.repeated_terms,
-        )
-        self.flow.extend(new_rows)
+        encode_quad(terms, self.encoder, self.repeated_terms, self.quad_buffer)
         return self.flow.frame_from_bounds()
 
     def set_graph(self, g: object) -> None:
@@ -328,14 +315,14 @@ class QuadStream(Stream):
 
         """
         self.encoder.new_epoch()
-        quad = jelly.RdfQuad()
-        rows = self.encode_changed_spo(quad)
+        quad = self.quad_buffer
+        self.encode_changed_spo(quad)
         # The graph comes last, as in the parser
         if self.graph_changed:
-            rows.extend(self.encoder.encode_graph(self.repeated_terms[3], quad))
+            self.encoder.encode_graph(self.repeated_terms[3], quad)
             self.graph_changed = False
-        rows.append(jelly.RdfStreamRow(quad=quad))
-        self.flow.extend(rows)
+        self.flow.new_row().quad.CopyFrom(quad)
+        quad.Clear()
         return self.flow.frame_from_bounds()
 
 
