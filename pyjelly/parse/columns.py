@@ -538,8 +538,8 @@ class ColumnDecoder:
         return [adapter.bnode(label) for label in column.bnodes]
 
     def literals(self, column: jelly.RdfColumn) -> list[Any]:
-        lex_values = column.lex_values
-        literal_kinds = column.literal_kinds
+        lex_values: list[str] = column.lex_values[:]
+        literal_kinds: list[int] = column.literal_kinds[:]
         count = len(lex_values)
         kind_count = len(literal_kinds)
         if kind_count > 1 and kind_count != count:
@@ -556,20 +556,34 @@ class ColumnDecoder:
         if not count:
             return []
         decoder = self.decoder
-        terms = []
-        if kind_count <= 1:
-            language, datatype, direction = self.literal_kind(
-                literal_kinds[0] if kind_count else 0, langtags, directions
-            )
+        terms: list[Any] = []
+        if kind_count > 1:
+            # Each literal kind is resolved once
+            resolved: dict[int, tuple[str | None, str | None, str | None]] = {}
+            for lex, kind in zip(lex_values, literal_kinds, strict=True):
+                parts = resolved.get(kind)
+                if parts is None:
+                    parts = resolved[kind] = self.literal_kind(
+                        kind, langtags, directions
+                    )
+                language, datatype, direction = parts
+                terms.append(decoder.literal_term(lex, language, datatype, direction))
+            return terms
+        language, datatype, direction = self.literal_kind(
+            literal_kinds[0] if kind_count else 0, langtags, directions
+        )
+        if direction:
             return [
                 decoder.literal_term(lex, language, datatype, direction)
                 for lex in lex_values
             ]
-        for lex, kind in zip(lex_values, literal_kinds, strict=True):
-            language, datatype, direction = self.literal_kind(
-                kind, langtags, directions
-            )
-            terms.append(decoder.literal_term(lex, language, datatype, direction))
+        # As Decoder.literal_term(), for each literal
+        cache = decoder.literal_cache(language, datatype)
+        for lex in lex_values:
+            term = cache.get(lex)
+            if term is None:
+                term = decoder.new_literal(lex, language, datatype, cache)
+            terms.append(term)
         return terms
 
     def literal_kind(

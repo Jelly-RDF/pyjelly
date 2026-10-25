@@ -419,8 +419,10 @@ class Decoder:
         # The last s, p, o and g terms, for repeated terms
         self.repeated_terms: list[object] = [_MISSING] * 4
         # Literals often repeat (e.g., the same values in many entities), and
-        # making one is often slow (rdflib parses the value)
-        self.literal_cache: dict[tuple[str, str | None, str | None], Any] = {}
+        # making one is often slow (rdflib parses the value). By language tag and
+        # datatype, then by lexical form, see literal_cache()
+        self.literal_caches: dict[tuple[str | None, str | None], dict[str, Any]] = {}
+        self.literal_cache_size = 0
 
         self.term_handlers: dict[type[Any], TermHandler] = {
             t: getattr(self, name) for t, name in self._TERM_HANDLER_NAMES.items()
@@ -646,9 +648,10 @@ class Decoder:
         elif kind == "datatype" and self.datatypes.lookup_size:
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         lex = literal.lex
-        term = self.literal_cache.get((lex, language, datatype))
+        cache = self.literal_cache(language, datatype)
+        term = cache.get(lex)
         if term is None:
-            term = self._new_literal(lex, language, datatype)
+            term = self.new_literal(lex, language, datatype, cache)
         return term
 
     def literal_term(
@@ -662,18 +665,37 @@ class Decoder:
         if direction:
             assert language
             return self.adapter.directional_literal(lex, language, direction)
-        term = self.literal_cache.get((lex, language, datatype))
+        cache = self.literal_cache(language, datatype)
+        term = cache.get(lex)
         if term is None:
-            term = self._new_literal(lex, language, datatype)
+            term = self.new_literal(lex, language, datatype, cache)
         return term
 
-    def _new_literal(self, lex: str, language: str | None, datatype: str | None) -> Any:
-        """Make a literal term, and cache it."""
+    def literal_cache(
+        self, language: str | None, datatype: str | None
+    ) -> dict[str, Any]:
+        """Return recent literals of a language tag and datatype, by lexical form."""
+        key = (language, datatype)
+        cache = self.literal_caches.get(key)
+        if cache is None:
+            cache = self.literal_caches[key] = {}
+        return cache
+
+    def new_literal(
+        self,
+        lex: str,
+        language: str | None,
+        datatype: str | None,
+        cache: dict[str, Any],
+    ) -> Any:
+        """Make a literal term, and keep it in its literal_cache()."""
         term = self.adapter.literal(lex=lex, language=language, datatype=datatype)
-        cache = self.literal_cache
-        if len(cache) >= LITERAL_CACHE_SIZE:
-            cache.clear()
-        cache[(lex, language, datatype)] = term
+        if self.literal_cache_size >= LITERAL_CACHE_SIZE:
+            for full in self.literal_caches.values():
+                full.clear()
+            self.literal_cache_size = 0
+        cache[lex] = term
+        self.literal_cache_size += 1
         return term
 
     def decode_namespace_declaration(
