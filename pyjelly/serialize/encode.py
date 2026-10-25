@@ -268,17 +268,21 @@ def encode_spo(
     """
     rows: list[jelly.RdfStreamRow] = []
     s = next(terms)
-    if repeated_terms[Slot.subject] != s:
+    # Terms are often the same object. `is` is a fast path then.
+    previous = repeated_terms[Slot.subject]
+    if previous is not s and previous != s:
         extra_rows = term_encoder.encode_spo(s, Slot.subject, statement)
         rows.extend(extra_rows)
         repeated_terms[Slot.subject] = s
     p = next(terms)
-    if repeated_terms[Slot.predicate] != p:
+    previous = repeated_terms[Slot.predicate]
+    if previous is not p and previous != p:
         extra_rows = term_encoder.encode_spo(p, Slot.predicate, statement)
         rows.extend(extra_rows)
         repeated_terms[Slot.predicate] = p
     o = next(terms)
-    if repeated_terms[Slot.object] != o:
+    previous = repeated_terms[Slot.object]
+    if previous is not o and previous != o:
         extra_rows = term_encoder.encode_spo(o, Slot.object, statement)
         rows.extend(extra_rows)
         repeated_terms[Slot.object] = o
@@ -331,7 +335,8 @@ def encode_quad(
     quad = jelly.RdfQuad()
     rows = encode_spo(terms, term_encoder, repeated_terms, quad)
     g = next(terms)
-    if repeated_terms[Slot.graph] != g:
+    previous = repeated_terms[Slot.graph]
+    if previous is not g and previous != g:
         extra_rows = term_encoder.encode_graph(g, quad)
         rows.extend(extra_rows)
         repeated_terms[Slot.graph] = g

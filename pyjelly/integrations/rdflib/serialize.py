@@ -1,12 +1,12 @@
 # ruff: noqa: I001
 from __future__ import annotations
-from typing import cast
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from functools import singledispatch
 from typing import Any, IO
 from typing_extensions import override
 from itertools import chain
 from pyjelly.integrations.rdflib.parse import Quad, Triple
+from pyjelly.integrations.rdflib.walk import Tree, gspo_trees, spo_tree, spo_triples
 from pyjelly.options import StreamParameters
 
 import rdflib
@@ -104,6 +104,66 @@ def stream_frames(
     raise TypeError(msg)
 
 
+def _differs(previous: object, term: object) -> bool:
+    return previous is not term and previous != term
+
+
+def _emit_tree(
+    stream: Stream,
+    tree: Tree,
+    emit: Callable[[], jelly.RdfStreamFrame | None],
+) -> Generator[jelly.RdfStreamFrame]:
+    """
+    Emit the statements of a subject -> predicate -> objects tree.
+
+    Uses the stream's cursor API, so the stream doesn't compare terms. In a tree,
+    each subject differs from the one before it, and so do the predicates of one
+    subject and the objects of one predicate. Only the first term of a group can
+    be equal to the term before it (e.g., rdf:type as the first predicate of
+    every subject), so only those are compared here, once per group.
+
+    Args:
+        stream (Stream): stream to write to
+        tree (Tree): statements to write
+        emit (Callable): the stream's emit_triple or emit_quad
+
+    Yields:
+        Generator[jelly.RdfStreamFrame]: jelly frames
+
+    """
+    terms = stream.repeated_terms
+    subjects = iter(tree.items())
+    for s, predicates in subjects:
+        # The first subject of the tree
+        if _differs(terms[0], s):
+            stream.set_subject(s)
+        yield from _emit_predicates(stream, predicates, emit)
+        break
+    for s, predicates in subjects:
+        stream.set_subject(s)
+        yield from _emit_predicates(stream, predicates, emit)
+
+
+def _emit_predicates(
+    stream: Stream,
+    predicates: Any,
+    emit: Callable[[], jelly.RdfStreamFrame | None],
+) -> Generator[jelly.RdfStreamFrame]:
+    terms = stream.repeated_terms
+    first = True
+    for p, objects in predicates.items():
+        if not first or _differs(terms[1], p):
+            stream.set_predicate(p)
+        first = False
+        # The first object of a predicate is rarely equal to the object before
+        # it, and most predicates have only one object: comparing would cost
+        # more than it saves
+        for o in objects:
+            stream.set_object(o)
+            if frame := emit():
+                yield frame
+
+
 @stream_frames.register(TripleStream)
 def triples_stream_frames(
     stream: TripleStream,
@@ -131,9 +191,15 @@ def triples_stream_frames(
 
     graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
     for graph in graphs:
-        for terms in graph:
-            if frame := stream.triple(terms):
-                yield frame
+        tree = spo_tree(graph) if isinstance(graph, Graph) else None
+        if tree is not None:
+            # An in-memory graph, grouped by subject and predicate
+            yield from _emit_tree(stream, tree, stream.emit_triple)
+        else:
+            # Any other store, or a generator of triples, in its own order
+            for terms in graph:
+                if frame := stream.triple(terms):
+                    yield frame
         if frame := stream.flow.frame_from_graph():
             yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -162,15 +228,21 @@ def quads_stream_frames(
     stream.enroll()
     if stream.options.params.namespace_declarations:
         namespace_declarations(data, stream)  # type: ignore[arg-type]
-    iterator: Generator[Quad, None, None]
-    if isinstance(data, Dataset):
-        iterator = cast(Generator[Quad, None, None], data.quads())
+    trees = gspo_trees(data) if isinstance(data, Dataset) else None
+    if trees is not None:
+        # An in-memory dataset, grouped by graph, subject and predicate
+        for g, tree in trees:
+            if _differs(stream.repeated_terms[3], g):
+                stream.set_graph(g)
+            yield from _emit_tree(stream, tree, stream.emit_quad)
     else:
-        iterator = data
-
-    for terms in iterator:
-        if frame := stream.quad(terms):
-            yield frame
+        # Any other store, or a generator of quads, in its own order
+        quads = (
+            data.quads((None, None, None, None)) if isinstance(data, Dataset) else data
+        )
+        for terms in quads:
+            if frame := stream.quad(terms):
+                yield frame
     if frame := stream.flow.frame_from_dataset():
         yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
@@ -211,7 +283,7 @@ def graphs_stream_frames(
         graphs = ds.graphs()
 
     for graph in graphs:
-        yield from stream.graph(graph_id=graph.identifier, graph=graph)
+        yield from stream.graph(graph_id=graph.identifier, graph=spo_triples(graph))
 
     if frame := stream.flow.frame_from_dataset():
         yield frame
