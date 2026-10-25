@@ -255,14 +255,14 @@ def _run_case_process(  # noqa: PLR0913
     return result
 
 
-def _parse_cpu_list(text: str) -> set[int]:
-    """Parse a Linux CPU list, like "0-4,10"."""
+def parse_cpu_list(text: str) -> list[int]:
+    """Parse a Linux CPU list, as taskset and sysfs write it: "0-4,10"."""
     cpus: set[int] = set()
     for part in text.strip().split(","):
         if part:
             first, _, last = part.partition("-")
             cpus.update(range(int(first), int(last or first) + 1))
-    return cpus
+    return sorted(cpus)
 
 
 def performance_cluster() -> list[int] | None:
@@ -290,7 +290,7 @@ def performance_cluster() -> list[int] | None:
                 (base / f"cpu{cpu}/cache").glob("index[0-9]*"),
                 key=lambda path: int(path.name[5:]),
             )
-            shared = _parse_cpu_list((caches[-1] / "shared_cpu_list").read_text())
+            shared = set(parse_cpu_list((caches[-1] / "shared_cpu_list").read_text()))
             cluster = sorted(fastest & shared)
             if cluster not in clusters:
                 clusters.append(cluster)

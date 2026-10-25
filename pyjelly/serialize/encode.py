@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from enum import IntEnum
-from typing import Final, TypeAlias, TypeVar
+from typing import Final, TypeAlias
 
 from mypy_extensions import mypyc_attr
 
@@ -32,12 +32,7 @@ def split_iri(iri_string: str) -> tuple[str, str]:
     return prefix, name
 
 
-T = TypeVar("T")
 Statement: TypeAlias = jelly.RdfQuad | jelly.RdfTriple
-HasGraph: TypeAlias = jelly.RdfQuad | jelly.RdfGraphStart
-Terms: TypeAlias = (
-    jelly.RdfIri | jelly.RdfLiteral | str | jelly.RdfDefaultGraph | jelly.RdfTriple
-)
 
 
 class _CachedIri:

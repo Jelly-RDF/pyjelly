@@ -68,15 +68,6 @@ def _add_timing(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _cpus(value: str) -> list[int]:
-    """Parse a CPU list like taskset's: "5-9" or "5,6,7" or "0,5-9"."""
-    cpus: list[int] = []
-    for part in value.split(","):
-        first, _, last = part.partition("-")
-        cpus.extend(range(int(first), int(last or first) + 1))
-    return cpus
-
-
 def _format_cpus(cpus: list[int]) -> str:
     """Format CPU cores like taskset does: "5-9,15"."""
     ranges: list[list[int]] = []
@@ -169,7 +160,7 @@ def main() -> None:
     run.add_argument("--out", type=Path, help="where to save the results as JSON")
     run.add_argument(
         "--cpus",
-        type=_cpus,
+        type=measure.parse_cpu_list,
         action="append",
         default=[],
         help=(
@@ -186,7 +177,9 @@ def main() -> None:
     case.add_argument("dataset")
     case.add_argument("method", choices=list(METHODS))
     case.add_argument("--rows", type=int, default=data.DEFAULT_ROWS)
-    case.add_argument("--cpus", type=_cpus, help="CPU cores to pin the case to")
+    case.add_argument(
+        "--cpus", type=measure.parse_cpu_list, help="CPU cores to pin the case to"
+    )
     _add_timing(case)
     case.add_argument(
         "--profile",

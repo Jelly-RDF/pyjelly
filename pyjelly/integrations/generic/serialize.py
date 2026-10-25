@@ -60,7 +60,7 @@ class GenericSinkTermEncoder(TermEncoder):
             self.encode_quoted_triple(term, out)
             return
 
-        super().encode_spo(term, out)  # raises: not handled
+        super().encode_spo(term, out)  # raises NotImplementedError
 
     def encode_graph(self, term: object, out: EncodedTerm) -> None:
         """
@@ -90,7 +90,7 @@ class GenericSinkTermEncoder(TermEncoder):
         if isinstance(term, BlankNode):
             self.encode_bnode(term._identifier, out)
             return
-        super().encode_graph(term, out)  # raises: not handled
+        super().encode_graph(term, out)  # raises NotImplementedError
 
 
 def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:

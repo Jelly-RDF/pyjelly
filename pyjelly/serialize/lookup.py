@@ -74,7 +74,6 @@ class Lookup:
         assert key not in self.data, f"key {key!r} already present"
         index = len(self.keys)
         if index <= self.max_size:
-            # Not full yet: the next index
             self.keys.append(key)
             self.last_use.append(0)
         else:
@@ -223,26 +222,6 @@ class LookupEncoder:
         # The entry was already marked as used by encode_entry_index()
         current_index = self.lookup.data[value]
         self.last_reused_index = current_index
-        return current_index
-
-    def encode_prefix_term_index(self, value: str) -> int:
-        if self.lookup.max_size == 0:
-            return 0
-        previous_index = self.last_reused_index
-        if not value and previous_index == 0:
-            return 0
-        current_index = self.encode_term_index(value)
-        if previous_index == 0:
-            return current_index
-        if current_index == previous_index:
-            return 0
-        return current_index
-
-    def encode_name_term_index(self, value: str) -> int:
-        previous_index = self.last_reused_index
-        current_index = self.encode_term_index(value)
-        if current_index == previous_index + 1:
-            return 0
         return current_index
 
     def encode_datatype_term_index(self, value: str) -> int:

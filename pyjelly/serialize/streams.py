@@ -65,7 +65,7 @@ class Stream:
         # The encoder adds rows for new lookup entries to the same flow
         encoder.flow = flow
         self.repeated_terms = [None] * len(Slot)
-        # See set_subject()
+        # Which terms the cursor API set since the last emit()
         self.subject_changed = False
         self.predicate_changed = False
         self.object_changed = False
@@ -256,14 +256,15 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
     try:
         stream_cls = STREAM_DISPATCH[physical_type]
     except KeyError:
-        msg = (
-            "no stream class for physical type "
-            f"{jelly.PhysicalStreamType.Name(physical_type)}"
-        )
         if physical_type == jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
             msg = (
                 "writing streams of the GRAPHS physical type is not supported "
                 "(they can still be read). Use QUADS instead."
+            )
+        else:
+            msg = (
+                "no stream class for physical type "
+                f"{jelly.PhysicalStreamType.Name(physical_type)}"
             )
         raise NotImplementedError(msg) from None
     return stream_cls
@@ -360,7 +361,7 @@ class QuadStream(Stream):
                 yield frame
 
     def set_graph(self, g: object) -> None:
-        """Set the graph name of the next quad (see Stream.set_subject)."""
+        """Set the graph name of the next quad."""
         self.repeated_terms[3] = g
         self.graph_changed = True
 

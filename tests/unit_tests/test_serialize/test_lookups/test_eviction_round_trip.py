@@ -30,7 +30,7 @@ PlainQuad = tuple[str, str, tuple[str, str | None], str]
 
 def make_quads(count: int) -> list[PlainQuad]:
     """Return quads as plain strings: many more names and prefixes than fit."""
-    rng = random.Random(42)  # noqa: S311
+    rng = random.Random(42)
 
     def iri() -> str:
         return f"http://example.org/ns{rng.randrange(30)}/name{rng.randrange(200)}"

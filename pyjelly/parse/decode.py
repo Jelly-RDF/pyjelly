@@ -202,8 +202,8 @@ class Decoder:
         """
         Initialize decoder.
 
-        Initializes decoder with a lookup tables with preset sizes,
-        integration-dependent adapter and empty repeated terms dictionary.
+        Initializes decoder with lookup tables of preset sizes and an
+        integration-dependent adapter.
 
         Args:
             adapter (Adapter): integration-dependent adapter that specifies terms
@@ -388,9 +388,8 @@ class Decoder:
         """
         Decode RdfLiteral to literal based on custom adapter implementation.
 
-        Notes: checks for langtag existence;
-               for datatype checks for non-zero table size and datatype field presence.
-               Recently decoded literals are reused.
+        Recently decoded literals are reused, so the adapter's literal terms must
+        be immutable.
 
         Args:
             literal (jelly.RdfLiteral): RdfLiteral message
@@ -401,11 +400,9 @@ class Decoder:
         """
         language = datatype = None
         kind = _LITERAL_WHICH_ONEOF(literal, "literalKind")
-        if kind is None:
-            pass
-        elif kind == "langtag":
+        if kind == "langtag":
             language = literal.langtag or None
-        elif self.datatypes.lookup_size:
+        elif kind == "datatype" and self.datatypes.lookup_size:
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         lex = literal.lex
         cache = self.literal_cache

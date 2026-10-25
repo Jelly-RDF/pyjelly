@@ -192,7 +192,6 @@ def parse_jelly_grouped(
     raise NotImplementedError(msg)
 
 
-# Statements are given to the store this many at a time
 ADD_BATCH_SIZE = 1000
 # How many context graphs to keep for reuse, by graph name
 MAX_CACHED_CONTEXTS = 1024
