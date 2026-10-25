@@ -587,7 +587,7 @@ class Decoder:
         cached = self.iri_cache[name_index]
         if cached is not None and cached.name is name and cached.prefix is prefix:
             return cached.term
-        return self._new_iri(name_index, name, prefix)
+        return self.new_iri(name_index, name, prefix)
 
     def iri_term(self, prefix_index: int, name_index: int) -> Any:
         """Return the IRI made of the entries at the indices (prefix 0 is none)."""
@@ -596,9 +596,9 @@ class Decoder:
         cached = self.iri_cache[name_index]
         if cached is not None and cached.name is name and cached.prefix is prefix:
             return cached.term
-        return self._new_iri(name_index, name, prefix)
+        return self.new_iri(name_index, name, prefix)
 
-    def _new_iri(self, name_index: int, name: str, prefix: str) -> Any:
+    def new_iri(self, name_index: int, name: str, prefix: str) -> Any:
         """Make an IRI term, and cache it for its name entry."""
         term = self.adapter.iri(iri=prefix + name)
         self.iri_cache[name_index] = _CachedIri(name, prefix, term)
