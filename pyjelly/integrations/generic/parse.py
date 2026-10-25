@@ -18,7 +18,7 @@ from pyjelly.integrations.generic.generic_sink import (
     Quad,
     Triple,
 )
-from pyjelly.parse.decode import Decoder, ParserOptions
+from pyjelly.parse.decode import Decoder, ParserOptions, flat_rows, grouped_rows
 from pyjelly.parse.ioutils import get_options_and_frames
 
 Statement = Triple | Quad
@@ -52,7 +52,8 @@ def parse_triples_stream(
                 frame.metadata
             ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
-    return
+    if options.params.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
+        yield decoder.end_of_stream()
 
 
 def parse_quads_stream(
@@ -88,7 +89,8 @@ def parse_quads_stream(
                 frame.metadata
             ) if frame.metadata else frame_metadata.set({})
         yield decoder.iter_rows(frame)
-    return
+    if options.params.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
+        yield decoder.end_of_stream()
 
 
 def parse_jelly_grouped(
@@ -143,10 +145,11 @@ def parse_jelly_grouped(
         raise JellyConformanceError(msg)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        for graph in parse_triples_stream(
-            frames=frames,
-            options=options,
-            **{"frame_metadata": frame_metadata} if frame_metadata is not None else {},
+        for graph in grouped_rows(
+            parse_triples_stream(
+                frames=frames, options=options, frame_metadata=frame_metadata
+            ),
+            options,
         ):
             sink = sink_factory()
             for graph_item in graph:
@@ -160,10 +163,11 @@ def parse_jelly_grouped(
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        for dataset in parse_quads_stream(
-            frames=frames,
-            options=options,
-            **{"frame_metadata": frame_metadata} if frame_metadata is not None else {},
+        for dataset in grouped_rows(
+            parse_quads_stream(
+                frames=frames, options=options, frame_metadata=frame_metadata
+            ),
+            options,
         ):
             sink = sink_factory()
             for item in dataset:
@@ -259,15 +263,17 @@ def parse_jelly_flat(
         raise JellyConformanceError(msg)
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
-        for triples in parse_triples_stream(frames=frames, options=options):
-            yield from triples
+        yield from flat_rows(
+            parse_triples_stream(frames=frames, options=options), options
+        )
         return
     if options.stream_types.physical_type in (
         jelly.PHYSICAL_STREAM_TYPE_QUADS,
         jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
     ):
-        for quads in parse_quads_stream(frames=frames, options=options):
-            yield from quads
+        yield from flat_rows(
+            parse_quads_stream(frames=frames, options=options), options
+        )
         return
     physical_type_name = jelly.PhysicalStreamType.Name(
         options.stream_types.physical_type

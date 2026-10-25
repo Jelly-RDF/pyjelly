@@ -83,7 +83,7 @@ jobs:
     - name: Install jelly-cli
       uses: jelly-rdf/setup-cli@v1
       with:
-        version: "0.10.0"
+        version: "0.11.0"
       if: ${{ !cancelled() && steps.install.conclusion == 'success' && matrix['conformance-tests'] }}
 
     - name: Select protobuf Python backend

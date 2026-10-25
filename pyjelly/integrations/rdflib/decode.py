@@ -56,8 +56,8 @@ class RDFLibAdapter(Adapter):
         return rdflib.Literal(lex, lang=language, datatype=datatype, normalize=False)
 
     @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
+    def namespace_declaration(self, name: str, iri: rdflib.URIRef) -> Prefix:
+        return Prefix(name, iri)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)

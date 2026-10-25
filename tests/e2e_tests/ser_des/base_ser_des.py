@@ -3,7 +3,7 @@ from typing import TypeAlias
 
 from rdflib import Dataset, Graph
 
-from pyjelly.options import LookupPreset
+from pyjelly.options import VERSION_1_2, LookupPreset
 
 TripleGraphType: TypeAlias = Graph
 QuadGraphType: TypeAlias = Dataset
@@ -68,7 +68,11 @@ class BaseSerDes(ABC):
 
     @abstractmethod
     def write_quads_jelly(
-        self, in_graph: QuadGraphType, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: QuadGraphType,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         """
         Write quads to jelly bytes.
@@ -77,6 +81,7 @@ class BaseSerDes(ABC):
             in_graph (QuadGraphType): The graph-like structure containing the quads.
             preset (LookupPreset): The stream options lookup preset for serialization.
             frame_size (int): The size of the frame for serialization.
+            version (int): The protocol version to write.
 
         Returns:
             bytes: The output bytes containing the serialized quads.
@@ -125,7 +130,11 @@ class BaseSerDes(ABC):
 
     @abstractmethod
     def write_triples_jelly(
-        self, in_graph: TripleGraphType, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: TripleGraphType,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         """
         Write triples to jelly bytes.
@@ -134,6 +143,7 @@ class BaseSerDes(ABC):
             in_graph (TripleGraphType): The graph-like structure containing the triples.
             preset (LookupPreset): The stream options lookup preset for serialization.
             frame_size (int): The size of the frame for serialization.
+            version (int): The protocol version to write.
 
         Returns:
             bytes: The output bytes containing the serialized triples.

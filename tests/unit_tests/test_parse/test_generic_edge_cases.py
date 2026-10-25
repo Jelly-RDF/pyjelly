@@ -84,7 +84,7 @@ def test_namespace_declaration_returns_prefix() -> None:
         params=StreamParameters(),
     )
     adapter = GenericStatementSinkAdapter(options=opts)
-    p = adapter.namespace_declaration("ex", "http://example.com/")
+    p = adapter.namespace_declaration("ex", adapter.iri("http://example.com/"))
     assert isinstance(p, Prefix)
     assert p.prefix == "ex"
     assert p.iri == IRI("http://example.com/")
@@ -147,6 +147,7 @@ def test_parse_jelly_grouped_prefixes_triples(monkeypatch: pytest.MonkeyPatch) -
     def dummy_triples_stream(
         frames: Iterable[jelly.RdfStreamFrame],  # noqa: ARG001
         options: ParserOptions,  # noqa: ARG001
+        frame_metadata: object,  # noqa: ARG001
     ) -> Any:
         yield [
             Prefix("ex", IRI("http://example.com/")),
@@ -182,6 +183,7 @@ def test_parse_jelly_grouped_prefixes_quads(monkeypatch: pytest.MonkeyPatch) -> 
     def fake_parse_quads_stream(
         frames: Iterable[jelly.RdfStreamFrame],  # noqa: ARG001
         options: ParserOptions,  # noqa: ARG001
+        frame_metadata: object,  # noqa: ARG001
     ) -> Any:
         yield [
             Prefix("ex", IRI("http://example.com/")),

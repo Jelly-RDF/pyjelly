@@ -15,17 +15,37 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 ## Overview
 
+### Jelly-RDF versions
+
+pyjelly reads all versions of Jelly-RDF: 1.0, 1.1 and 1.2. It writes [Jelly-RDF 1.2]({{ proto_link("specification/serialization/") }}) by default, which is smaller, and faster to write and read, than Jelly-RDF 1.1.
+
+Parsers that only know Jelly-RDF 1.0 or 1.1 can't read Jelly-RDF 1.2. To write Jelly-RDF 1.1 for them, set the protocol version to 2:
+
+```python
+from pyjelly.options import StreamParameters
+from pyjelly.serialize.streams import SerializerOptions
+
+options = SerializerOptions(params=StreamParameters(version=2))
+graph.serialize("out.jelly", format="jelly", options=options)
+```
+
 ### Supported stream types
 
-pyjelly supports all [physical stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}): `TRIPLES`, `QUADS` and `GRAPHS` (read-only).
+pyjelly writes the `TRIPLES` and `QUADS` [physical stream types]({{ proto_link("specification/serialization/#physical-stream-types") }}). It also reads `GRAPHS`, which only exists in Jelly-RDF 1.0 and 1.1.
 
-See the full [stream type matrix]({{ proto_link("specification/serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
+A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Messages]({{ proto_link("specification/serialization/#stream-types") }}). When you write a stream of graphs or datasets (e.g., with `grouped_stream_to_file`), each one is one RDF Message. When you read such a stream with `parse_jelly_grouped`, you get one graph or dataset for each message. Other streams give one graph or dataset for each frame.
+
+### RDF 1.2
+
+The generic API supports the terms of [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and language-tagged strings with a base direction, as `Literal("text", "en", direction="ltr")`. To declare which of them a stream may have, set `rdf_version` in `StreamParameters`. RDFLib doesn't support these terms yet, so the RDFLib integration can't read or write them.
+
+Jelly-RDF 1.2 can't store generalized statements (e.g., a literal as a subject), or RDF-star quoted triples anywhere but in the object. To write them, use Jelly-RDF 1.1.
 
 ### Conformance to the Jelly specification
 
-pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). While the vast majority of features are implemented, there are a few edge cases left to resolve.
+pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests]({{ proto_link("conformance/") }}) of Jelly-RDF 1.2, and the tests of Jelly-RDF 1.1, except for writing the `GRAPHS` physical stream type.
 
-You can track the progress in [the conformance test suite definition]({{ git_link("tests/utils/rdf_test_cases.py") }}).
+See the [conformance tests]({{ git_link("tests/conformance_tests") }}) in the pyjelly repository.
 
 ## Use cases
 
