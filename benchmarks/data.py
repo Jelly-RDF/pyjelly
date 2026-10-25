@@ -17,6 +17,9 @@ from itertools import islice
 from pathlib import Path
 from typing import Any
 
+from rdflib import Dataset, Graph
+from rdflib.term import Node
+
 from pyjelly.integrations.generic import parse as generic_parse
 from pyjelly.integrations.rdflib import parse as rdflib_parse
 
@@ -115,6 +118,9 @@ class BenchData:
     decoded from Jelly with pyjelly, once for each term model that is used: rdflib
     terms for the rdflib integration and rdflib's own formats, and pyjelly's own
     terms for the generic integration.
+
+    For rdflib's formats that can only be written from a whole graph, the
+    statements are also put into an rdflib Graph or Dataset.
     """
 
     name: str
@@ -131,6 +137,39 @@ class BenchData:
     def rdflib(self) -> list[Any]:
         """The statements as rdflib Triple or Quad tuples."""
         return self._read(rdflib_parse.parse_jelly_flat, self.rows)
+
+    @cached_property
+    def rdflib_graph(self) -> Graph:
+        """
+        The statements in an rdflib Graph (triples) or Dataset (quads).
+
+        The graph has the dataset's prefixes. It has no duplicates, so it can have
+        fewer statements than the list, see `rdflib_graph_size`.
+        """
+        graph: Graph
+        if self.quads:
+            graph = dataset = Dataset()
+            # One Graph object for each graph name, as a user would keep them
+            contexts: dict[Node, Graph] = {}
+            for s, p, o, g in self.rdflib:
+                context = contexts.get(g)
+                if context is None:
+                    context = contexts[g] = dataset.graph(g)
+                context.add((s, p, o))
+        else:
+            graph = Graph(bind_namespaces="core")
+            for triple in self.rdflib:
+                graph.add(triple)
+        for prefix, namespace in self.prefixes:
+            graph.bind(prefix, namespace)
+        return graph
+
+    @cached_property
+    def rdflib_graph_size(self) -> int:
+        """Return how many statements are in `rdflib_graph`, in all its graphs."""
+        if isinstance(self.rdflib_graph, Dataset):
+            return sum(1 for _ in self.rdflib_graph.quads())
+        return len(self.rdflib_graph)
 
     @cached_property
     def generic(self) -> list[Any]:

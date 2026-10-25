@@ -39,7 +39,7 @@ class CaseResult:
     task: str
     dataset: str
     method: str
-    #: Statements done in one operation: every statement given to the writer, or
+    #: Statements done in one operation: every statement the writer writes, or
     #: every statement the reader found in the bytes
     statements: int = 0
     #: Throughput of each iteration, in statements per second
@@ -93,9 +93,9 @@ def run_case(  # noqa: PLR0913
         result.skipped = "the format can't hold this kind of statements"
         return result
 
-    # Setup, not measured: make the terms, check that the method round-trips the
-    # data, and make the bytes to read
-    statements = method.statements(data)
+    # Setup, not measured: make the terms (and the graph, for writers that need
+    # one), check that the method round-trips the data, and make the bytes to read
+    method.prepare(data)
     try:
         written, result.problems = round_trip(method, data)
     except Exception as e:  # noqa: BLE001
@@ -110,7 +110,7 @@ def run_case(  # noqa: PLR0913
     operation: Callable[[], object]
     if task == "write":
         output = NullOutput()
-        result.statements = len(statements)
+        result.statements = method.write_count(data)
 
         def operation() -> None:
             method.write(data, output)

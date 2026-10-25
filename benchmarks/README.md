@@ -45,7 +45,7 @@ uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sw
 `case` runs one task, dataset and method in the current process. With `--profile`, the measured iterations run under cProfile, the top functions are printed, and the stats are saved for tools like `snakeviz`:
 
 ```bash
-uv run python -m benchmarks case read nanopubs pyjelly-rdflib --warmup 1 --iterations 1 --profile read.prof
+uv run python -m benchmarks case read nanopubs rdflib-jelly-stream --warmup 1 --iterations 1 --profile read.prof
 ```
 
 cProfile doesn't see inside functions compiled with mypyc: their time is counted in the Python function that called them. It also slows down pure Python code much more than compiled code, so use it to see where the time goes, not to compare methods.
@@ -60,25 +60,27 @@ cProfile doesn't see inside functions compiled with mypyc: their time is counted
 
 ### Methods
 
+Method names are `<terms>-<format>`, plus `-<API>` for Jelly, which has two APIs. `<terms>` is the kind of term objects the statements are made of: rdflib's, or the generic ones of pyjelly's generic integration.
+
 | Method | Writes | Reads |
 |---|---|---|
 | `rdflib-nt` | N-Triples / N-Quads, line by line from the list | rdflib's parser |
 | `rdflib-turtle` | Turtle / TriG, from a Graph / Dataset | rdflib's parser |
 | `rdflib-xml` | RDF/XML, from a Graph (triples only) | rdflib's parser |
 | `rdflib-jsonld` | JSON-LD, from a Graph / Dataset | rdflib's parser |
-| `rdflib-jelly` | Jelly through rdflib's plugin API (`Graph.serialize`) | `Graph.parse` |
-| `pyjelly-rdflib` | Jelly with pyjelly's flat streaming API, rdflib terms | `parse_jelly_flat` |
-| `pyjelly-generic` | Jelly with pyjelly's flat streaming API, generic terms | `parse_jelly_flat` |
+| `rdflib-jelly-graph` | Jelly through rdflib's plugin API: `Graph.serialize` | `Graph.parse` |
+| `rdflib-jelly-stream` | Jelly with pyjelly's flat streaming API, from the list | `parse_jelly_flat` |
+| `generic-jelly-stream` | The same, with the generic integration's terms instead of rdflib's | `parse_jelly_flat` |
 
 All Jelly methods use pyjelly's default options: the "big" lookup preset (4000 names, 150 prefixes, 32 datatypes) and frames of 250 rows. The other formats' writers get the dataset's prefixes.
 
 ### Tasks
 
-- **Write**: the statements go from the list to the writer, and the output to a stream that throws it away (like Java's `OutputStream.nullOutputStream()`). There's no extra buffering. Throughput always counts all 100,000 statements.
+- **Write**: the statements go from the list (or the graph, see below) to the writer, and the output to a stream that throws it away (like Java's `OutputStream.nullOutputStream()`). There's no extra buffering. Throughput counts the statements the writer writes: all 100,000 for writers that take the list.
 - **Read**: the parser reads bytes from memory and gives statements back, which are only counted. Throughput counts the statements actually in the bytes: a writer that drops duplicates leaves fewer to read.
 - **Size**: bytes of the written output, plain, with gzip (level 6) and with zstd (level 3), divided by 100,000 statements.
 
-rdflib can only write Turtle, RDF/XML and JSON-LD from a whole Graph or Dataset. As in Jelly-JVM, filling the graph is measured, as a user with a stream of statements has to do it too. These writers drop duplicates and change the order of statements.
+rdflib can only write Turtle, RDF/XML, JSON-LD and Jelly (through its plugin API) from a whole Graph or Dataset. The graph is built from the list before measuring, with the dataset's prefixes, so only `serialize` is measured. A graph has no duplicates, so these writers write fewer statements (e.g., 70,468 of 100,000 in assist-iot-weather), and their throughput counts only those. They also write statements in the graph's own order, not the dataset's. This differs from Jelly-JVM, which measures filling the graph too.
 
 rdflib's parsers can only add statements to a Graph or Dataset. To measure only the parser, the graph uses a store that just counts statements. What's left of the graph's work is the type checks in `Graph.add`, about 2–5% of the time.
 

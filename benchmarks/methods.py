@@ -117,6 +117,14 @@ class Method(ABC):
     def statements(self, data: BenchData) -> list[Any]:
         """Return the dataset's statements in this method's term model."""
 
+    def prepare(self, data: BenchData) -> None:
+        """Make everything the writer starts from, so that it isn't measured."""
+        self.statements(data)
+
+    def write_count(self, data: BenchData) -> int:
+        """Return how many statements `write` writes."""
+        return len(self.statements(data))
+
     @abstractmethod
     def write(self, data: BenchData, out: IO[bytes]) -> None:
         """Write all statements of the dataset to `out`."""
@@ -184,25 +192,19 @@ class RdflibGraph(Method):
     """
     A format that rdflib only writes from a whole Graph or Dataset.
 
-    The graph is built inside the measurement, as in the Jelly-JVM benchmarks:
-    a user who has a stream of statements has to do the same. The graph gets the
-    dataset's prefixes, if the format can use them.
+    The graph is built before measuring (see `BenchData.rdflib_graph`), so only
+    `serialize` is measured. The graph has no duplicates, so the writer writes
+    fewer statements than there are in the list.
     """
 
     buffers = True
 
     def __init__(
-        self,
-        name: str,
-        triples_format: str,
-        quads_format: str | None,
-        *,
-        prefixes: bool = True,
+        self, name: str, triples_format: str, quads_format: str | None
     ) -> None:
         self.name = name
         self.triples_format = triples_format
         self.quads_format = quads_format
-        self.prefixes = prefixes
 
     @override
     def supports(self, data: BenchData) -> bool:
@@ -219,25 +221,18 @@ class RdflibGraph(Method):
         return data.rdflib
 
     @override
+    def prepare(self, data: BenchData) -> None:
+        _ = data.rdflib_graph
+
+    @override
+    def write_count(self, data: BenchData) -> int:
+        return data.rdflib_graph_size
+
+    @override
     def write(self, data: BenchData, out: IO[bytes]) -> None:
-        graph: Graph
-        if data.quads:
-            graph = dataset = Dataset()
-            # One Graph object for each graph name, as a user would keep them
-            contexts: dict[Node, Graph] = {}
-            for s, p, o, g in data.rdflib:
-                context = contexts.get(g)
-                if context is None:
-                    context = contexts[g] = dataset.graph(g)
-                context.add((s, p, o))
-        else:
-            graph = Graph(bind_namespaces="core")
-            for triple in data.rdflib:
-                graph.add(triple)
-        if self.prefixes:
-            for prefix, namespace in data.prefixes:
-                graph.bind(prefix, namespace)
-        graph.serialize(destination=out, format=self._format(quads=data.quads))
+        data.rdflib_graph.serialize(
+            destination=out, format=self._format(quads=data.quads)
+        )
 
     @override
     def read(self, data: bytes, *, quads: bool) -> int:
@@ -263,7 +258,7 @@ class PyjellyFlat(Method):
     """
 
     def __init__(self, integration: str) -> None:
-        self.name = f"pyjelly-{integration}"
+        self.name = f"{integration}-jelly-stream"
         self.generic = integration == "generic"
 
     @override
@@ -306,7 +301,8 @@ METHODS: dict[str, Method] = {
         RdflibGraph("rdflib-xml", "xml", None),
         RdflibGraph("rdflib-jsonld", "json-ld", "json-ld"),
         # Jelly through rdflib's plugin API: Graph.serialize and Graph.parse
-        RdflibGraph("rdflib-jelly", "jelly", "jelly", prefixes=False),
+        RdflibGraph("rdflib-jelly-graph", "jelly", "jelly"),
+        # Jelly through pyjelly's flat streaming API
         PyjellyFlat("rdflib"),
         PyjellyFlat("generic"),
     )
@@ -358,6 +354,11 @@ def round_trip(method: Method, data: BenchData) -> tuple[bytes, list[str]]:
     if method.read(written, quads=data.quads) != len(actual):
         problems.append(
             "read() counts a different number of statements than read_all()"
+        )
+    if method.write_count(data) != len(actual):
+        problems.append(
+            f"write_count() is {method.write_count(data)}, "
+            f"but {len(actual)} statements were read back"
         )
     if method.buffers:
         missing, extra = set(expected) - set(actual), set(actual) - set(expected)
