@@ -1,6 +1,8 @@
+import pytest
+
 from pyjelly import jelly
 from pyjelly.integrations.generic.generic_sink import IRI, Literal
-from pyjelly.integrations.generic.parse import GenericStatementSinkAdapter
+from pyjelly.integrations.generic.parse import GenericTriplesAdapter
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import Decoder, ParserOptions
 
@@ -11,7 +13,7 @@ def make_decoder() -> Decoder:
         lookup_preset=LookupPreset(max_names=8, max_prefixes=8),
         params=StreamParameters(),
     )
-    return Decoder(adapter=GenericStatementSinkAdapter(options))
+    return Decoder(adapter=GenericTriplesAdapter(options))
 
 
 def test_iri_terms_are_reused_until_their_entries_change() -> None:
@@ -61,3 +63,20 @@ def test_literal_terms_are_reused_only_when_equal() -> None:
         Literal("1", datatype="http://dt/a"),
         Literal("1", datatype="http://dt/b"),
     ]
+
+
+def test_repeated_terms_must_be_set_first() -> None:
+    decoder = make_decoder()
+    decoder.ingest_prefix_entry(jelly.RdfPrefixEntry(id=1, value="http://a/"))
+    decoder.ingest_name_entry(jelly.RdfNameEntry(id=1, value="x"))
+    iri = jelly.RdfIri(prefix_id=1, name_id=1)
+    with pytest.raises(ValueError, match="missing repeated term predicate"):
+        decoder.decode_triple(jelly.RdfTriple(s_iri=iri, o_iri=iri))
+
+    # Terms set once can be repeated
+    first = decoder.decode_triple(jelly.RdfTriple(s_iri=iri, p_iri=iri, o_bnode="b"))
+    assert decoder.decode_triple(jelly.RdfTriple(o_iri=iri)) == (
+        first[0],
+        first[1],
+        IRI("http://a/x"),
+    )

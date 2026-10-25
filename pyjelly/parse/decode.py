@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from enum import Enum, auto
-from typing import Any, ClassVar, NamedTuple
+from typing import Any, ClassVar, Final, NamedTuple, cast
 from typing_extensions import Never
 
 from mypy_extensions import mypyc_attr
@@ -15,6 +15,23 @@ from pyjelly.parse.lookup import LookupDecoder
 RowHandler = Callable[[Any], Any | None]
 TermHandler = Callable[[Any], Any | None]
 RdfStreamOptions = jelly.RdfStreamOptions
+
+# Methods called through the message classes rather than on messages: upb looks
+# up any attribute of a message as a field name first, even a method's name
+_ROW_WHICH_ONEOF: Final = jelly.RdfStreamRow.WhichOneof
+_LITERAL_WHICH_ONEOF: Final = jelly.RdfLiteral.WhichOneof
+_TRIPLE_LIST_FIELDS: Final = jelly.RdfTriple.ListFields
+_QUAD_LIST_FIELDS: Final = jelly.RdfQuad.ListFields
+
+# The term positions of a statement, for error messages
+_POSITIONS: Final = ("subject", "predicate", "object", "graph")
+_GRAPH: Final = 3
+# The kinds of term fields, in the order of their numbers in each position
+_IRI: Final = 0
+_BNODE: Final = 1
+_LITERAL_OR_DEFAULT_GRAPH: Final = 2
+# Marks a repeated term that was never set
+_MISSING: Final = object()
 
 # How many literal terms the decoder keeps for reuse. When the cache is full, it
 # is emptied: simpler and cheaper than evicting the least recently used ones
@@ -215,7 +232,8 @@ class Decoder:
         self.datatypes = LookupDecoder(
             lookup_size=self.options.lookup_preset.max_datatypes
         )
-        self.repeated_terms: dict[str, jelly.RdfIri | str | jelly.RdfLiteral] = {}
+        # The last s, p, o and g terms, for repeated terms
+        self.repeated_terms: list[object] = [_MISSING] * 4
         # One IRI term per name table entry, as in Jelly-JVM: an IRI is mostly
         # used with the same prefix again, so its term can be reused. Index 0 is
         # unused, as table indices start from 1
@@ -248,7 +266,7 @@ class Decoder:
 
         """
         for row_owner in frame.rows:
-            row = getattr(row_owner, row_owner.WhichOneof("row"))
+            row = getattr(row_owner, _ROW_WHICH_ONEOF(row_owner, "row"))
             decoded_row = self.decode_row(row)
             if isinstance(
                 row, (jelly.RdfTriple, jelly.RdfQuad, jelly.RdfNamespaceDeclaration)
@@ -401,9 +419,12 @@ class Decoder:
 
         """
         language = datatype = None
-        if literal.langtag:
-            language = literal.langtag
-        elif self.datatypes.lookup_size and literal.HasField("datatype"):
+        kind = _LITERAL_WHICH_ONEOF(literal, "literalKind")
+        if kind is None:
+            pass
+        elif kind == "langtag":
+            language = literal.langtag or None
+        elif self.datatypes.lookup_size:
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         lex = literal.lex
         cache = self.literal_cache
@@ -430,19 +451,15 @@ class Decoder:
     def decode_graph_end(self, _: jelly.RdfGraphEnd) -> Any:
         return self.adapter.graph_end()
 
-    def decode_statement(
-        self,
-        statement: jelly.RdfTriple | jelly.RdfQuad,
-        oneofs: Sequence[str],
-    ) -> Any:
+    def decode_statement(self, fields: list[Any], size: int) -> list[Any]:
         """
-        Decode a triple/quad message.
+        Decode the terms of a triple or quad message.
 
-        Notes: also updates repeated terms dictionary
+        Notes: also updates the repeated terms
 
         Args:
-            statement (jelly.RdfTriple | jelly.RdfQuad): triple/quad message
-            oneofs (Sequence[str]): terms s/p/o/g(if quads)
+            fields (list[Any]): the message's fields, from ListFields()
+            size (int): 3 for a triple, 4 for a quad
 
         Raises:
             ValueError: if a missing repeated term is encountered
@@ -451,23 +468,39 @@ class Decoder:
             Any: a list of decoded terms
 
         """
-        terms = []
-        for oneof in oneofs:
-            field = statement.WhichOneof(oneof)
-            if field:
-                jelly_term = getattr(statement, field)
-                decoded_term = self.decode_term(jelly_term)
-                self.repeated_terms[oneof] = decoded_term
+        repeated = self.repeated_terms
+        terms = repeated[:size]
+        # The fields come in the order of their numbers, so the terms are decoded
+        # in s, p, o, g order. Each term has four fields, numbered from 1:
+        # IRI, blank node, literal and quoted triple (s_iri = 1, ..., o_iri = 9),
+        # but the graph's are IRI, blank node, default graph and literal
+        for field, value in fields:
+            number: int = field.number - 1
+            position = number >> 2
+            kind = number & 3
+            if kind == _IRI:
+                term = self.decode_iri(value)
+            elif kind == _BNODE:
+                term = self.adapter.bnode(value)
+            elif kind == _LITERAL_OR_DEFAULT_GRAPH:
+                if position == _GRAPH:
+                    term = self.adapter.default_graph()
+                else:
+                    term = self.decode_literal(value)
+            elif position == _GRAPH:
+                term = self.decode_literal(value)
             else:
-                decoded_term = self.repeated_terms[oneof]
-                if decoded_term is None:
-                    msg = f"missing repeated term {oneof}"
-                    raise ValueError(msg)
-            terms.append(decoded_term)
+                term = self.decode_quoted_triple(value)
+            terms[position] = term
+            repeated[position] = term
+        for i in range(size):
+            if terms[i] is _MISSING:
+                msg = f"missing repeated term {_POSITIONS[i]}"
+                raise ValueError(msg)
         return terms
 
     def decode_triple(self, triple: jelly.RdfTriple) -> Any:
-        terms = self.decode_statement(triple, ("subject", "predicate", "object"))
+        terms = self.decode_statement(cast("list[Any]", _TRIPLE_LIST_FIELDS(triple)), 3)
         return self.adapter.triple(terms)
 
     def decode_quoted_triple(self, triple: jelly.RdfTriple) -> Any:
@@ -485,5 +518,5 @@ class Decoder:
         return self.adapter.quoted_triple(terms)
 
     def decode_quad(self, quad: jelly.RdfQuad) -> Any:
-        terms = self.decode_statement(quad, ("subject", "predicate", "object", "graph"))
+        terms = self.decode_statement(cast("list[Any]", _QUAD_LIST_FIELDS(quad)), 4)
         return self.adapter.quad(terms)
