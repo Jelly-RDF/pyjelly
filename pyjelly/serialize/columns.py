@@ -43,6 +43,9 @@ MAX_INLINE_LENGTH: Final = 15
 #: The most statements a frame can have
 MAX_ROWS: Final = (1 << 27) - 1
 
+_TRIPLE_SIZE: Final = 3
+_QUAD_SIZE: Final = 4
+
 _KIND_NAMES: Final = ("an IRI", "a literal", "a blank node", "a triple term")
 
 
@@ -377,7 +380,13 @@ class ColumnBatch:
         self, terms: Iterable[object], repeated_terms: list[object | None]
     ) -> None:
         """Add a triple, and keep its terms in `repeated_terms`, as the row layout."""
-        s, p, o = terms
+        # Indexing a tuple is cheaper than unpacking any iterable
+        if isinstance(terms, tuple) and len(terms) == _TRIPLE_SIZE:
+            s = terms[0]
+            p = terms[1]
+            o = terms[2]
+        else:
+            s, p, o = terms
         self.add(self.subjects, s)
         self.add(self.predicates, p)
         self.add(self.objects, o)
@@ -390,7 +399,14 @@ class ColumnBatch:
         self, terms: Iterable[object], repeated_terms: list[object | None]
     ) -> None:
         """Add a quad, and keep its terms in `repeated_terms`, as the row layout."""
-        s, p, o, g = terms
+        # See add_triple()
+        if isinstance(terms, tuple) and len(terms) == _QUAD_SIZE:
+            s = terms[0]
+            p = terms[1]
+            o = terms[2]
+            g = terms[3]
+        else:
+            s, p, o, g = terms
         self.add(self.subjects, s)
         self.add(self.predicates, p)
         self.add(self.objects, o)
