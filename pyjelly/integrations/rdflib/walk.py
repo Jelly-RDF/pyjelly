@@ -15,6 +15,9 @@ from rdflib import Dataset, Graph
 from rdflib.plugins.stores.memory import Memory
 from rdflib.store import Store
 
+from pyjelly import jelly
+from pyjelly.serialize.streams import QuadStream, Stream
+
 # subject -> predicate -> objects. The objects are a list, or the keys of a dict
 # in the in-memory store's own index.
 Tree = Mapping[Any, Mapping[Any, Iterable[Any]]]
@@ -48,6 +51,11 @@ class _MemoryIndexes(NamedTuple):
     context_key: Callable[[Graph], str]
 
 
+#: Whether to read the in-memory store's private indexes. Only for tests: the
+#: slower public API gives the same statements.
+memory_fast_path = True
+
+
 def _memory_indexes(store: Store) -> _MemoryIndexes | None:
     """
     Return the in-memory store's private indexes, if this is that store.
@@ -57,7 +65,7 @@ def _memory_indexes(store: Store) -> _MemoryIndexes | None:
     so that the slower public API is used instead. Tests check that this
     works for the installed rdflib version.
     """
-    if type(store) is not Memory:
+    if type(store) is not Memory or not memory_fast_path:
         return None
     try:
         return _MemoryIndexes(
@@ -137,3 +145,49 @@ def _group_quads(
             triples_list.append((s, p, o))
     for g, triples_of_graph in by_graph.items():
         yield g, _group(triples_of_graph)
+
+
+def write_tree(stream: Stream, tree: Tree) -> Iterator[jelly.RdfStreamFrame]:
+    """
+    Write the statements of a subject -> predicate -> objects tree.
+
+    Uses the stream's cursor API, so the stream doesn't compare terms. In a tree,
+    each subject differs from the one before it, and so do the predicates of one
+    subject and the objects of one predicate. Only the first subject of the tree
+    and the first predicate of a subject can be equal to the one before it (e.g.,
+    rdf:type as the first predicate of every subject), so only those are
+    compared. The first object of a predicate is rarely equal to the object
+    before it, and most predicates have only one object, so objects are not
+    compared: an equal one is just written again.
+
+    Yields:
+        jelly.RdfStreamFrame: full frames.
+
+    """
+    encoder = stream.encoder
+    terms = stream.repeated_terms
+    first_subject = True
+    for s, predicates in tree.items():
+        if not first_subject or not encoder.same_term(terms[0], s):
+            stream.set_subject(s)
+        first_subject = False
+        first_predicate = True
+        for p, objects in predicates.items():
+            if not first_predicate or not encoder.same_term(terms[1], p):
+                stream.set_predicate(p)
+            first_predicate = False
+            for o in objects:
+                stream.set_object(o)
+                frame = stream.emit()
+                if frame is not None:
+                    yield frame
+
+
+def write_trees(
+    stream: QuadStream, trees: Iterable[tuple[Any, Tree]]
+) -> Iterator[jelly.RdfStreamFrame]:
+    """Write the statements of graphs, see gspo_trees() and write_tree()."""
+    for g, tree in trees:
+        if not stream.encoder.same_term(stream.repeated_terms[3], g):
+            stream.set_graph(g)
+        yield from write_tree(stream, tree)

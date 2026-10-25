@@ -64,7 +64,9 @@ def walk_quads(dataset: Dataset) -> list[tuple[Any, ...]]:
 
 
 def public_path_only(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(walk, "_memory_indexes", lambda _store: None)
+    monkeypatch.setattr(walk, "memory_fast_path", False)
+    # walk is compiled: check that it really reads the switch
+    assert walk._memory_indexes(Graph().store) is None
 
 
 def assert_grouped(

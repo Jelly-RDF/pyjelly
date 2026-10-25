@@ -154,6 +154,17 @@ class Stream:
         self.repeated_terms[2] = o
         self.object_changed = True
 
+    def emit(self) -> jelly.RdfStreamFrame | None:
+        """
+        Add a statement made of the terms set with the cursor API.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
+        raise NotImplementedError
+
     def encode_changed_spo(self) -> int:
         """
         Encode the subject, predicate and object that were set since the last emit.
@@ -283,7 +294,7 @@ class TripleStream(Stream):
         encode_triple(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
-    def emit_triple(self) -> jelly.RdfStreamFrame | None:
+    def emit(self) -> jelly.RdfStreamFrame | None:
         """
         Add a triple made of the terms set with the cursor API.
 
@@ -323,7 +334,7 @@ class QuadStream(Stream):
         self.repeated_terms[3] = g
         self.graph_changed = True
 
-    def emit_quad(self) -> jelly.RdfStreamFrame | None:
+    def emit(self) -> jelly.RdfStreamFrame | None:
         """
         Add a quad made of the terms set with the cursor API.
 

@@ -31,6 +31,7 @@ include = [
   "pyjelly/integrations/generic/generic_sink.py",
   "pyjelly/integrations/generic/serialize.py",
   "pyjelly/integrations/rdflib/encode.py",
+  "pyjelly/integrations/rdflib/walk.py",
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
   "pyjelly/serialize/streams.py",
