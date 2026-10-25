@@ -303,7 +303,7 @@ class ColumnDecoder:
 
     def message_lengths(self, batch: jelly.RdfColumnBatch, rows: int) -> list[int]:
         """Return the lengths of the RDF Messages that end in a batch."""
-        lengths = list(batch.message_lengths)
+        lengths = batch.message_lengths[:]
         if lengths:
             if not self.messages:
                 msg = "message boundaries are only valid in streams of RDF Messages"
@@ -366,7 +366,7 @@ class ColumnDecoder:
         """Decode a column into its runs, whose cells add up to the row count."""
         values = self.run_values(column, allowed, position)
         unbound_allowed = position == "graph"
-        layouts: list[int] = list(column.layouts)
+        layouts: list[int] = column.layouts[:]
         runs = _Runs(values, rows, position)
         index = 0
         k = 0
@@ -477,8 +477,8 @@ class ColumnDecoder:
         return values
 
     def iris(self, column: jelly.RdfColumn) -> list[Any]:
-        name_ids: list[int] = list(column.name_ids)
-        prefix_ids: list[int] = list(column.prefix_ids)
+        name_ids: list[int] = column.name_ids[:]
+        prefix_ids: list[int] = column.prefix_ids[:]
         count = len(name_ids)
         prefix_count = len(prefix_ids)
         if prefix_count > 1 and prefix_count != count:
