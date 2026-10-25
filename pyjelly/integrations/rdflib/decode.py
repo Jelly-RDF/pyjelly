@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from itertools import chain
-from typing import Any
+from typing import Any, Final
 from typing_extensions import override
 
 import rdflib
@@ -19,6 +19,10 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.rdflib.statements import Prefix, Quad, Triple
 from pyjelly.parse.decode import Adapter, ParserOptions
+
+# Bound once: mypyc would look up __new__ on the type at every call
+_new_tuple: Final = tuple.__new__
+_new_str: Final = str.__new__
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -42,12 +46,12 @@ class RDFLibAdapter(Adapter):
         if self.validate_iris:
             return rdflib.URIRef(iri)
         # The same term, without the check
-        return str.__new__(rdflib.URIRef, iri)
+        return _new_str(rdflib.URIRef, iri)
 
     @override
     def bnode(self, bnode: str) -> rdflib.BNode:
         # What BNode(bnode) makes, without running its __new__ in Python
-        return str.__new__(rdflib.BNode, bnode)
+        return _new_str(rdflib.BNode, bnode)
 
     @override
     def default_graph(self) -> rdflib.URIRef:
@@ -85,7 +89,7 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     def triple(self, terms: Iterable[Any]) -> Triple:
         # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
         # decoder always gives the right number of terms
-        return tuple.__new__(Triple, terms)
+        return _new_tuple(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -107,7 +111,7 @@ class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
 
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
-        return tuple.__new__(Quad, terms)
+        return _new_tuple(Quad, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)

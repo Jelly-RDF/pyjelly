@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from itertools import chain
-from typing import Any
+from typing import Any, Final
 from typing_extensions import override
 
 from mypy_extensions import mypyc_attr
@@ -25,6 +25,9 @@ from pyjelly.integrations.generic.generic_sink import (
     Triple,
 )
 from pyjelly.parse.decode import Adapter, ParserOptions
+
+# Bound once: mypyc would look up __new__ on the type at every call
+_new_tuple: Final = tuple.__new__
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -74,7 +77,7 @@ class GenericStatementSinkAdapter(Adapter):
     def quoted_triple(self, terms: Iterable[Any]) -> Triple:
         # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
         # decoder always gives the right number of terms
-        return tuple.__new__(Triple, terms)
+        return _new_tuple(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -96,7 +99,7 @@ class GenericTriplesAdapter(GenericStatementSinkAdapter):
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
-        return tuple.__new__(Triple, terms)
+        return _new_tuple(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -118,7 +121,7 @@ class GenericQuadsAdapter(GenericQuadsBaseAdapter):
 
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
-        return tuple.__new__(Quad, terms)
+        return _new_tuple(Quad, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
