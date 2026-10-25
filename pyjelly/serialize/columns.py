@@ -57,14 +57,6 @@ def _kind_of(term: EncodedTerm) -> int:
     return KIND_TRIPLE
 
 
-def _pack_kinds(kinds: list[int]) -> bytes:
-    """Pack term types 2 bits each, four in a byte, from the lowest bits."""
-    packed = bytearray((len(kinds) + 3) >> 2)
-    for i, kind in enumerate(kinds):
-        packed[i >> 2] |= kind << ((i & 3) << 1)
-    return bytes(packed)
-
-
 def _compress_ids(ids: list[int]) -> list[int]:
     """
     Return the prefix indices of a column's IRIs, as they are written.
@@ -113,7 +105,8 @@ class Column:
         self.layouts: list[int] = []
         self.value_count = 0
         # The types of the run values (bits 1 << KIND_*), and once there is more
-        # than one, the type of each value
+        # than one, the type of each value, packed as written: 2 bits each, four
+        # in a byte, from the lowest bits
         self.kinds_used = 0
         self.kinds: list[int] | None = None
         # IRIs: name indices (0 if the previous one + 1) and prefix indices
@@ -141,7 +134,11 @@ class Column:
                 self._new_kind(kind, used)
             kinds = self.kinds
             if kinds is not None:
-                kinds.append(kind)
+                shift = (self.value_count & 3) << 1
+                if shift:
+                    kinds[-1] |= kind << shift
+                else:
+                    kinds.append(kind)
         self.value_count += 1
         if kind == KIND_IRI:
             name_id = term.second
@@ -175,7 +172,12 @@ class Column:
             raise JellyConformanceError(msg)
         if used and self.kinds is None:
             # Every value so far had the one type
-            self.kinds = [(used & -used).bit_length() - 1] * self.value_count
+            count = self.value_count
+            full_byte = ((used & -used).bit_length() - 1) * 0x55
+            kinds = [full_byte] * (count >> 2)
+            if count & 3:
+                kinds.append(full_byte & ((1 << ((count & 3) << 1)) - 1))
+            self.kinds = kinds
         self.kinds_used = used | (1 << kind)
 
     def _langtag_index(self, langtag: str, direction: int) -> int:
@@ -233,7 +235,7 @@ class Column:
         if self.triple_terms:
             column.triple_terms.extend(self.triple_terms)
         if self.kinds is not None:
-            column.kinds = _pack_kinds(self.kinds)
+            column.kinds = bytes(self.kinds)
         self.clear()
 
     def clear(self) -> None:
