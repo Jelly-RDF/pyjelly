@@ -28,16 +28,20 @@ uv run python -m benchmarks size
 
 All commands take `--datasets` and `--methods` (comma-separated), and `--rows`. Run `python -m benchmarks <command> --help` for the rest. Print saved results again with `python -m benchmarks report <file>...`.
 
-A full run of all datasets and methods takes a few hours. For a quick check, use fewer datasets, sweeps and iterations:
+A full run of all datasets and methods takes a few hours. To make it faster:
+
+- Run cases in parallel on several sets of cores with `--cpus`, given once per set. Each case is pinned to one set, which no other case uses at the same time. Use sets of the same kind of cores. On the NVIDIA DGX Spark, the two clusters of performance cores give two cases at once, with no measurable effect on the results: `--cpus 5-9 --cpus 15-19`.
+- Skip the round-trip check with `--no-check`, but only when the code under test hasn't changed since the check last passed. The check takes a few seconds per case.
+- For a rough check, use fewer datasets, sweeps and iterations:
 
 ```bash
-uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sweeps 2 --warmup 1 --iterations 2 --time 0.5
+uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sweeps 2 --iterations 2 --time 0.5
 ```
 
 ### Getting stable results
 
 - Use a recent CPython and check that pyjelly is compiled with mypyc. The saved results indicate that in `pyjelly_compiled_with_mypyc`. An editable install compiles it, but the compiled modules are only for the Python version that built them.
-- On a CPU with performance and efficiency cores, pin the benchmark to the performance cores. On the NVIDIA DGX Spark, we use cores 15–19: `taskset -c 15-19 uv run python -m benchmarks run read`.
+- On a CPU with performance and efficiency cores, pin the benchmark to the performance cores, with `--cpus` (see above) or `taskset`. On the NVIDIA DGX Spark, these are cores 5–9 and 15–19.
 - Don't run anything else heavy at the same time.
 
 ### Comparing Python versions
@@ -101,7 +105,7 @@ Before measuring, each case writes the data, reads it back and compares the stat
 ### Measurement
 
 - Each case (task, dataset, method) runs in its own Python process, like a JMH fork.
-- In the process: 5 warmup iterations, then 5 measured iterations. An iteration repeats the operation until 1 second has passed, and always finishes the last operation. The case's result is the mean throughput of the measured iterations.
+- In the process: 1 warmup iteration, then 5 measured iterations. An iteration repeats the operation until 1 second has passed, and always finishes the last operation. The case's result is the mean throughput of the measured iterations. One warmup iteration is often enough here: unlike the JVM, CPython has no JIT to warm up.
 - Before each iteration, the garbage collector runs, outside the timing. The data prepared before measuring is frozen with `gc.freeze()`, so the collector doesn't go through it again and again during the measurement.
 - A sweep runs every case once. There are 3 sweeps. The result is the median of the sweeps. Values whose sweeps differ by more than 10% are marked with `*`.
 - Averages over datasets are geometric means. A method that couldn't run on all datasets has the number of datasets it ran on next to its mean.

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,7 +46,7 @@ def _add_selection(parser: argparse.ArgumentParser) -> None:
 
 def _add_timing(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--warmup", type=int, default=5, help="warmup iterations (default: %(default)s)"
+        "--warmup", type=int, default=1, help="warmup iterations (default: %(default)s)"
     )
     parser.add_argument(
         "--iterations",
@@ -59,6 +60,21 @@ def _add_timing(parser: argparse.ArgumentParser) -> None:
         default=1.0,
         help="seconds per iteration, at least one operation (default: %(default)s)",
     )
+    parser.add_argument(
+        "--no-check",
+        dest="check",
+        action="store_false",
+        help="skip the round-trip check (only if the code under test hasn't changed)",
+    )
+
+
+def _cpus(value: str) -> list[int]:
+    """Parse a CPU list like taskset's: "5-9" or "5,6,7" or "0,5-9"."""
+    cpus: list[int] = []
+    for part in value.split(","):
+        first, _, last = part.partition("-")
+        cpus.extend(range(int(first), int(last or first) + 1))
+    return cpus
 
 
 def main() -> None:
@@ -76,6 +92,16 @@ def main() -> None:
         "--sweeps", type=int, default=3, help="how many sweeps (default: %(default)s)"
     )
     run.add_argument("--out", type=Path, help="where to save the results as JSON")
+    run.add_argument(
+        "--cpus",
+        type=_cpus,
+        action="append",
+        default=[],
+        help=(
+            "a set of CPU cores to pin cases to, e.g. 15-19. Give it several times "
+            "to run that many cases in parallel, one per set"
+        ),
+    )
 
     case = commands.add_parser(
         "case", help="run one case in this process and print its result as JSON"
@@ -84,6 +110,7 @@ def main() -> None:
     case.add_argument("dataset")
     case.add_argument("method", choices=list(METHODS))
     case.add_argument("--rows", type=int, default=data.DEFAULT_ROWS)
+    case.add_argument("--cpus", type=_cpus, help="CPU cores to pin the case to")
     _add_timing(case)
     case.add_argument(
         "--profile",
@@ -101,6 +128,8 @@ def main() -> None:
     if args.command == "fetch":
         data.fetch(args.datasets)
     elif args.command == "case":
+        if args.cpus:
+            os.sched_setaffinity(0, args.cpus)
         result = measure.run_case(
             args.task,
             args.dataset,
@@ -109,6 +138,7 @@ def main() -> None:
             warmup=args.warmup,
             iterations=args.iterations,
             seconds=args.time,
+            check=args.check,
             profile=args.profile,
         )
         print(json.dumps(asdict(result)))
@@ -124,6 +154,8 @@ def main() -> None:
                 "iterations",
                 "time",
                 "sweeps",
+                "check",
+                "cpus",
             )
         }
         results = measure.run_sweeps(
@@ -135,6 +167,8 @@ def main() -> None:
             warmup=args.warmup,
             iterations=args.iterations,
             seconds=args.time,
+            check=args.check,
+            cpu_sets=args.cpus,
         )
         stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
         out = args.out or RESULTS_DIR / f"{stamp}-{args.task}.json"

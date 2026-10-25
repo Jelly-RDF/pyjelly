@@ -34,6 +34,13 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
         super().__init__(initlist)
         self.logical_type = logical_type or self.__class__.logical_type
 
+    # The methods below are called for every row, so they work on the underlying
+    # list directly. Going through UserList is much slower.
+
+    @override
+    def extend(self, other: Iterable[jelly.RdfStreamRow]) -> None:
+        self.data.extend(other)
+
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
         Treat the current rows as a graph and produce a frame.
@@ -64,10 +71,10 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
             jelly.RdfStreamFrame | None: stream frame
 
         """
-        if not self:
+        if not self.data:
             return None
-        frame = jelly.RdfStreamFrame(rows=self)
-        self.clear()
+        frame = jelly.RdfStreamFrame(rows=self.data)
+        self.data.clear()
         return frame
 
 
@@ -116,7 +123,7 @@ class BoundedFrameFlow(FrameFlow):
             jelly.RdfStreamFrame | None: stream frame
 
         """
-        if len(self) >= self.frame_size:
+        if len(self.data) >= self.frame_size:
             return self.to_stream_frame()
         return None
 
