@@ -74,12 +74,15 @@ class RDFLibTermEncoder(TermEncoder):
             return
 
         if cls is Literal or (cls is not BNode and isinstance(node, Literal)):
+            # The slots behind the language and datatype properties, which are
+            # Python functions
+            datatype = node._datatype
             self.encode_literal(
                 lex=str(node),
-                language=node.language,
+                language=node._language,
                 # `datatype` is cast to `str` explicitly because
                 # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
-                datatype=node.datatype and str(node.datatype),
+                datatype=datatype and str(datatype),
                 out=out,
             )
             return
