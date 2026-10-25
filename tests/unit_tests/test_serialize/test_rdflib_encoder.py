@@ -67,6 +67,10 @@ def test_subclasses_encode_like_their_base_class(
         (Literal("1", datatype=XSD.integer), Literal("1", datatype=XSD.integer), True),
         (Literal("1", datatype=XSD.integer), Literal("1"), False),
         (Literal("a", lang="en"), Literal("a", lang="de"), False),
+        (Literal("a"), Literal("b"), False),
+        (Literal("a", lang="en"), Literal("a", lang="en"), True),
+        (Literal("a"), BNode("a"), False),
+        (BNode("a"), URIRef("a"), False),
         (
             MyURIRef("http://ex/a"),
             URIRef("http://ex/a"),

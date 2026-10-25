@@ -23,17 +23,32 @@ class RDFLibTermEncoder(TermEncoder):
         """
         Return whether two terms are equal, for repeated terms.
 
-        rdflib's __eq__ is slow Python code. For two terms of the same exact class
-        URIRef or BNode it only compares their strings, so this does that directly.
+        rdflib's __eq__ is slow Python code, so the common cases are answered here
+        with plain string comparisons (typed as str, so mypyc compiles them to C):
+
+        - Two URIRefs or two BNodes are equal if their strings are.
+        - Two Literals are never equal if their lexical forms differ. If they are
+          the same, the language tag and datatype matter too: rdflib decides.
+        - Terms of different classes among these three are never equal.
         """
         if a is b:
             return True
         cls = type(a)
-        if cls is type(b) and (cls is URIRef or cls is rdflib.BNode):
-            # Typed as str, compiled to a plain string comparison
-            a_str: str = cast("str", a)
-            b_str: str = cast("str", b)
-            return a_str == b_str
+        other_cls = type(b)
+        if cls is other_cls:
+            if cls is URIRef or cls is rdflib.BNode:
+                a_str: str = cast("str", a)
+                b_str: str = cast("str", b)
+                return a_str == b_str
+            if cls is Literal:
+                a_lex: str = cast("str", a)
+                b_lex: str = cast("str", b)
+                if a_lex != b_lex:
+                    return False
+        elif (cls is URIRef or cls is rdflib.BNode or cls is Literal) and (
+            other_cls is URIRef or other_cls is rdflib.BNode or other_cls is Literal
+        ):
+            return False
         return a == b
 
     def encode_spo(self, term: object, out: EncodedTerm) -> None:
