@@ -30,7 +30,7 @@ All commands take `--datasets` and `--methods` (comma-separated), and `--rows`. 
 
 A full run of all datasets and methods takes a few hours. To make it faster:
 
-- Run cases in parallel on several sets of cores with `--cpus`, given once per set. Each case is pinned to one set, which no other case uses at the same time. Use sets of the same kind of cores. On the NVIDIA DGX Spark, the two clusters of performance cores give two cases at once, with no measurable effect on the results: `--cpus 5-9 --cpus 15-19`.
+- Run cases in parallel on several sets of cores with `--cpus`, given once per set. Each case always runs on the same set, which no other case uses at the same time. Sets on different clusters differ in speed (see below), so compare results only between runs with the same sets. On the NVIDIA DGX Spark, `--cpus 5-9 --cpus 15-19` runs two cases at once on the two clusters of performance cores.
 - Skip the round-trip check with `--no-check`, but only when the code under test hasn't changed since the check last passed. The check takes a few seconds per case.
 - For a rough check, use fewer datasets, sweeps and iterations:
 
@@ -41,7 +41,7 @@ uv run python -m benchmarks run read --datasets assist-iot-weather,nanopubs --sw
 ### Getting stable results
 
 - Use a recent CPython and check that pyjelly is compiled with mypyc. The saved results indicate that in `pyjelly_compiled_with_mypyc`. An editable install compiles it, but the compiled modules are only for the Python version that built them.
-- On a CPU with performance and efficiency cores, pin the benchmark to the performance cores, with `--cpus` (see above) or `taskset`. On the NVIDIA DGX Spark, these are cores 5–9 and 15–19.
+- `run` pins the cases to one cluster of the fastest cores by default, found from Linux sysfs: the cores with the highest maximum frequency that share a last-level cache. On a CPU with performance and efficiency cores, these are performance cores. Clusters of the same cores can still differ in speed: on the NVIDIA DGX Spark, the performance cores are 5–9 and 15–19, on two clusters about 3% apart, and `run` picks 15–19. To choose other cores, pass `--cpus` or start `run` under `taskset`. The cores each case ran on are saved with its result.
 - Don't run anything else heavy at the same time.
 
 ### Comparing Python versions

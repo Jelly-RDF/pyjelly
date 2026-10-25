@@ -27,7 +27,6 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field
 from functools import partial
 from pathlib import Path
-from queue import Queue
 from typing import Any
 
 import pyjelly.parse.decode
@@ -256,6 +255,50 @@ def _run_case_process(  # noqa: PLR0913
     return result
 
 
+def _parse_cpu_list(text: str) -> set[int]:
+    """Parse a Linux CPU list, like "0-4,10"."""
+    cpus: set[int] = set()
+    for part in text.strip().split(","):
+        if part:
+            first, _, last = part.partition("-")
+            cpus.update(range(int(first), int(last or first) + 1))
+    return cpus
+
+
+def performance_cluster() -> list[int] | None:
+    """
+    Return the cores of one cluster of the fastest cores, None if unknown.
+
+    On CPUs with performance and efficiency cores, the fastest cores are the ones
+    with the highest maximum frequency. They can be split into clusters with
+    different last-level caches, which differ in speed by a few percent (on the
+    NVIDIA DGX Spark: cores 5-9 and 15-19, ~3%), so results are only comparable
+    within one cluster. This is the last of them, read from Linux sysfs.
+    """
+    base = Path("/sys/devices/system/cpu")
+    try:
+        cpus = sorted(int(path.name[3:]) for path in base.glob("cpu[0-9]*"))
+        frequencies = {
+            cpu: int((base / f"cpu{cpu}/cpufreq/cpuinfo_max_freq").read_text())
+            for cpu in cpus
+        }
+        top = max(frequencies.values())
+        fastest = {cpu for cpu, frequency in frequencies.items() if frequency == top}
+        clusters: list[list[int]] = []
+        for cpu in sorted(fastest):
+            caches = sorted(
+                (base / f"cpu{cpu}/cache").glob("index[0-9]*"),
+                key=lambda path: int(path.name[5:]),
+            )
+            shared = _parse_cpu_list((caches[-1] / "shared_cpu_list").read_text())
+            cluster = sorted(fastest & shared)
+            if cluster not in clusters:
+                clusters.append(cluster)
+    except (OSError, ValueError, IndexError):
+        return None
+    return clusters[-1] if clusters else None
+
+
 def run_sweeps(  # noqa: PLR0913
     task: str,
     datasets: Sequence[str],
@@ -272,26 +315,21 @@ def run_sweeps(  # noqa: PLR0913
     """
     Run every case `sweeps` times, each time in a new process.
 
-    With several CPU sets, the cases of a sweep run in parallel, each pinned to
-    one set that no other case uses at the same time. The next sweep starts when
-    the previous one is done. Use sets of the same kind of cores, so that the
-    results are comparable.
+    The cases run pinned to a CPU set, if one is given. With several sets, the
+    cases of a sweep run in parallel, one per set. Each case always runs on the
+    same set (cases are dealt to the sets in turn), so that a speed difference
+    between the sets can't make two runs of the same case differ. The next sweep
+    starts when the previous one is done.
     """
     cases = [(dataset, method) for dataset in datasets for method in methods]
     total = sweeps * len(cases)
     results: list[CaseResult] = []
     lock = threading.Lock()
-    free_sets: Queue[Sequence[int] | None] = Queue()
-    if cpu_sets:
-        for cpus in cpu_sets:
-            free_sets.put(cpus)
-    else:
-        free_sets.put(None)
+    sets: list[Sequence[int] | None] = list(cpu_sets) or [None]
 
-    def run_one(sweep: int, case: tuple[str, str]) -> None:
-        dataset, method = case
-        cpus = free_sets.get()
-        try:
+    def run_share(sweep: int, worker: int) -> None:
+        # Every len(sets)-th case, always on the same set
+        for dataset, method in cases[worker :: len(sets)]:
             result = _run_case_process(
                 task,
                 dataset,
@@ -301,20 +339,18 @@ def run_sweeps(  # noqa: PLR0913
                 iterations=iterations,
                 seconds=seconds,
                 check=check,
-                cpus=cpus,
+                cpus=sets[worker],
             )
-        finally:
-            free_sets.put(cpus)
-        result.sweep = sweep
-        score = f"{result.score:,.0f} st/s" if result.score else result.skipped
-        with lock:
-            results.append(result)
-            progress = f"[{len(results)}/{total}] sweep {sweep + 1}"
-            print(f"{progress}: {task} {dataset} {method}: {score}", flush=True)
+            result.sweep = sweep
+            score = f"{result.score:,.0f} st/s" if result.score else result.skipped
+            with lock:
+                results.append(result)
+                progress = f"[{len(results)}/{total}] sweep {sweep + 1}"
+                print(f"{progress}: {task} {dataset} {method}: {score}", flush=True)
 
-    with ThreadPoolExecutor(max_workers=max(1, len(cpu_sets))) as pool:
+    with ThreadPoolExecutor(max_workers=len(sets)) as pool:
         for sweep in range(sweeps):
-            list(pool.map(partial(run_one, sweep), cases))
+            list(pool.map(partial(run_share, sweep), range(len(sets))))
 
     # In the order of the cases, not the order they finished in
     order = {case: i for i, case in enumerate(cases)}
