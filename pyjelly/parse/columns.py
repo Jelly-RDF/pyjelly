@@ -477,22 +477,38 @@ class ColumnDecoder:
         return values
 
     def iris(self, column: jelly.RdfColumn) -> list[Any]:
-        name_ids = column.name_ids
-        prefix_ids = column.prefix_ids
+        name_ids: list[int] = list(column.name_ids)
+        prefix_ids: list[int] = list(column.prefix_ids)
         count = len(name_ids)
         prefix_count = len(prefix_ids)
         if prefix_count > 1 and prefix_count != count:
             msg = f"a column has {prefix_count} prefix ids for {count} IRIs"
             raise JellyConformanceError(msg)
         decoder = self.decoder
+        # As Decoder.iri_term(), for each IRI
+        names = decoder.names.data
+        prefixes = decoder.prefixes.data
+        cache = decoder.iri_cache
         prefix_index = prefix_ids[0] if prefix_count == 1 else 0
         name_index = 0
-        terms = []
+        terms: list[Any] = []
         for i in range(count):
             if prefix_count > 1 and prefix_ids[i]:
                 prefix_index = prefix_ids[i]
             name_index = name_ids[i] or name_index + 1
-            terms.append(decoder.iri_term(prefix_index, name_index))
+            name = names[name_index - 1]
+            prefix = prefixes[prefix_index - 1] if prefix_index else ""
+            if name is None or prefix is None:
+                msg = (
+                    f"an IRI refers to name {name_index} or prefix {prefix_index}, "
+                    "which is not set"
+                )
+                raise JellyConformanceError(msg)
+            cached = cache[name_index]
+            if cached is not None and cached.name is name and cached.prefix is prefix:
+                terms.append(cached.term)
+            else:
+                terms.append(decoder.new_iri(name_index, name, prefix))
         return terms
 
     def bnodes(self, column: jelly.RdfColumn) -> list[Any]:
