@@ -85,6 +85,27 @@ def _unbound(position: str) -> JellyConformanceError:
     return JellyConformanceError(msg)
 
 
+def _check_kinds(kinds: bytes, value_count: int, position: str) -> None:
+    if len(kinds) != (value_count + 3) >> 2:
+        msg = (
+            f"the {position} column has {len(kinds)} bytes of kinds "
+            f"for {value_count} values"
+        )
+        raise JellyConformanceError(msg)
+    used = value_count & 3
+    if used and kinds[-1] >> (used << 1):
+        msg = f"the unused bits of the kinds of the {position} column are not 0"
+        raise JellyConformanceError(msg)
+
+
+def _kinds_mismatch(position: str, kind: int) -> JellyConformanceError:
+    msg = (
+        f"the kinds of the {position} column refer to more {_KIND_NAMES[kind]} "
+        "than it has"
+    )
+    return JellyConformanceError(msg)
+
+
 class _Runs:
     """
     The runs of a column: the term of each run, and how many cells it takes.
@@ -399,33 +420,40 @@ class ColumnDecoder:
         self, column: jelly.RdfColumn, counts: tuple[int, ...], position: str
     ) -> list[Any]:
         """Decode the run values of a column whose kinds say which type each is."""
-        kinds = column.kinds
+        kinds: bytes = column.kinds
         value_count = sum(counts)
-        if len(kinds) != (value_count + 3) >> 2:
-            msg = (
-                f"the {position} column has {len(kinds)} bytes of kinds "
-                f"for {value_count} values"
-            )
-            raise JellyConformanceError(msg)
-        used = value_count & 3
-        if used and kinds[-1] >> (used << 1):
-            msg = f"the unused bits of the kinds of the {position} column are not 0"
-            raise JellyConformanceError(msg)
-        kind_list = [(kinds[i >> 2] >> ((i & 3) << 1)) & 3 for i in range(value_count)]
-        for kind in range(4):
-            if kind_list.count(kind) != counts[kind]:
-                msg = (
-                    f"the kinds of the {position} column do not match its "
-                    f"number of {_KIND_NAMES[kind]}"
-                )
-                raise JellyConformanceError(msg)
-        by_kind = (
-            iter(self.iris(column)),
-            iter(self.literals(column)),
-            iter(self.bnodes(column)),
-            iter(self.triple_terms(column)),
-        )
-        return [next(by_kind[kind]) for kind in kind_list]
+        _check_kinds(kinds, value_count, position)
+        iris = self.iris(column)
+        literals = self.literals(column)
+        bnodes = self.bnodes(column)
+        triple_terms = self.triple_terms(column)
+        # How many values of each type were taken. If no type runs out of values,
+        # all are used up at the end, as there are value_count of them
+        iri = literal = bnode = triple = 0
+        values: list[Any] = []
+        for i in range(value_count):
+            kind = (kinds[i >> 2] >> ((i & 3) << 1)) & 3
+            if kind == _KIND_IRI:
+                if iri == len(iris):
+                    raise _kinds_mismatch(position, kind)
+                values.append(iris[iri])
+                iri += 1
+            elif kind == _KIND_LITERAL:
+                if literal == len(literals):
+                    raise _kinds_mismatch(position, kind)
+                values.append(literals[literal])
+                literal += 1
+            elif kind == _KIND_BNODE:
+                if bnode == len(bnodes):
+                    raise _kinds_mismatch(position, kind)
+                values.append(bnodes[bnode])
+                bnode += 1
+            else:
+                if triple == len(triple_terms):
+                    raise _kinds_mismatch(position, kind)
+                values.append(triple_terms[triple])
+                triple += 1
+        return values
 
     def iris(self, column: jelly.RdfColumn) -> list[Any]:
         name_ids = column.name_ids
