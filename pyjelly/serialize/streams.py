@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -233,6 +233,11 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
             "no stream class for physical type "
             f"{jelly.PhysicalStreamType.Name(physical_type)}"
         )
+        if physical_type == jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
+            msg = (
+                "writing streams of the GRAPHS physical type is not supported "
+                "(they can still be read). Use QUADS instead."
+            )
         raise NotImplementedError(msg) from None
     return stream_cls
 
@@ -332,42 +337,7 @@ class QuadStream(Stream):
         return self.flow.frame_from_bounds()
 
 
-class GraphStream(TripleStream):
-    physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]] = FlatQuadsFrameFlow
-
-    def graph(
-        self,
-        graph_id: object,
-        graph: Iterable[Iterable[object]],
-    ) -> Generator[jelly.RdfStreamFrame]:
-        """
-        Process one graph into a sequence of jelly frames.
-
-        Args:
-            graph_id (object): graph id (BN, Literal, iri, default)
-            graph (Iterable[Iterable[object]]): iterable of triples (graph's content)
-
-        Yields:
-            Generator[jelly.RdfStreamFrame]: jelly frames.
-
-        """
-        graph_start = jelly.RdfGraphStart()
-        [*graph_rows] = self.encoder.encode_graph(graph_id, graph_start)
-        start_row = jelly.RdfStreamRow(graph_start=graph_start)
-        graph_rows.append(start_row)
-        self.flow.extend(graph_rows)
-        for triple in graph:
-            if frame := self.triple(triple):  # has frame slicing inside
-                yield frame
-        end_row = jelly.RdfStreamRow(graph_end=jelly.RdfGraphEnd())
-        self.flow.append(end_row)
-        if frame := self.flow.frame_from_bounds():
-            yield frame
-
-
 STREAM_DISPATCH: dict[jelly.PhysicalStreamType, type[Stream]] = {
     jelly.PHYSICAL_STREAM_TYPE_TRIPLES: TripleStream,
     jelly.PHYSICAL_STREAM_TYPE_QUADS: QuadStream,
-    jelly.PHYSICAL_STREAM_TYPE_GRAPHS: GraphStream,
 }

@@ -4,6 +4,7 @@ import io
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -26,14 +27,12 @@ from pyjelly.integrations.generic.parse import (
     parse_jelly_grouped as generic_parse_jelly_grouped,
 )
 from pyjelly.integrations.generic.serialize import (
-    GenericSinkTermEncoder,
     flat_stream_to_file,
-    graphs_stream_frames,
     grouped_stream_to_file,
 )
 from pyjelly.options import StreamParameters
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.streams import GraphStream, SerializerOptions
+from pyjelly.serialize.streams import SerializerOptions
 
 
 def _make_flat_triples_bytes() -> bytes:
@@ -85,47 +84,9 @@ def _make_flat_quads_bytes() -> bytes:
 
 
 def _make_physical_graphs_bytes() -> bytes:
-    options = SerializerOptions(
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-        params=StreamParameters(
-            generalized_statements=True,
-            rdf_star=True,
-            namespace_declarations=False,
-        ),
-    )
-
-    stream = GraphStream(
-        encoder=GenericSinkTermEncoder(),
-        options=options,
-    )
-
-    sink = GenericStatementSink()
-
-    sink.add(
-        Quad(
-            IRI("http://ex/s1"),
-            IRI("http://ex/p1"),
-            IRI("http://ex/o1"),
-            IRI("http://ex/g1"),
-        )
-    )
-    sink.add(
-        Quad(
-            IRI("http://ex/s2"),
-            IRI("http://ex/p2"),
-            IRI("http://ex/o2"),
-            IRI("http://ex/g2"),
-        )
-    )
-
-    output = io.BytesIO()
-
-    frames = list(graphs_stream_frames(stream, sink))
-
-    for frame in frames:
-        output.write(frame.SerializeToString())
-
-    return output.getvalue()
+    # pyjelly doesn't write streams of the GRAPHS physical type, but reads them.
+    # This one is from the Jelly conformance tests (from_jelly/graphs_rdf_1_1/pos_004).
+    return Path("tests/integration_tests/graphs_physical_flat_quads.jelly").read_bytes()
 
 
 def _make_grouped_graphs_bytes() -> bytes:

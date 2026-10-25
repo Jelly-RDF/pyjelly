@@ -7,7 +7,7 @@ from typing_extensions import override
 from itertools import chain
 
 from pyjelly.integrations.rdflib.parse import Quad, Triple
-from pyjelly.integrations.rdflib.walk import Tree, gspo_trees, spo_tree, spo_triples
+from pyjelly.integrations.rdflib.walk import Tree, gspo_trees, spo_tree
 from pyjelly.options import StreamParameters
 
 from rdflib import Graph
@@ -18,7 +18,6 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 from pyjelly import jelly
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
-    GraphStream,
     QuadStream,
     SerializerOptions,
     Stream,
@@ -181,48 +180,6 @@ def quads_stream_frames(
         for terms in quads:
             if frame := stream.quad(terms):
                 yield frame
-    if frame := stream.flow.frame_from_dataset():
-        yield frame
-    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
-        yield frame
-
-
-@stream_frames.register(GraphStream)
-def graphs_stream_frames(
-    stream: GraphStream,
-    data: Dataset | Generator[Quad],
-) -> Generator[jelly.RdfStreamFrame]:
-    """
-    Serialize a Dataset into jelly frames as a stream of graphs.
-
-    Notes:
-        If flow of DatasetsFrameFlow type, the whole dataset
-        will be encoded into one frame.
-
-    Args:
-        stream (GraphStream): stream that specifies graphs processing
-        data (Dataset | Generator[Quad]): Dataset to serialize.
-
-    Yields:
-        Generator[jelly.RdfStreamFrame]: jelly frames
-
-    """
-    stream.enroll()
-    if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
-
-    if isinstance(data, Dataset):
-        graphs = data.graphs()
-    else:
-        ds = Dataset()
-        for quad in data:
-            ctx = ds.get_context(quad.g)
-            ctx.add((quad.s, quad.p, quad.o))
-        graphs = ds.graphs()
-
-    for graph in graphs:
-        yield from stream.graph(graph_id=graph.identifier, graph=spo_triples(graph))
-
     if frame := stream.flow.frame_from_dataset():
         yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):

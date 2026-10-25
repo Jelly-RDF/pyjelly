@@ -10,14 +10,13 @@ from pyjelly.integrations.rdflib.parse import Quad, Triple
 from pyjelly.integrations.rdflib.serialize import (
     flat_stream_to_file,
     flat_stream_to_frames,
-    graphs_stream_frames,
     grouped_stream_to_file,
     grouped_stream_to_frames,
     quads_stream_frames,
 )
 from pyjelly.options import StreamParameters
 from pyjelly.serialize.ioutils import write_delimited
-from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions
+from pyjelly.serialize.streams import QuadStream, SerializerOptions
 
 EX = Namespace("http://example.org/")
 
@@ -148,54 +147,6 @@ def test_flat_stream_to_file_quads() -> None:
 def test_flat_stream_to_frames_empty() -> None:
     frames = list(flat_stream_to_frames(_empty_triples()))  # type: ignore[arg-type]
     assert frames == []
-
-
-def test_graphs_stream_frames_namespace() -> None:
-    ds = _dataset_gen()
-    opts = SerializerOptions(
-        logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
-        params=StreamParameters(namespace_declarations=True),
-    )
-    stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
-
-    frames = list(graphs_stream_frames(stream, ds))
-    buf = io.BytesIO()
-    for f in frames:
-        write_delimited(f, buf)
-    data = buf.getvalue()
-
-    ds_in = Dataset()
-    ds_in.parse(data=data, format="jelly")
-
-    expected = set(ds)
-    assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
-    assert set(ds_in) == expected
-    assert len(ds_in) == len(expected)
-
-
-def test_graphs_stream_frames_from_quads_generator() -> None:
-    opts = SerializerOptions(
-        logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
-        params=StreamParameters(namespace_declarations=False),
-    )
-    stream: GraphStream = GraphStream.for_rdflib(options=opts)  # type: ignore[assignment]
-
-    frames = list(graphs_stream_frames(stream, _quads_gen()))
-    buf = io.BytesIO()
-    for f in frames:
-        write_delimited(f, buf)
-    data = buf.getvalue()
-
-    ds_in = Dataset()
-    ds_in.parse(data=data, format="jelly")
-
-    expected = {
-        Quad(URIRef(EX.s1), URIRef(EX.p1), Literal("o1"), URIRef(EX.gq)),
-        Quad(URIRef(EX.s2), URIRef(EX.p2), Literal("o2"), URIRef(EX.gq)),
-    }
-    assert all(isinstance(f, jelly.RdfStreamFrame) for f in frames)
-    assert set(ds_in) == expected
-    assert len(ds_in) == len(expected)
 
 
 def test_quads_stream_frames_namespace() -> None:

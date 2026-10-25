@@ -45,6 +45,24 @@ def make_shared_graph() -> Graph:
     return make_dataset().graph(ex("g"))
 
 
+def walk_triples(graph: Graph) -> list[tuple[Any, ...]]:
+    tree = walk.spo_tree(graph)
+    assert tree is not None
+    return [(s, p, o) for s, ps in tree.items() for p, os in ps.items() for o in os]
+
+
+def walk_quads(dataset: Dataset) -> list[tuple[Any, ...]]:
+    trees = walk.gspo_trees(dataset)
+    assert trees is not None
+    return [
+        (s, p, o, g)
+        for g, tree in trees
+        for s, ps in tree.items()
+        for p, os in ps.items()
+        for o in os
+    ]
+
+
 def public_path_only(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(walk, "_memory_indexes", lambda _store: None)
 
@@ -88,9 +106,9 @@ def test_fast_and_public_paths_give_same_triples(
     make: Callable[[], Graph], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     graph = make()
-    fast = list(walk.spo_triples(graph))
+    fast = walk_triples(graph)
     public_path_only(monkeypatch)
-    public = list(walk.spo_triples(graph))
+    public = walk_triples(graph)
 
     for triples in (fast, public):
         assert len(triples) == len(graph)
@@ -105,9 +123,9 @@ def test_fast_and_public_paths_give_same_quads(
 ) -> None:
     dataset = make()
     expected = set(dataset.quads((None, None, None, None)))
-    fast = list(walk.gspo_quads(dataset))
+    fast = walk_quads(dataset)
     public_path_only(monkeypatch)
-    public = list(walk.gspo_quads(dataset))
+    public = walk_quads(dataset)
 
     for quads in (fast, public):
         assert len(quads) == len(expected)

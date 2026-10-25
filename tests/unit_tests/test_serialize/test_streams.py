@@ -16,11 +16,11 @@ from pyjelly.serialize.flows import (
     flow_for_type,
 )
 from pyjelly.serialize.streams import (
-    GraphStream,
     QuadStream,
     SerializerOptions,
     Stream,
     TripleStream,
+    stream_for_type,
 )
 
 
@@ -30,11 +30,8 @@ def test_flat_triples_inference_delimited() -> None:
     assert stream.flow.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
 
 
-@pytest.mark.parametrize("stream_class", [QuadStream, GraphStream])
-def test_flat_quads_inference_delimited(
-    stream_class: type[GraphStream | QuadStream],
-) -> None:
-    stream = stream_class(encoder=TermEncoder(), options=None)
+def test_flat_quads_inference_delimited() -> None:
+    stream = QuadStream(encoder=TermEncoder(), options=None)
     assert isinstance(stream.flow, FlatQuadsFrameFlow)
     assert stream.flow.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
 
@@ -67,8 +64,6 @@ def test_flow_base_logical_type(
         (TripleStream, jelly.LOGICAL_STREAM_TYPE_GRAPHS),
         (QuadStream, jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
         (QuadStream, jelly.LOGICAL_STREAM_TYPE_DATASETS),
-        (GraphStream, jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
-        (GraphStream, jelly.LOGICAL_STREAM_TYPE_DATASETS),
     ],
 )
 def test_flow_logical_type_nondelimited(
@@ -91,7 +86,6 @@ def test_flow_logical_type_nondelimited(
     [
         (TripleStream, jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
         (QuadStream, jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
-        (GraphStream, jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
     ],
 )
 def test_wrong_inference(
@@ -106,3 +100,9 @@ def test_wrong_inference(
                 params=StreamParameters(delimited=False),
             ),
         )
+
+
+def test_graphs_physical_type_is_not_written() -> None:
+    # Streams of the GRAPHS physical type can be read, but not written
+    with pytest.raises(NotImplementedError, match="GRAPHS physical type"):
+        stream_for_type(jelly.PHYSICAL_STREAM_TYPE_GRAPHS)

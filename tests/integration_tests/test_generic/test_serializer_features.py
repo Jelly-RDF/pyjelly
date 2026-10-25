@@ -1,24 +1,32 @@
-from typing import Any, Final, cast
+from typing import Any, cast
 
 import pytest
 
 from pyjelly import jelly
 from pyjelly.errors import JellyAssertionError
+from pyjelly.integrations.generic.generic_sink import (
+    IRI,
+    GenericStatementSink,
+    Quad,
+    Triple,
+)
 from pyjelly.integrations.generic.serialize import guess_options, guess_stream
 from pyjelly.options import StreamParameters
 from pyjelly.serialize.streams import QuadStream, SerializerOptions, TripleStream
 
 
-class _Sink:
-    def __init__(self, *, is_triples_sink: bool) -> None:
-        self.is_triples_sink: Final[bool] = is_triples_sink
+def _sink(*, is_triples_sink: bool) -> GenericStatementSink:
+    sink = GenericStatementSink()
+    s, p, o = IRI("http://ex/s"), IRI("http://ex/p"), IRI("http://ex/o")
+    sink.add(Triple(s, p, o) if is_triples_sink else Quad(s, p, o, IRI("http://ex/g")))
+    return sink
 
 
 @pytest.mark.parametrize(
     ("sink", "expected_logical"),
     [
-        (_Sink(is_triples_sink=True), jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
-        (_Sink(is_triples_sink=False), jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
+        (_sink(is_triples_sink=True), jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
+        (_sink(is_triples_sink=False), jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
     ],
     ids=["triples-sink", "quads-sink"],
 )
@@ -37,12 +45,12 @@ def test_defaults_generic(
     ("sink", "logical", "expected_physical"),
     [
         (
-            _Sink(is_triples_sink=True),
+            _sink(is_triples_sink=True),
             jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
             TripleStream,
         ),
         (
-            _Sink(is_triples_sink=False),
+            _sink(is_triples_sink=False),
             jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
             QuadStream,
         ),
@@ -70,8 +78,8 @@ def test_override_generic_compatible(
 @pytest.mark.parametrize(
     ("sink", "logical"),
     [
-        (_Sink(is_triples_sink=True), jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
-        (_Sink(is_triples_sink=False), jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
+        (_sink(is_triples_sink=True), jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS),
+        (_sink(is_triples_sink=False), jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES),
     ],
     ids=["triples-sink+quads-error", "quads-sink+triples-error"],
 )

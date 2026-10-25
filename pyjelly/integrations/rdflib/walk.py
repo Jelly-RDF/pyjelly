@@ -35,13 +35,6 @@ def _group(triples: Iterable[tuple[Any, Any, Any]]) -> Tree:
     return tree
 
 
-def _flatten(tree: Tree) -> Iterator[tuple[Any, Any, Any]]:
-    for s, predicates in tree.items():
-        for p, objects in predicates.items():
-            for o in objects:
-                yield s, p, o
-
-
 class _MemoryIndexes(NamedTuple):
     """The private indexes of rdflib's in-memory store that the fast path uses."""
 
@@ -144,22 +137,3 @@ def _group_quads(
             triples_list.append((s, p, o))
     for g, triples_of_graph in by_graph.items():
         yield g, _group(triples_of_graph)
-
-
-def spo_triples(graph: Graph) -> Iterator[tuple[Any, Any, Any]]:
-    """Return the graph's triples, grouped by subject and predicate if in memory."""
-    tree = spo_tree(graph)
-    if tree is None:
-        return iter(graph.triples((None, None, None)))
-    return _flatten(tree)
-
-
-def gspo_quads(dataset: Dataset) -> Iterator[tuple[Any, Any, Any, Any]]:
-    """Return the dataset's quads, grouped if in memory (see gspo_trees())."""
-    trees = gspo_trees(dataset)
-    if trees is None:
-        yield from dataset.quads((None, None, None, None))
-        return
-    for g, tree in trees:
-        for s, p, o in _flatten(tree):
-            yield s, p, o, g

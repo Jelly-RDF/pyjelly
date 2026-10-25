@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -35,6 +36,8 @@ class ToJellyTestCase:
     result_path: Path | None
     test_type: str
     category: str
+    #: pyjelly reads streams of the GRAPHS physical type, but doesn't write them
+    needs_graphs_physical_type: bool = False
     id: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -102,6 +105,10 @@ def _process_test_case(
         result_path=result_path,
         test_type=test_type_str,
         category=categorize_by_requires(graph, test_uri),
+        needs_graphs_physical_type=(
+            JELLYT.requirementPhysicalTypeGraphs
+            in set(graph.objects(test_uri, MF.requires))
+        ),
     )
 
 
@@ -184,28 +191,34 @@ if not REPORTING_MODE:
         if not ("pos_014" in case.uri and case.category == "rdf11")
     ]
 
+
+def _param(case: ToJellyTestCase) -> Any:
+    marks = (
+        [pytest.mark.skip(reason="pyjelly doesn't write the GRAPHS physical type")]
+        if case.needs_graphs_physical_type
+        else []
+    )
+    return pytest.param(case, id=case.id, marks=marks)
+
+
 RDF11_POSITIVE_CASES = [
-    pytest.param(case, id=case.id)
+    _param(case)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "positive" and case.category == "rdf11"
 ]
 
 ALL_POSITIVE_CASES = [
-    pytest.param(case, id=case.id)
-    for case in ALL_TO_JELLY_CASES
-    if case.test_type == "positive"
+    _param(case) for case in ALL_TO_JELLY_CASES if case.test_type == "positive"
 ]
 
 RDF11_NEGATIVE_CASES = [
-    pytest.param(case, id=case.id)
+    _param(case)
     for case in ALL_TO_JELLY_CASES
     if case.test_type == "negative" and case.category == "rdf11"
 ]
 
 ALL_NEGATIVE_CASES = [
-    pytest.param(case, id=case.id)
-    for case in ALL_TO_JELLY_CASES
-    if case.test_type == "negative"
+    _param(case) for case in ALL_TO_JELLY_CASES if case.test_type == "negative"
 ]
 
 

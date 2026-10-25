@@ -16,23 +16,16 @@ from pyjelly.integrations.generic.generic_sink import (
 from pyjelly.integrations.generic.serialize import (
     GenericSinkTermEncoder,
     flat_stream_to_frames,
-    graphs_stream_frames,
     grouped_stream_to_frames,
     guess_options,
     guess_stream,
     quads_stream_frames,
-    split_to_graphs,
     stream_frames,
     triples_stream_frames,
 )
 from pyjelly.options import LookupPreset, StreamParameters
 from pyjelly.serialize.encode import Slot
-from pyjelly.serialize.flows import (
-    DatasetsFrameFlow,
-    FlatQuadsFrameFlow,
-)
 from pyjelly.serialize.streams import (
-    GraphStream,
     QuadStream,
     SerializerOptions,
     TripleStream,
@@ -42,21 +35,6 @@ from pyjelly.serialize.streams import (
 def test_stream_frames_typeerror() -> None:
     with pytest.raises(TypeError):
         list(stream_frames(object(), GenericStatementSink()))  # type: ignore[arg-type]
-
-
-def test_split_to_graphs() -> None:
-    g1 = IRI("http://g1")
-    g2 = IRI("http://g2")
-
-    def gen() -> Generator[Quad]:
-        yield Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), g1)
-        yield Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), g1)
-        yield Quad(IRI("http://s3"), IRI("http://p3"), IRI("http://o3"), g2)
-
-    graphs = list(split_to_graphs(gen()))
-    assert len(graphs) == 2
-    assert graphs[0].identifier == g1
-    assert graphs[1].identifier == g2
 
 
 def test_guess_options_and_stream() -> None:
@@ -109,23 +87,6 @@ def test_flat_stream_guesses_options() -> None:
     frames = list(flat_stream_to_frames(gen()))
     assert frames
     assert isinstance(frames[-1], jelly.RdfStreamFrame)
-
-
-def test_graphs_stream_frames_from_generator() -> None:
-    options = SerializerOptions()
-    stream = GraphStream(
-        encoder=GenericSinkTermEncoder(),
-        options=options,
-    )
-
-    def gen() -> Generator[Quad]:
-        yield Quad(
-            IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1")
-        )
-
-    out = list(graphs_stream_frames(stream, gen()))
-    assert out
-    assert isinstance(out[-1], jelly.RdfStreamFrame)
 
 
 @pytest.mark.parametrize("with_namespace", [True, False])
@@ -185,89 +146,10 @@ def test_quads_stream_frames_parametrized(*, with_namespace: bool) -> None:
     assert isinstance(out[-1], jelly.RdfStreamFrame)
 
 
-@pytest.mark.parametrize("with_namespace", [True, False])
-def test_graphs_stream_frames_parametrized(*, with_namespace: bool) -> None:
-    options = SerializerOptions(
-        params=StreamParameters(namespace_declarations=with_namespace),
-    )
-    stream = GraphStream(
-        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
-        options=options,
-    )
-
-    sink = GenericStatementSink()
-    if with_namespace:
-        sink.bind("ex", IRI("http://example.com/"))
-    sink.add(
-        Quad(
-            IRI("http://ex/s1"),
-            IRI("http://ex/p1"),
-            IRI("http://ex/o1"),
-            IRI("http://ex/g1"),
-        )
-    )
-    sink.add(
-        Quad(
-            IRI("http://ex/s2"),
-            IRI("http://ex/p2"),
-            IRI("http://ex/o2"),
-            IRI("http://ex/g2"),
-        )
-    )
-
-    out = list(graphs_stream_frames(stream, sink))
-    assert out
-    assert isinstance(out[-1], jelly.RdfStreamFrame)
-
-
 def test_encoder_unsupported_raises() -> None:
     enc = GenericSinkTermEncoder(lookup_preset=LookupPreset())
     with pytest.raises(NotImplementedError, match="unsupported term type"):
         enc.encode_spo(object(), Slot.subject, jelly.RdfTriple())
-
-
-def test_graphs_stream_frames_emit_dataset() -> None:
-    opts = SerializerOptions(
-        flow=DatasetsFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_DATASETS,
-    )
-    stream = GraphStream(
-        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
-        options=opts,
-    )
-
-    sink = GenericStatementSink()
-    sink.add(
-        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
-    )
-    sink.add(
-        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
-    )
-    frames = list(graphs_stream_frames(stream, sink))
-    assert frames
-    assert isinstance(frames[-1], jelly.RdfStreamFrame)
-
-
-def test_graphs_stream_frames_emit_flat() -> None:
-    sink = GenericStatementSink()
-    sink.add(
-        Quad(IRI("http://s1"), IRI("http://p1"), IRI("http://o1"), IRI("http://g1"))
-    )
-    sink.add(
-        Quad(IRI("http://s2"), IRI("http://p2"), IRI("http://o2"), IRI("http://g2"))
-    )
-
-    opts = SerializerOptions(
-        flow=FlatQuadsFrameFlow(),
-        logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
-    )
-    stream = GraphStream(
-        encoder=GenericSinkTermEncoder(lookup_preset=LookupPreset()),
-        options=opts,
-    )
-    frames = list(graphs_stream_frames(stream, sink))
-    assert frames
-    assert isinstance(frames[-1], jelly.RdfStreamFrame)
 
 
 def test_grouped_stream_to_frames_init_stream_guess_options() -> None:

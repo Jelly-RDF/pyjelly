@@ -4,6 +4,8 @@ from collections import deque
 from collections.abc import Generator
 from typing import IO, NamedTuple, Union
 
+from mypy_extensions import mypyc_attr
+
 
 class _DefaultGraph:
     def __repr__(self) -> str:
@@ -130,6 +132,7 @@ class Prefix(NamedTuple):
     iri: IRI
 
 
+@mypyc_attr(allow_interpreted_subclasses=True)
 class GenericStatementSink:
     _store: deque[Triple | Quad]
 
