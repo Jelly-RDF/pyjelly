@@ -195,7 +195,9 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
+        # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
+        # decoder always gives the right number of terms
+        return tuple.__new__(Triple, terms)
 
 
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
@@ -215,7 +217,7 @@ class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
 
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*terms)
+        return tuple.__new__(Quad, terms)
 
 
 class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):

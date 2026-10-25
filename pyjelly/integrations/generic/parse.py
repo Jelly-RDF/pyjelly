@@ -68,7 +68,9 @@ class GenericStatementSinkAdapter(Adapter):
 
     @override
     def quoted_triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
+        # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
+        # decoder always gives the right number of terms
+        return tuple.__new__(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -90,7 +92,7 @@ class GenericTriplesAdapter(GenericStatementSinkAdapter):
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
+        return tuple.__new__(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -112,7 +114,7 @@ class GenericQuadsAdapter(GenericQuadsBaseAdapter):
 
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*terms)
+        return tuple.__new__(Quad, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
