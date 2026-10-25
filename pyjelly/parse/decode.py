@@ -3,6 +3,9 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from enum import Enum, auto
+from functools import partial
+from itertools import chain
+from operator import is_not
 from typing import Any, ClassVar, Final, NamedTuple, cast
 from typing_extensions import Never
 
@@ -245,7 +248,7 @@ def messages(rows: Iterable[Iterable[Any]]) -> Iterator[list[Any]]:
     Group the rows of a stream of RDF Messages by message.
 
     Args:
-        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() yields
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
             for each frame, and Decoder.end_of_stream()
 
     Yields:
@@ -269,7 +272,7 @@ def grouped_rows(
     Return the rows of each frame, or of each message in a stream of RDF Messages.
 
     Args:
-        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() yields
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
             for each frame, and Decoder.end_of_stream()
         options (ParserOptions): the stream's options
 
@@ -284,19 +287,17 @@ def flat_rows(rows: Iterable[Iterable[Any]], options: ParserOptions) -> Iterator
     Return the rows of all frames, without the ends of RDF Messages.
 
     Args:
-        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() yields
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
             for each frame, and Decoder.end_of_stream()
         options (ParserOptions): the stream's options
 
     """
+    # Not a generator: the rows of the frames reach the caller without passing
+    # through one more Python frame
+    all_rows = chain.from_iterable(rows)
     if options.params.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
-        for frame_rows in rows:
-            for row in frame_rows:
-                if row is not MESSAGE_END:
-                    yield row
-    else:
-        for frame_rows in rows:
-            yield from frame_rows
+        return filter(partial(is_not, MESSAGE_END), all_rows)
+    return all_rows
 
 
 def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
@@ -463,15 +464,19 @@ class Decoder:
 
         Args:
             frame (jelly.RdfStreamFrame): jelly frame
-        Yields:
+
+        Returns:
             Iterator[Any]: decoded rows, and in streams of RDF Messages, MESSAGE_END
                 at the end of each message
 
         """
         column_decoder = self.column_decoder
         if column_decoder is not None:
-            yield from column_decoder.iter_frame(frame)
-            return
+            return column_decoder.iter_frame(frame)
+        return self.iter_row_layout(frame)
+
+    def iter_row_layout(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
+        """Yield the decoded rows of a frame of a Jelly-RDF 1.0 or 1.1 stream."""
         # Rows are told apart by the name of their field, most common ones first
         for row_owner in frame.rows:
             kind: str | None = _ROW_WHICH_ONEOF(row_owner, "row")
