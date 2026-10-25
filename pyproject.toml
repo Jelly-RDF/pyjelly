@@ -149,6 +149,8 @@ docs = [
 ]
 # Version 4.3.1 includes the final Python 3.15 release.
 ci = ["cibuildwheel>=4.3.1,<5 ; python_version >= '3.11'"]
+# Python 3.14 has zstd in the standard library, older versions need the package
+benchmark = ["pyjelly[rdflib]", "zstandard>=0.23.0 ; python_version < '3.14'"]
 
 
 [tool.uv]
@@ -184,7 +186,7 @@ extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}"]
 packages = ["pyjelly"]
 
 [tool.ruff.lint]
-extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004"] }
+extend-per-file-ignores = { "tests/unit_tests/**" = ["PLR2004"], "benchmarks/**" = ["T201"] }
 exclude = [
     "**examples/**",
 ]
