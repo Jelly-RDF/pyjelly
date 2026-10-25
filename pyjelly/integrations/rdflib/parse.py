@@ -8,7 +8,7 @@ from typing_extensions import Never, Self, override
 
 import rdflib
 from rdflib import BNode, Node, URIRef
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, ConjunctiveGraph, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
 
@@ -424,6 +424,12 @@ def parse_jelly_grouped(
     raise NotImplementedError(msg)
 
 
+# Statements are given to the store this many at a time
+ADD_BATCH_SIZE = 1000
+# How many context graphs to keep for reuse, by graph name
+MAX_CACHED_CONTEXTS = 1024
+
+
 def parse_jelly_to_graph(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = Graph,
@@ -447,25 +453,78 @@ def parse_jelly_to_graph(
     """
     options, frames = get_options_and_frames(inp)
 
+    sink: Graph
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         sink = graph_factory()
-    if options.stream_types.physical_type in (
-        jelly.PHYSICAL_STREAM_TYPE_QUADS,
-        jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
-    ):
-        quad_sink = dataset_factory()
-        sink = quad_sink
+        # Graph.add only checks the terms before giving them to the store
+        to_store = type(sink).add is Graph.add
+    else:
+        # Other stream types fail in parse_jelly_flat
+        sink = dataset_factory()
+        # Dataset.add would also make a new context graph for every quad
+        to_store = type(sink).add is ConjunctiveGraph.add
 
-    for item in parse_jelly_flat(inp=inp, frames=frames, options=options):
+    items = parse_jelly_flat(inp=inp, frames=frames, options=options)
+    if to_store:
+        _add_to_store(sink, items)
+        return sink
+
+    # The Graph or Dataset class changes add(), so it gets every statement
+    for item in items:
         if isinstance(item, Prefix):
             sink.bind(item.prefix, item.iri)
         if isinstance(item, Triple):
             sink.add(item)
         if isinstance(item, Quad):
             s, p, o, graph_name = item
-            context = quad_sink.get_context(graph_name)
-            quad_sink.add((s, p, o, context))
+            context = cast(Dataset, sink).get_context(graph_name)
+            sink.add((s, p, o, context))  # type: ignore[arg-type]
     return sink
+
+
+def _context(
+    dataset: Dataset, contexts: dict[GraphName, Graph], graph_name: GraphName
+) -> Graph:
+    """Return the dataset's context graph for a graph name, reusing it if cached."""
+    context = contexts.get(graph_name)
+    if context is None:
+        context = dataset.get_context(graph_name)
+        if len(contexts) >= MAX_CACHED_CONTEXTS:
+            contexts.clear()
+        contexts[graph_name] = context
+    return context
+
+
+def _add_to_store(sink: Graph, items: Iterable[Statement | Prefix]) -> None:
+    """Add statements to the Graph's or Dataset's store directly, in batches."""
+    store = sink.store
+    batch: list[tuple[Node, Node, Node, Graph]] = []
+    contexts: dict[GraphName, Graph] = {}
+    # Repeated graph names are the same objects, so they are checked first
+    last_graph_name: object = None
+    context = sink
+
+    for item in items:
+        if isinstance(item, Quad):
+            s, p, o, graph_name = item
+            if graph_name is not last_graph_name:
+                context = _context(cast(Dataset, sink), contexts, graph_name)
+                last_graph_name = graph_name
+            batch.append((s, p, o, context))
+        elif isinstance(item, Triple):
+            s, p, o = item
+            batch.append((s, p, o, sink))
+        elif isinstance(item, Prefix):
+            # Statements before the prefix are added first, to keep the order
+            if batch:
+                store.addN(batch)
+                batch = []
+            sink.bind(item.prefix, item.iri)
+        if len(batch) >= ADD_BATCH_SIZE:
+            store.addN(batch)
+            batch = []
+    if batch:
+        store.addN(batch)
 
 
 def parse_jelly_flat(
