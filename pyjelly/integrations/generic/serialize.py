@@ -53,7 +53,7 @@ class GenericSinkTermEncoder(TermEncoder):
             return
 
         if isinstance(term, BlankNode):
-            self.encode_bnode(term._identifier, out)
+            self.encode_bnode(term._id, out)
             return
 
         if isinstance(term, Triple):
@@ -88,7 +88,7 @@ class GenericSinkTermEncoder(TermEncoder):
             return
 
         if isinstance(term, BlankNode):
-            self.encode_bnode(term._identifier, out)
+            self.encode_bnode(term._id, out)
             return
         super().encode_graph(term, out)  # raises NotImplementedError
 

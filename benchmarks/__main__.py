@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -105,6 +106,26 @@ def _default_cpu_sets() -> list[list[int]]:
     return []
 
 
+def _case(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """Run the `case` command."""
+    if args.cpus:
+        if sys.platform != "linux":
+            parser.error("--cpus works only on Linux")
+        os.sched_setaffinity(0, args.cpus)
+    result = measure.run_case(
+        args.task,
+        args.dataset,
+        args.method,
+        rows=args.rows,
+        warmup=args.warmup,
+        iterations=args.iterations,
+        seconds=args.time,
+        check=args.check,
+        profile=args.profile,
+    )
+    print(json.dumps(asdict(result)))
+
+
 def _run(args: argparse.Namespace) -> None:
     """Run the `run` command."""
     if not args.cpus:
@@ -197,20 +218,7 @@ def main() -> None:
     if args.command == "fetch":
         data.fetch(args.datasets)
     elif args.command == "case":
-        if args.cpus:
-            os.sched_setaffinity(0, args.cpus)
-        result = measure.run_case(
-            args.task,
-            args.dataset,
-            args.method,
-            rows=args.rows,
-            warmup=args.warmup,
-            iterations=args.iterations,
-            seconds=args.time,
-            check=args.check,
-            profile=args.profile,
-        )
-        print(json.dumps(asdict(result)))
+        _case(args, parser)
     elif args.command == "run":
         _run(args)
     elif args.command == "size":

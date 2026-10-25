@@ -19,21 +19,23 @@ class BlankNode:
     """Class for blank nodes, storing BN's identifier as a string."""
 
     def __init__(self, identifier: str) -> None:
-        self._identifier: str = identifier
+        # Not `_identifier`: mypyc would name its C field `__identifier`, which
+        # is a reserved word for the MSVC compiler
+        self._id: str = identifier
 
     def __str__(self) -> str:
-        return f"_:{self._identifier}"
+        return f"_:{self._id}"
 
     def __repr__(self) -> str:
-        return f"BlankNode(identifier={self._identifier})"
+        return f"BlankNode(identifier={self._id})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, BlankNode):
-            return self._identifier == other._identifier
+            return self._id == other._id
         return False
 
     def __hash__(self) -> int:
-        return hash(self._identifier)
+        return hash(self._id)
 
 
 class IRI:
@@ -150,7 +152,8 @@ class GenericStatementSink:
         """
         self._store: deque[Triple | Quad] = deque()
         self._namespaces: dict[str, IRI] = {}
-        self._identifier = identifier
+        # Not `_identifier`, see BlankNode
+        self._id = identifier
 
     def add(self, statement: Triple | Quad) -> None:
         self._store.append(statement)
@@ -170,7 +173,7 @@ class GenericStatementSink:
 
     @property
     def identifier(self) -> GraphName:
-        return self._identifier
+        return self._id
 
     @property
     def store(self) -> Generator[Triple | Quad]:
@@ -195,7 +198,7 @@ class GenericStatementSink:
         parsed_result = parse_jelly_to_graph(input_file)
         self._store = parsed_result._store
         self._namespaces = parsed_result._namespaces
-        self._identifier = parsed_result._identifier
+        self._id = parsed_result._id
 
     def serialize(self, output_file: IO[bytes]) -> None:
         from pyjelly.integrations.generic.serialize import (  # noqa: PLC0415
