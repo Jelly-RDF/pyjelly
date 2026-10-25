@@ -32,6 +32,8 @@ def parse_triples_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
+    *,
+    validate_iris: bool = False,
 ) -> Generator[Iterable[Triple | Prefix]]:
     """
     Parse flat triple stream.
@@ -41,6 +43,8 @@ def parse_triples_stream(
         options (ParserOptions): stream options
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     Yields:
         Generator[Iterable[Triple | Prefix]]:
@@ -48,7 +52,7 @@ def parse_triples_stream(
             one iterable per frame.
 
     """
-    adapter = RDFLibTriplesAdapter(options)
+    adapter = RDFLibTriplesAdapter(options, validate_iris=validate_iris)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
         if frame_metadata is not None:
@@ -64,6 +68,8 @@ def parse_quads_stream(
     frames: Iterable[jelly.RdfStreamFrame],
     options: ParserOptions,
     frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
+    *,
+    validate_iris: bool = False,
 ) -> Generator[Iterable[Quad | Prefix]]:
     """
     Parse flat quads stream.
@@ -73,6 +79,8 @@ def parse_quads_stream(
         options (ParserOptions): stream options
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     Yields:
         Generator[Iterable[Quad | Prefix]]:
@@ -85,7 +93,7 @@ def parse_quads_stream(
         adapter_class = RDFLibQuadsAdapter
     else:
         adapter_class = RDFLibGraphsAdapter
-    adapter = adapter_class(options=options)
+    adapter = adapter_class(options=options, validate_iris=validate_iris)
     decoder = Decoder(adapter=adapter)
     for frame in frames:
         if frame_metadata is not None:
@@ -97,13 +105,14 @@ def parse_quads_stream(
         yield decoder.end_of_stream()
 
 
-def parse_jelly_grouped(
+def parse_jelly_grouped(  # noqa: PLR0913 keyword-only options
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = Graph,
     dataset_factory: Callable[[], Dataset] = Dataset,
     *,
     logical_type_strict: bool = False,
     frame_metadata: ContextVar[MutableMapping[str, bytes]] | None = None,
+    validate_iris: bool = False,
 ) -> Generator[Graph] | Generator[Dataset]:
     """
     Take jelly file and return generators based on the detected physical type.
@@ -123,8 +132,8 @@ def parse_jelly_grouped(
             physical type is used to route parsing.
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
-
-
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     Raises:
         NotImplementedError: is raised if a physical type is not implemented
@@ -158,7 +167,10 @@ def parse_jelly_grouped(
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         for graph in grouped_rows(
             parse_triples_stream(
-                frames=frames, options=options, frame_metadata=frame_metadata
+                frames=frames,
+                options=options,
+                frame_metadata=frame_metadata,
+                validate_iris=validate_iris,
             ),
             options,
         ):
@@ -176,7 +188,10 @@ def parse_jelly_grouped(
     ):
         for dataset in grouped_rows(
             parse_quads_stream(
-                frames=frames, options=options, frame_metadata=frame_metadata
+                frames=frames,
+                options=options,
+                frame_metadata=frame_metadata,
+                validate_iris=validate_iris,
             ),
             options,
         ):
@@ -207,6 +222,8 @@ def parse_jelly_to_graph(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = Graph,
     dataset_factory: Callable[[], Dataset] = Dataset,
+    *,
+    validate_iris: bool = False,
 ) -> Graph | Dataset:
     """
     Add statements from Generator to provided Graph/Dataset.
@@ -219,6 +236,8 @@ def parse_jelly_to_graph(
         dataset_factory (Callable[[], Dataset]): factory to create Dataset.
             By default creates an empty in-memory Dataset,
             but you can pass something else here.
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     Returns:
         Dataset | Graph: Dataset or Graph with statements.
@@ -237,7 +256,9 @@ def parse_jelly_to_graph(
         # Dataset.add would also make a new context graph for every quad
         to_store = type(sink).add is ConjunctiveGraph.add
 
-    items = parse_jelly_flat(inp=inp, frames=frames, options=options)
+    items = parse_jelly_flat(
+        inp=inp, frames=frames, options=options, validate_iris=validate_iris
+    )
     if to_store:
         _add_to_store(sink, items)
         return sink
@@ -306,6 +327,7 @@ def parse_jelly_flat(
     options: ParserOptions | None = None,
     *,
     logical_type_strict: bool = False,
+    validate_iris: bool = False,
 ) -> Generator[Statement | Prefix]:
     """
     Parse jelly file with FLAT logical type into a Generator of stream events.
@@ -319,6 +341,8 @@ def parse_jelly_flat(
         logical_type_strict (bool): If True, validate the *logical* type in
             stream options and require FLAT_(TRIPLES|QUADS). Otherwise, only the
             physical type is used to route parsing.
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking takes time.
 
     Raises:
         NotImplementedError: if physical type is not supported
@@ -346,7 +370,10 @@ def parse_jelly_flat(
 
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         yield from flat_rows(
-            parse_triples_stream(frames=frames, options=options), options
+            parse_triples_stream(
+                frames=frames, options=options, validate_iris=validate_iris
+            ),
+            options,
         )
         return
     if options.stream_types.physical_type in (
@@ -369,6 +396,8 @@ class RDFLibJellyParser(RDFLibParser):
         self,
         source: InputSource,
         sink: Graph,
+        *,
+        validate_iris: bool = False,
     ) -> None:
         """
         Parse jelly file into provided RDFLib Graph.
@@ -376,6 +405,8 @@ class RDFLibJellyParser(RDFLibParser):
         Args:
             source (InputSource): jelly file as buffered binary stream InputSource obj
             sink (Graph): RDFLib Graph
+            validate_iris (bool): whether rdflib checks the IRIs, see
+                parse_jelly_to_graph(). Pass it to Graph.parse().
 
         Raises:
             TypeError: raises error if invalid input
@@ -394,4 +425,5 @@ class RDFLibJellyParser(RDFLibParser):
             inp,
             graph_factory=lambda: Graph(store=sink.store, identifier=sink.identifier),
             dataset_factory=lambda: Dataset(store=sink.store),
+            validate_iris=validate_iris,
         )
