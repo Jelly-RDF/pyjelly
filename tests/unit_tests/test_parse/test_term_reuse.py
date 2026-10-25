@@ -1,5 +1,5 @@
 from pyjelly import jelly
-from pyjelly.integrations.generic.generic_sink import IRI
+from pyjelly.integrations.generic.generic_sink import IRI, Literal
 from pyjelly.integrations.generic.parse import GenericStatementSinkAdapter
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import Decoder, ParserOptions
@@ -36,3 +36,28 @@ def test_iri_terms_are_reused_until_their_entries_change() -> None:
     # The name entry is overwritten
     decoder.ingest_name_entry(jelly.RdfNameEntry(id=1, value="z"))
     assert decoder.decode_iri(jelly.RdfIri(prefix_id=1, name_id=1)) == IRI("http://c/z")
+
+
+def test_literal_terms_are_reused_only_when_equal() -> None:
+    decoder = make_decoder()
+    decoder.ingest_datatype_entry(jelly.RdfDatatypeEntry(id=1, value="http://dt/a"))
+    decoder.ingest_datatype_entry(jelly.RdfDatatypeEntry(id=2, value="http://dt/b"))
+
+    plain = decoder.decode_literal(jelly.RdfLiteral(lex="1"))
+    assert decoder.decode_literal(jelly.RdfLiteral(lex="1")) is plain
+    literals = [
+        plain,
+        decoder.decode_literal(jelly.RdfLiteral(lex="2")),
+        decoder.decode_literal(jelly.RdfLiteral(lex="1", langtag="en")),
+        decoder.decode_literal(jelly.RdfLiteral(lex="1", langtag="de")),
+        decoder.decode_literal(jelly.RdfLiteral(lex="1", datatype=1)),
+        decoder.decode_literal(jelly.RdfLiteral(lex="1", datatype=2)),
+    ]
+    assert literals == [
+        Literal("1"),
+        Literal("2"),
+        Literal("1", langtag="en"),
+        Literal("1", langtag="de"),
+        Literal("1", datatype="http://dt/a"),
+        Literal("1", datatype="http://dt/b"),
+    ]

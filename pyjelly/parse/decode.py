@@ -16,6 +16,10 @@ RowHandler = Callable[[Any], Any | None]
 TermHandler = Callable[[Any], Any | None]
 RdfStreamOptions = jelly.RdfStreamOptions
 
+# How many literal terms the decoder keeps for reuse. When the cache is full, it
+# is emptied: simpler and cheaper than evicting the least recently used ones
+LITERAL_CACHE_SIZE = 16384
+
 
 class ParsingMode(Enum):
     """
@@ -124,6 +128,7 @@ class Adapter(metaclass=ABCMeta):
         language: str | None = None,
         datatype: str | None = None,
     ) -> Any:
+        """Return a literal term. The decoder reuses it, so it must be immutable."""
         raise NotImplementedError
 
     # Optional abstract methods--not required to be implemented by all adapters
@@ -217,6 +222,9 @@ class Decoder:
         self.iri_cache: list[_CachedIri | None] = [None] * (
             self.options.lookup_preset.max_names + 1
         )
+        # Literals often repeat (e.g., the same values in many entities), and
+        # making one is often slow (rdflib parses the value)
+        self.literal_cache: dict[tuple[str, str | None, str | None], Any] = {}
 
         self.row_handlers: dict[type[Any], RowHandler] = {
             t: getattr(self, name) for t, name in self._ROW_HANDLER_NAMES.items()
@@ -382,7 +390,8 @@ class Decoder:
         Decode RdfLiteral to literal based on custom adapter implementation.
 
         Notes: checks for langtag existence;
-               for datatype checks for non-zero table size and datatype field presence
+               for datatype checks for non-zero table size and datatype field presence.
+               Recently decoded literals are reused.
 
         Args:
             literal (jelly.RdfLiteral): RdfLiteral message
@@ -396,11 +405,16 @@ class Decoder:
             language = literal.langtag
         elif self.datatypes.lookup_size and literal.HasField("datatype"):
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
-        return self.adapter.literal(
-            lex=literal.lex,
-            language=language,
-            datatype=datatype,
-        )
+        lex = literal.lex
+        cache = self.literal_cache
+        key = (lex, language, datatype)
+        term = cache.get(key)
+        if term is None:
+            term = self.adapter.literal(lex=lex, language=language, datatype=datatype)
+            if len(cache) >= LITERAL_CACHE_SIZE:
+                cache.clear()
+            cache[key] = term
+        return term
 
     def decode_namespace_declaration(
         self,
