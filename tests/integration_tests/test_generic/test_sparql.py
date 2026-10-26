@@ -291,3 +291,24 @@ def test_row_failing_after_a_full_frame() -> None:
     with pytest.raises(JellyIncompleteResultsError, match="NotImplementedError"):
         read.extend(results)
     assert read == good
+
+
+def test_garbage_after_an_error_trailer() -> None:
+    # As Fuseki does when it cancels a query: after the error trailer, it appends
+    # a text message to the response
+    out = io.BytesIO()
+    with pytest.raises(TimeoutError):
+        serialize_jelly_sparql(["s", "o", "t"], _failing_rows(), out)
+    data = out.getvalue() + b"\n##  Query cancelled due to timeout  ##\n"
+    results = parse_jelly_sparql(data)
+    rows: list[tuple[Node | None, ...]] = []
+    with pytest.raises(JellyIncompleteResultsError, match="TimeoutError"):
+        rows.extend(results)
+    assert rows == ROWS[:2]
+
+
+def test_garbage_after_a_complete_trailer() -> None:
+    data = _write(ROWS).getvalue() + b"\n##  not Jelly  ##\n"
+    results = parse_jelly_sparql(data)
+    with pytest.raises(JellyConformanceError):
+        list(results)
