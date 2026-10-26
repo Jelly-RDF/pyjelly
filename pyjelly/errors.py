@@ -12,23 +12,23 @@ class JellyNotImplementedError(NotImplementedError):
 
 class JellyIncompleteResultsError(Exception):
     """
-    Raised when the producer of SPARQL results says that they are incomplete.
+    Raised when the producer of SPARQL results reports that they are incomplete.
 
-    For example, when the query failed midway. The rows read before are valid.
+    For example, the query failed midway. The rows read before the error are valid.
     """
 
     def __init__(self, message: str, error: str, result: object = None) -> None:
         super().__init__(message)
-        #: Why the producer could not complete the results, in its words
+        #: Error message from the producer
         self.error = error
-        #: The results that were read, if the reader keeps them
+        #: Results read before the error, if the reader keeps them
         self.result = result
 
 
 class JellyTruncatedResultsWarning(UserWarning):
     """
-    Issued when a stream of SPARQL results ends without saying they are complete.
+    Issued when a stream of SPARQL results ends without a trailer.
 
-    The writer may have stopped before writing all results, e.g., because the
-    connection was lost.
+    Some results may be missing, e.g., because the writer stopped or the connection
+    was lost.
     """

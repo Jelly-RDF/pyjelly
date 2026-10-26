@@ -1,4 +1,4 @@
-"""Jelly-SPARQL with rdflib: query results written and read through the plugins."""
+"""Jelly-SPARQL with rdflib: writing and reading query results via the plugins."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ def test_files(graph: Graph, tmp_path: Path) -> None:
     result = graph.query(SELECT)
     path = tmp_path / "results.jellys"
     result.serialize(str(path), format="jelly")
-    # Paths work too, but rdflib's types say only streams do
+    # Paths work too, although rdflib's type hints only allow streams
     assert Result.parse(str(path), format="jelly") == result  # type: ignore[arg-type]
     assert Result.parse(path, format="jelly") == result  # type: ignore[arg-type]
     with path.open("rb") as file:
@@ -183,7 +183,7 @@ def test_truncated(graph: Graph) -> None:
     result = graph.query(SELECT)
     data = result.serialize(format="jelly", options=SparqlOptions(frame_values=3))
     assert data is not None
-    # The stream without its last frame, the one with the trailer
+    # Cut off the last frame, which has the trailer
     frames = list(sparql_frames(io.BytesIO(data)))
     cut = data[: -(frames[-1].ByteSize() + 1)]
     parsed = Result.parse(io.BytesIO(cut), format="jelly")
@@ -281,7 +281,7 @@ def test_validate_iris_is_passed_on(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_frames_of_many_terms() -> None:
-    # More distinct IRIs than the name lookup has: frames end early
+    # More distinct IRIs than the name lookup holds, so frames end early
     options = SparqlOptions(
         lookup_preset=LookupPreset(max_names=128, max_prefixes=8, max_datatypes=8)
     )
@@ -343,7 +343,7 @@ def test_lazy_incomplete() -> None:
     parsed = parse_jelly_sparql(out, lazy=True)
     rows: list[object] = []
     with pytest.raises(JellyIncompleteResultsError):  # noqa: PT012
-        # Not rows.extend(parsed): it would call len(parsed), which reads all rows
+        # Not rows.extend(parsed): that calls len(parsed), which reads all rows
         for row in parsed:
             rows.append(row)  # noqa: PERF402
     assert len(rows) == 1
@@ -395,7 +395,7 @@ def test_sequence_goes_on_after_incomplete_results(graph: Graph) -> None:
     assert not first.error
     assert second.error == "RuntimeError: the endpoint went away"
     assert len(second) == 1
-    # Not equal: the blank nodes of a result set in a sequence are its own
+    # Not equal, because each result set in a sequence has its own blank nodes
     assert len(third) == len(graph.query(SELECT))
 
 
@@ -421,7 +421,7 @@ def test_incomplete_and_truncated_results_are_passed_on(graph: Graph) -> None:
     with pytest.warns(JellyTruncatedResultsWarning):
         parsed = Result.parse(io.BytesIO(cut), format="jelly")
     assert parsed.truncated
-    # Written again, the results say that they may be incomplete
+    # When written again, the results are marked as possibly incomplete
     again = parsed.serialize(format="jelly")
     assert again is not None
     with pytest.raises(JellyIncompleteResultsError, match="ended without"):
@@ -472,7 +472,7 @@ def test_lazy_reading_from_a_socket() -> None:
             frame = stream.row([URIRef(EX + "a")])
             assert frame is not None
             writer.write(frame)
-            # The reader has the first row before the rest is written
+            # The reader gets the first row before the rest is written
             waited.append(first_row_read.wait(timeout=10))
             writer.write(stream.end())
 

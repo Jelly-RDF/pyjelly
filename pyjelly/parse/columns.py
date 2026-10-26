@@ -96,13 +96,13 @@ def _check_kinds(kinds: bytes, value_count: int, position: str) -> None:
         raise JellyConformanceError(msg)
 
 
-# More cells than this are added at once, fewer one by one: cheaper than making a
-# list of a few cells to add
+# Above this count, cells are added in bulk. Below it, appending them one at a
+# time is cheaper than building a temporary list.
 _FEW_CELLS: Final = 16
 
 
 def _add_values(cells: list[Any], values: list[Any], start: int, count: int) -> None:
-    """Add `count` values, from values[start], one per cell."""
+    """Append values[start:start + count] to the cells."""
     if count > _FEW_CELLS:
         cells += values[start : start + count]
     else:
@@ -111,7 +111,7 @@ def _add_values(cells: list[Any], values: list[Any], start: int, count: int) -> 
 
 
 def _add_run(cells: list[Any], term: Any, count: int) -> None:
-    """Add `count` cells of one term."""
+    """Append `count` cells holding the same term."""
     if count > _FEW_CELLS:
         cells += [term] * count
     else:
@@ -135,7 +135,7 @@ def _kinds_mismatch(position: str, kind: int) -> JellyConformanceError:
 def _layout_cells(
     values: list[Any], layouts: list[int], rows: int, position: str
 ) -> list[Any]:
-    """Return the cells that the layouts of a column give, in order."""
+    """Expand a column's layout tokens into its cells, in order."""
     cells: list[Any] = []
     index = 0
     k = 0
@@ -171,7 +171,7 @@ def _layout_cells(
                 "its values"
             )
             raise JellyConformanceError(msg)
-        # Checked before the cells are made, as a run can claim any length
+        # Check before building the cells, since a run can claim any length
         if len(cells) + count > rows:
             raise _too_many_cells(position)
         _add_run(cells, term, count)
@@ -314,8 +314,8 @@ class ColumnDecoder:
         self.options_read = False
         # Statements of the current RDF Message so far, in this and earlier frames
         self.rows_in_message = 0
-        #: Put before the labels of blank nodes, to tell apart the blank nodes of
-        #: result sets that use the same labels (see pyjelly.parse.sparql)
+        #: Prefix for blank node labels, so that equal labels in different result
+        #: sets give different blank nodes (see pyjelly.parse.sparql)
         self.bnode_scope = ""
 
     def iter_frame(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
@@ -435,7 +435,7 @@ class ColumnDecoder:
         self.apply_entries(batch.names, batch.prefixes, batch.datatypes)
 
     def apply_entries(self, names: Any, prefixes: Any, datatypes: Any) -> None:
-        """Apply the packed lookup entries of a frame."""
+        """Apply a frame's packed lookup entries."""
         decoder = self.decoder
         _apply_entries(names, decoder.names)
         _apply_entries(prefixes, decoder.prefixes)
@@ -544,18 +544,18 @@ class ColumnDecoder:
 
     def cells(self, column: jelly.RdfColumn, rows: int, position: str) -> list[Any]:
         """
-        Decode a column of Jelly-SPARQL into its cells, in order.
+        Decode a Jelly-SPARQL column into its cells, in order.
 
-        The column can have terms of any type, and unbound cells, which are None.
+        The column may hold terms of any type. Unbound cells are None.
         """
         values = self.run_values(column, _ANY, position)
         layouts: list[int] = column.layouts[:]
-        # Without layouts, each value takes one cell
+        # Without layout tokens, each value fills one cell
         cells = _layout_cells(values, layouts, rows, position) if layouts else values
         if len(cells) > rows:
             raise _too_many_cells(position)
         if len(cells) < rows:
-            # The rest are unbound
+            # Pad with unbound cells
             cells += [None] * (rows - len(cells))
         return cells
 

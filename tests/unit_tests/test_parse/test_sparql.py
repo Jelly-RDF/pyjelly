@@ -34,7 +34,7 @@ def test_row_limit() -> None:
 
 
 def test_value_limit() -> None:
-    # Checked before the cells are made
+    # Checked before any cells are built
     decoder = _decoder(max_values=100)
     frame = _frame(variables=["x", "y"], row_count=51)
     with pytest.raises(JellyConformanceError, match="100 values allowed"):

@@ -51,7 +51,7 @@ def _stream_options(case: ConformanceCase) -> jelly.SparqlResultsOptions:
 
 
 def _options(case: ConformanceCase) -> SparqlOptions:
-    """Return the options of a test, as written in its stream options file."""
+    """Read a test's options from its stream options file."""
     options = _stream_options(case)
     return SparqlOptions(
         lookup_preset=LookupPreset(

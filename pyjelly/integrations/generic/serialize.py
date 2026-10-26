@@ -32,10 +32,10 @@ QUAD_ARITY = 4
 class GenericSinkTermEncoder(TermEncoder):
     def same_term(self, a: object, b: object) -> bool:
         """
-        Return whether two terms are equal, for repeated terms.
+        Check whether two terms are equal, to find repeated terms.
 
-        IRIs, blank nodes and literals are compared by their strings, without a
-        call to their __eq__.
+        IRIs, blank nodes and literals are compared field by field, which is
+        cheaper than calling their __eq__.
         """
         if a is b:
             return True

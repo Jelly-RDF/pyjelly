@@ -1,7 +1,7 @@
 """
-Jelly-SPARQL for rdflib: SPARQL query results (rdflib.query.Result) in Jelly.
+Jelly-SPARQL support for rdflib's SPARQL query results (rdflib.query.Result).
 
-With pyjelly installed, rdflib reads and writes them in the "jelly" format:
+With pyjelly installed, rdflib reads and writes results in the "jelly" format:
 
     result = graph.query("SELECT ?s ?o WHERE { ?s ?p ?o }")
     result.serialize("results.jellys", format="jelly")
@@ -31,7 +31,7 @@ from pyjelly.parse.sparql import (
 )
 from pyjelly.serialize.sparql import FrameWriter, SparqlStream, write_bindings
 
-#: The error that a result read from a truncated stream is passed on with
+#: Trailer error written for results that were read from a truncated stream
 TRUNCATED_ERROR = (
     "the results were read from a stream that ended without saying that they are "
     "complete, so some may be missing"
@@ -40,15 +40,14 @@ TRUNCATED_ERROR = (
 
 class JellySparqlResult(Result):
     """
-    SPARQL query results read from Jelly-SPARQL: an rdflib Result, with more.
+    An rdflib Result read from Jelly-SPARQL, with a few extra attributes.
 
     Attributes:
-        links: IRIs of links that describe the results, like head.link of SPARQL
-            JSON results.
-        truncated: whether the stream ended without saying that the results are
-            complete, so some may be missing.
-        error: why the results are incomplete, if the writer said so. Only set by
-            parse_jelly_sparql_sequence(): parse_jelly_sparql() raises
+        links: link IRIs for the results, as in head.link of SPARQL JSON results.
+        truncated: whether the stream ended without a trailer, so some results may
+            be missing.
+        error: error message from the writer, if the results are incomplete. Only
+            set by parse_jelly_sparql_sequence(). parse_jelly_sparql() raises
             JellyIncompleteResultsError instead.
 
     """
@@ -74,10 +73,10 @@ def _to_result(
     lazy: bool,
     raise_error: bool,
 ) -> JellySparqlResult:
-    """Return a result set, whose rows are bindings, as an rdflib Result."""
+    """Convert a result set with bindings as rows to an rdflib Result."""
     if result_set.is_boolean:
         result = JellySparqlResult("ASK")
-        # The rest of the stream, which must not have more of the result
+        # Read to the end of the stream: nothing may follow a boolean result
         result_set.keep()
         result.links = result_set.links
         try:
@@ -86,18 +85,18 @@ def _to_result(
             if raise_error:
                 error.result = result
                 raise
-            # The value read, which may be wrong
+            # Keep the value, even though the result is incomplete
             result.askAnswer = result_set._boolean
             result.error = error.error
         result.truncated = result_set.truncated
         return result
     result = JellySparqlResult("SELECT")
-    # The Variables that the bindings have
+    # The same Variable objects as the keys of the bindings
     result.vars = binding_rows.variables(result_set.variables)
     result.links = result_set.links
     if lazy:
-        # rdflib makes the bindings as the result is iterated, as for its own
-        # query results
+        # rdflib builds the bindings during iteration, as for its own query
+        # results
         result.bindings = _read_bindings(result_set, result, raise_error=raise_error)
         return result
     bindings: list[Mapping[Variable, Identifier]] = []
@@ -125,7 +124,7 @@ def _incomplete(
 def _read_bindings(
     result_set: SparqlResultSet, result: JellySparqlResult, *, raise_error: bool
 ) -> Iterator[Mapping[Variable, Identifier]]:
-    """Yield the bindings, and when they end, what the stream said."""
+    """Yield the bindings, then record the links, truncation and error."""
     try:
         yield from result_set
     except JellyIncompleteResultsError as error:
@@ -146,17 +145,17 @@ def parse_jelly_sparql(
             result set (the FLAT stream type, the default).
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
             still read, rdflib only logs a warning. Checking slows down parsing.
-        lazy (bool): whether to read the rows as the result is iterated, rather
-            than all of them now. The stream must then stay open until the result
-            was iterated, and the error of incomplete results is raised then.
+        lazy (bool): read the rows during iteration instead of all at once. The
+            stream must stay open until the result has been iterated, and the
+            error of incomplete results is raised at the end of the iteration.
 
     Returns:
         JellySparqlResult: the results, an rdflib Result.
 
     Raises:
         JellyIncompleteResultsError: if the writer said that the results are
-            incomplete, e.g., because the query failed midway. The results read
-            are in its `result`.
+            incomplete, e.g., because the query failed midway. Its `result` holds
+            the results read before the error.
 
     """
     adapter_factory = _adapter_factory(validate_iris=validate_iris)
@@ -164,7 +163,7 @@ def parse_jelly_sparql(
     try:
         result_set = read_result_set(inp, adapter_factory, row_factory=binding_rows)
     except JellyIncompleteResultsError as error:
-        # A boolean result that is incomplete
+        # An incomplete boolean result
         result_set = cast("SparqlResultSet", error.result)
         error.result = _to_result(
             result_set, binding_rows, lazy=False, raise_error=False
@@ -179,11 +178,11 @@ def parse_jelly_sparql_sequence(
     """
     Read a sequence of SPARQL query results from one Jelly-SPARQL stream.
 
-    The stream has the PUNCTUATED type, which holds any number of results (a
-    stream of the FLAT type, the default, has one).
+    This reads PUNCTUATED streams, which hold any number of results. A FLAT
+    stream (the default) holds one.
 
-    An incomplete result does not end the sequence: it has the reason in its
-    `error` attribute, so check it, and the results after it are read too.
+    An incomplete result does not stop the sequence. Instead, its `error`
+    attribute is set, so check it. The results after it are still read.
 
     Args:
         inp (IO[bytes] | bytes): the stream, delimited.
@@ -201,7 +200,7 @@ def parse_jelly_sparql_sequence(
 
 
 def sparql_stream(options: SparqlOptions | None = None) -> SparqlStream:
-    """Return a stream that writes Jelly-SPARQL with terms of rdflib."""
+    """Create a Jelly-SPARQL writer for rdflib terms."""
     if options is None:
         options = SparqlOptions()
     encoder = RDFLibTermEncoder(lookup_preset=options.lookup_preset)
@@ -209,7 +208,7 @@ def sparql_stream(options: SparqlOptions | None = None) -> SparqlStream:
 
 
 def _passed_on_error(result: Result) -> str:
-    """Return the error of a result that was read from Jelly-SPARQL, if any."""
+    """Get the error to pass on for a result read from Jelly-SPARQL, if any."""
     error = getattr(result, "error", "")
     if not error and getattr(result, "truncated", False):
         return TRUNCATED_ERROR
@@ -217,7 +216,7 @@ def _passed_on_error(result: Result) -> str:
 
 
 def _write_result(stream: SparqlStream, result: Result, writer: FrameWriter) -> None:
-    """Write one result set: the result of a SELECT or ASK query."""
+    """Write the result of a SELECT or ASK query as one result set."""
     links = getattr(result, "links", ())
     if result.type == "ASK":
         if result.askAnswer is None:
@@ -237,7 +236,8 @@ def _write_result(stream: SparqlStream, result: Result, writer: FrameWriter) -> 
     if result.vars is None:
         msg = "the result of the SELECT query has no variables (vars is None)"
         raise JellyConformanceError(msg)
-    # Not result.bindings first: that would make all of them
+    # Check for the generator first, as reading result.bindings would build all
+    # bindings at once
     made = getattr(result, "_genbindings", None)
     bindings: Iterable[Mapping[Variable, Identifier]] = (
         result.bindings if made is None else _made_bindings(result, made)
@@ -256,15 +256,15 @@ def _made_bindings(
     result: Result, made: Iterator[Mapping[Variable, Identifier]]
 ) -> Iterator[Mapping[Variable, Identifier]]:
     """
-    Return the bindings of a result, as they are made.
+    Yield the bindings of a result as its generator produces them.
 
-    Result.bindings would make all of them before any is written, and if making
-    one fails, nothing would be written at all. They are still kept in the result,
-    as Result.__iter__() does.
+    Result.bindings would build all of them before anything is written, and if one
+    failed, nothing would be written at all. As in Result.__iter__(), the bindings
+    are also kept in the result.
     """
     result._genbindings = None
     kept = result._bindings
-    # Those made before, e.g. by an iteration of the result that stopped early
+    # Bindings already built, e.g. by an earlier loop over the result that stopped
     yield from list(kept)
     for binding in made:
         kept.append(binding)
@@ -277,14 +277,14 @@ def serialize_jelly_sparql(
     """
     Write SPARQL query results (of a SELECT or ASK query) in Jelly-SPARQL.
 
-    If getting the results fails midway (e.g., the query fails), the stream ends
-    with the error, so that readers know the results are incomplete, and the
-    error is raised. Results read from Jelly-SPARQL that are incomplete or
-    truncated are written as incomplete.
+    If the results fail midway (e.g., the query fails), the stream is ended with
+    the error so readers know the results are incomplete, and the exception is
+    re-raised. Results read from Jelly-SPARQL that were incomplete or truncated
+    are written as incomplete.
 
     Args:
         result (Result): the results.
-        out (IO[bytes]): where to write them.
+        out (IO[bytes]): output stream.
         options (SparqlOptions | None): options of the stream.
 
     """
@@ -298,11 +298,11 @@ def serialize_jelly_sparql_sequence(
     """
     Write a sequence of SPARQL query results in one Jelly-SPARQL stream.
 
-    The stream has the PUNCTUATED type: each result is a result set of its own.
+    The stream is PUNCTUATED, with one result set per result.
 
     Args:
         results (Iterable[Result]): the results.
-        out (IO[bytes]): where to write them.
+        out (IO[bytes]): output stream.
         options (SparqlOptions | None): options of the stream, which must be
             punctuated. Defaults to SparqlOptions(punctuated=True).
 
@@ -319,7 +319,7 @@ def serialize_jelly_sparql_sequence(
 
 
 class RDFLibJellySparqlParser(ResultParser):
-    """Reads SPARQL query results in Jelly-SPARQL, for rdflib's Result.parse()."""
+    """rdflib parser plugin for Jelly-SPARQL results, used by Result.parse()."""
 
     @override
     def parse(  # type: ignore[override]
@@ -334,13 +334,13 @@ class RDFLibJellySparqlParser(ResultParser):
         Read the results.
 
         Args:
-            source (IO[bytes] | bytes | str | Path): the stream, its bytes, or the
-                path of a file.
+            source (IO[bytes] | bytes | str | Path): a stream, bytes, or a file
+                path.
             content_type (str | None): unused.
             validate_iris (bool): whether rdflib checks the IRIs, see
                 parse_jelly_sparql().
-            lazy (bool): whether to read the rows as the result is iterated, see
-                parse_jelly_sparql(). Only for streams, not paths.
+            lazy (bool): read the rows during iteration, see parse_jelly_sparql().
+                Only for streams, not paths.
 
         """
         if not isinstance(source, (str, Path)):
@@ -353,7 +353,7 @@ class RDFLibJellySparqlParser(ResultParser):
 
 
 class RDFLibJellySparqlSerializer(ResultSerializer):
-    """Writes SPARQL query results in Jelly-SPARQL, for rdflib's Result.serialize()."""
+    """rdflib serializer plugin for Jelly-SPARQL, used by Result.serialize()."""
 
     @override
     def serialize(  # type: ignore[override]
@@ -367,8 +367,8 @@ class RDFLibJellySparqlSerializer(ResultSerializer):
         Write the results.
 
         Args:
-            stream (IO[bytes]): where to write them.
-            encoding (str): unused, Jelly is binary.
+            stream (IO[bytes]): output stream.
+            encoding (str): unused, as Jelly is binary.
             options (SparqlOptions | None): options of the stream.
 
         """

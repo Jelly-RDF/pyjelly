@@ -100,7 +100,7 @@ def test_failed_row() -> None:
     with pytest.raises(JellyConformanceError, match="failed to encode"):
         stream.end()
     frame = stream.end("the row failed")
-    # The rows of the frame are dropped
+    # The frame's rows are dropped
     assert frame.row_count == 0
     assert frame.HasField("options")
     assert list(frame.variables) == ["x"]
