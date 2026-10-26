@@ -1,8 +1,8 @@
 """
-Ways of writing and reading SPARQL query results, each through one library's API.
+SPARQL query result ser/des implementations for benchmarking.
 
 Each method writes the rows of a result set to a stream, and reads them back from
-bytes in memory. The throughput counts cells: rows times variables.
+bytes in memory.
 """
 
 from __future__ import annotations

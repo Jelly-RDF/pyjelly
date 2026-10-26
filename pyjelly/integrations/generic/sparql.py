@@ -1,9 +1,4 @@
-"""
-Jelly-SPARQL support for the generic API (SPARQL query results without rdflib).
-
-Values are generic API terms (IRI, Literal, BlankNode, and Triple for triple
-terms). Unbound variables are None.
-"""
+"""Jelly-SPARQL support for the generic API (without rdflib)."""
 
 from __future__ import annotations
 

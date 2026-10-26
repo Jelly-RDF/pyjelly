@@ -1,6 +1,6 @@
 # Benchmarks
 
-Throughput and size benchmarks of Jelly-RDF in pyjelly, compared with the RDF formats of rdflib, and of Jelly-SPARQL, compared with rdflib's formats of SPARQL query results (see [Jelly-SPARQL](#jelly-sparql)).
+Throughput and size benchmarks of Jelly-RDF and Jelly-SPARQL in pyjelly, compared with the formats of rdflib.
 
 The method follows the [Jelly-JVM benchmarks](https://github.com/Jelly-RDF/jelly-jvm/tree/main/jmh) as closely as Python allows, so that the results can be read the same way.
 
@@ -124,9 +124,9 @@ Everything else (processes, iterations, sweeps, cores, the round-trip check) is 
 
 ### Data
 
-- The 13 RiverBench datasets, read as the results of `SELECT * WHERE { ?s ?p ?o }` for triples and `SELECT * WHERE { GRAPH ?g { ?s ?p ?o } }` for quads, with `?g` unbound in the default graph. The first 100,000 rows, as for RDF.
-- Synthetic result sets, from the presets of Jelly-JVM's generator (`SparqlDataGen`), ported in `sparql_data.py`. Each brings out one property of the format: IRIs sorted or shuffled, repeated values, unbound cells, kinds of literals, columns that mix term types, RDF 1.2 terms, and the shape of the result set (`wide-5`, `wide-20`, `zero-vars`). `realistic-mixed` looks like the results of a typical query: an entity, a property, a label, an optional value, and a value of mixed types. As in Jelly-JVM, a preset has `--rows` rows, 100,000 by default.
-- By default, `run` and `size` use all RiverBench datasets and the presets `realistic-mixed`, `wide-20`, `sparse-random-50`, `lit-lang` and `iri-shuffled`. Pass any presets with `--datasets`; their names are in `PRESETS` in `sparql_data.py`.
+- The 13 RiverBench datasets, read as the results of `SELECT * WHERE { ?s ?p ?o }` for triples and `SELECT * WHERE { GRAPH ?g { ?s ?p ?o } }` for quads, with `?g` unbound in the default graph. The first 100,000 rows are used.
+- Synthetic result sets, from the presets of Jelly-JVM's generator, ported in `sparql_data.py`.
+- By default, `run` and `size` use all RiverBench datasets and `realistic-mixed`, `wide-20`, `sparse-random-50`, `lit-lang`, `iri-shuffled`. Pass any presets with `--datasets`. Their names are in `PRESETS` in `sparql_data.py`.
 
 ### Methods
 
@@ -139,13 +139,8 @@ Everything else (processes, iterations, sweeps, cores, the round-trip check) is 
 | `rdflib-jelly` | Jelly-SPARQL through rdflib's plugin API: `Result.serialize(format="jelly")` | `Result.parse(format="jelly")` |
 | `generic-jelly` | Jelly-SPARQL with pyjelly's generic API, from a list of rows | `parse_jelly_sparql` of the generic API |
 
-The rdflib methods write a `Result` whose bindings are a list of dicts, made before measuring. Reading makes a whole `Result`, with its bindings. Jelly uses pyjelly's default options: lookups of 8192 names, 1024 prefixes and 64 datatypes, and frames of 4096 values. rdflib can't hold RDF 1.2 terms, so its methods skip the presets that have them.
+The rdflib methods write a `Result` whose bindings are a list of dicts, made before measuring. Reading makes a whole `Result`, with its bindings. Jelly uses pyjelly's default options.
 
-CSV has no term types: every value that is not an IRI or a blank node is read back as a simple literal. The round-trip check then prints a warning, as in Jelly-JVM.
+Note that CSV is a lossy result set format, so it should not be compared directly with others.
 
 rdflib reads SPARQL TSV results but can't write them, so `rdflib-tsv` is only measured reading. The TSV it reads is written by a helper in `sparql_methods.py`.
-
-### Throughput
-
-Throughput counts cells, that is, rows times variables, as in Jelly-JVM. A result set without variables counts one cell per row.
-
