@@ -1,7 +1,8 @@
 import gzip
 import urllib.request
 
-from pyjelly.integrations.rdflib.parse import parse_jelly_flat, Triple
+from pyjelly.integrations.rdflib.parse import parse_jelly_flat
+from pyjelly.integrations.rdflib.statements import Triple
 from rdflib import URIRef
 
 # Dataset: OpenStreetMap data for Denmark (first 10k objects)
