@@ -69,13 +69,19 @@ FRAME_TAGS: Final = single_byte_tags(
 )
 """Tag bytes a non-delimited frame can start with (currently 0x0A, 0x12, 0x7A)."""
 
+SPARQL_FRAME_TAGS: Final = single_byte_tags(
+    cast("Descriptor", jelly.SparqlResultsFrame.DESCRIPTOR)
+)
+"""Tag bytes a non-delimited frame of Jelly-SPARQL can start with."""
 
-def hint_bytes_needed(first_byte: int) -> int:
+
+def hint_bytes_needed(first_byte: int, tags: frozenset[int] = FRAME_TAGS) -> int:
     """
     Return how many bytes `delimited_jelly_hint` needs to decide.
 
     Args:
         first_byte (int): first byte of the stream
+        tags (frozenset[int]): tag bytes a frame can start with
 
     Returns:
         int: number of bytes to read from the start of the stream, at most 128
@@ -87,17 +93,18 @@ def hint_bytes_needed(first_byte: int) -> int:
     11
 
     """
-    if first_byte in FRAME_TAGS:
+    if first_byte in tags:
         return first_byte + 1
     return 1
 
 
-def _is_frame_fields(data: bytes) -> bool:
+def _is_frame_fields(data: bytes, tags: frozenset[int]) -> bool:
     """
     Check whether `data` is exactly a sequence of fields of a stream frame.
 
     Args:
         data (bytes): candidate frame body
+        tags (frozenset[int]): tag bytes of the frame's fields
 
     Returns:
         bool: True if the bytes make up whole fields and nothing is left over
@@ -108,7 +115,7 @@ def _is_frame_fields(data: bytes) -> bool:
     while pos < end:
         tag = data[pos]
         pos += 1
-        if tag not in FRAME_TAGS:
+        if tag not in tags:
             return False
         wire_type = tag & _WIRE_TYPE_MASK
         if wire_type == _WIRE_VARINT:
@@ -138,7 +145,7 @@ def _is_frame_fields(data: bytes) -> bool:
     return pos == end
 
 
-def delimited_jelly_hint(header: bytes) -> bool:
+def delimited_jelly_hint(header: bytes, tags: frozenset[int] = FRAME_TAGS) -> bool:
     """
     Detect whether a Jelly stream is delimited, from its first bytes.
 
@@ -157,6 +164,8 @@ def delimited_jelly_hint(header: bytes) -> bool:
 
     Args:
         header (bytes): first bytes of the stream
+        tags (frozenset[int]): tag bytes a frame can start with, FRAME_TAGS for
+            Jelly-RDF and SPARQL_FRAME_TAGS for Jelly-SPARQL
 
     Returns:
         bool: True if the stream is delimited
@@ -199,13 +208,13 @@ def delimited_jelly_hint(header: bytes) -> bool:
     if not header:
         return False
     first = header[0]
-    if first not in FRAME_TAGS:
+    if first not in tags:
         # Not a frame tag, so it is the size of the first frame. This includes
         # 0, an empty frame: a stream of only empty frames is delimited too.
         return True
     if len(header) < first + 1:
         return False
-    return _is_frame_fields(header[1 : first + 1])
+    return _is_frame_fields(header[1 : first + 1], tags)
 
 
 def _read_exactly(inp: IO[bytes], size: int) -> bytes:
@@ -231,7 +240,7 @@ def _read_exactly(inp: IO[bytes], size: int) -> bytes:
     return b"".join(chunks)
 
 
-def read_hint_header(inp: IO[bytes]) -> bytes:
+def read_hint_header(inp: IO[bytes], tags: frozenset[int] = FRAME_TAGS) -> bytes:
     """
     Read just enough of the start of the stream to detect delimiting.
 
@@ -239,6 +248,7 @@ def read_hint_header(inp: IO[bytes]) -> bytes:
 
     Args:
         inp (IO[bytes]): stream to read from
+        tags (frozenset[int]): tag bytes a frame can start with
 
     Returns:
         bytes: bytes read from the start of the stream
@@ -247,7 +257,7 @@ def read_hint_header(inp: IO[bytes]) -> bytes:
     header = inp.read(1)
     if not header:
         return header
-    remaining = hint_bytes_needed(header[0]) - 1
+    remaining = hint_bytes_needed(header[0], tags) - 1
     if remaining:
         header += _read_exactly(inp, remaining)
     return header
@@ -272,6 +282,34 @@ class _StreamWithHeader:
         if len(taken) < size:
             taken += self._rest.read(size - len(taken))
         return taken
+
+
+def detect_delimited(
+    inp: IO[bytes], tags: frozenset[int] = FRAME_TAGS
+) -> tuple[IO[bytes], bool]:
+    """
+    Detect whether a stream is delimited, from its first bytes.
+
+    Args:
+        inp (IO[bytes]): the stream
+        tags (frozenset[int]): tag bytes a frame can start with
+
+    Returns:
+        tuple[IO[bytes], bool]: the stream to read from its start, and whether it
+            is delimited
+
+    """
+    if inp.seekable():
+        header = read_hint_header(inp, tags)
+        inp.seek(-len(header), os.SEEK_CUR)
+    else:
+        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
+        # it and put the bytes we looked at back in front of it.
+        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
+        buffered = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
+        header = read_hint_header(buffered, tags)
+        inp = _StreamWithHeader(header, buffered)  # type: ignore[assignment]
+    return inp, delimited_jelly_hint(header, tags)
 
 
 def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
@@ -311,17 +349,7 @@ def get_options_and_frames(
             stream types, lookup presets and other stream options
 
     """
-    if inp.seekable():
-        header = read_hint_header(inp)
-        inp.seek(-len(header), os.SEEK_CUR)
-    else:
-        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
-        # it and put the bytes we looked at back in front of it.
-        # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
-        buffered = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
-        header = read_hint_header(buffered)
-        inp = _StreamWithHeader(header, buffered)  # type: ignore[assignment]
-    is_delimited = delimited_jelly_hint(header)
+    inp, is_delimited = detect_delimited(inp)
 
     if is_delimited:
         first_frame = None

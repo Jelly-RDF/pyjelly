@@ -157,7 +157,7 @@ class TermEncoder:
         self.prefixes.lookup.new_epoch()
         self.datatypes.lookup.new_epoch()
 
-    def new_frame(self, iris: int) -> None:
+    def new_frame(self, iris: int, literals: int = 1) -> None:
         """
         Start encoding a new frame in the column layout.
 
@@ -167,12 +167,13 @@ class TermEncoder:
 
         Args:
             iris (int): the most IRIs that one statement can have.
+            literals (int): the most literals that one statement can have. In a
+                statement, only the object can be a literal.
 
         """
         self.names.lookup.new_epoch(_budget(self.names, iris))
         self.prefixes.lookup.new_epoch(_budget(self.prefixes, iris))
-        # Only the object can be a literal
-        self.datatypes.lookup.new_epoch(_budget(self.datatypes, 1))
+        self.datatypes.lookup.new_epoch(_budget(self.datatypes, literals))
         self.triple_prefix_index = -1
         self.triple_name_index = 0
 

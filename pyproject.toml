@@ -37,7 +37,9 @@ include = [
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
   "pyjelly/parse/columns.py",
+  "pyjelly/parse/sparql.py",
   "pyjelly/serialize/columns.py",
+  "pyjelly/serialize/sparql.py",
   "pyjelly/serialize/streams.py",
   "pyjelly/serialize/flows.py",
   "pyjelly/parse/decode.py",
@@ -74,7 +76,7 @@ archs = ["x86_64", "aarch64"]
 name = "pyjelly"
 version = "0.0.0"
 readme = "README.md"
-description = "Jelly-RDF implementation for Python"
+description = "Jelly-RDF and Jelly-SPARQL implementation for Python"
 authors = [
     { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
@@ -123,6 +125,14 @@ jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
 [project.entry-points."rdf.plugins.serializer"]
 jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
+
+[project.entry-points."rdf.plugins.resultparser"]
+jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+"application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+
+[project.entry-points."rdf.plugins.resultserializer"]
+jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
+"application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
 
 [dependency-groups]
 dev = ["mypy>=2.4", "pre-commit>=4.2.0", "ruff>=0.11.8"]

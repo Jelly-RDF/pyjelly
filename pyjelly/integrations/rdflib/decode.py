@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from itertools import chain
 from typing import Any, Final
-from typing_extensions import override
+from typing_extensions import Never, override
 
 import rdflib
 from mypy_extensions import mypyc_attr
@@ -72,6 +72,22 @@ class RDFLibAdapter(Adapter):
     @override
     def namespace_declaration(self, name: str, iri: rdflib.URIRef) -> Prefix:
         return Prefix(name, iri)
+
+    @override
+    def directional_literal(self, lex: str, language: str, direction: str) -> Never:
+        msg = (
+            "rdflib does not support literals with a base direction (RDF 1.2). "
+            "Read the data with the generic API instead."
+        )
+        raise NotImplementedError(msg)
+
+    @override
+    def quoted_triple(self, terms: Iterable[Any]) -> Never:
+        msg = (
+            "rdflib does not support triple terms (RDF 1.2) and quoted triples "
+            "(RDF-star). Read the data with the generic API instead."
+        )
+        raise NotImplementedError(msg)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
