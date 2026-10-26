@@ -118,6 +118,8 @@ class SparqlStream:
         self.values: list[object | None] = []
         self.row_count = 0
         self.rows_per_frame = 1
+        # Whether the frame of a non-delimited stream has no room for another row
+        self.full = False
         self.links: list[str] = []
         # Whether the stream options and the header are yet to be written
         self.options_pending = True
@@ -145,11 +147,10 @@ class SparqlStream:
         self.variables = names
         self.columns = [VariableColumn() for _ in names]
         self.values = [None] * len(names)
-        # A non-delimited stream is one frame, which no row count ends
         self.rows_per_frame = (
-            self.options.rows_per_frame(len(names))
+            min(self.options.rows_per_frame(len(names)), MAX_ROWS)
             if self.options.delimited
-            else MAX_ROWS + 1
+            else MAX_ROWS
         )
         self.header_pending = True
         self.links = list(links)
@@ -179,6 +180,7 @@ class SparqlStream:
         self.encoder.new_frame(iris, len(columns))
         self.triple_owner = None
         self.row_count = 0
+        self.full = False
 
     def row(self, values: Sequence[object | None]) -> jelly.SparqlResultsFrame | None:
         """
@@ -194,7 +196,7 @@ class SparqlStream:
         """
         columns = self.columns
         count = len(values)
-        frame = self._start_row(count)
+        self._check_row(count)
         try:
             # Indexing a tuple or list typed as such is much cheaper than indexing
             # any sequence, which goes through a general lookup with an int object
@@ -214,12 +216,16 @@ class SparqlStream:
             self.failed = True
             raise
         self.row_count += 1
-        if self.row_count >= self.rows_per_frame:
-            return self.end_frame()
-        return frame
+        # The frame ends after the row that leaves no room for another one, not
+        # before the next row: if that row fails, the frame is not lost
+        if self.row_count >= self.rows_per_frame or not self.encoder.has_room():
+            if self.options.delimited:
+                return self.end_frame()
+            self.full = True
+        return None
 
-    def _start_row(self, count: int) -> jelly.SparqlResultsFrame | None:
-        """Check that a row of `count` values can be added, and end a full frame."""
+    def _check_row(self, count: int) -> None:
+        """Check that a row of `count` values can be added."""
         if self.variables is None or self.failed:
             if self.failed:
                 raise _failed()
@@ -228,11 +234,13 @@ class SparqlStream:
         if count != len(self.columns):
             msg = f"expected {len(self.columns)} values in the row, got {count}"
             raise JellyConformanceError(msg)
-        if self.row_count and (
-            self.row_count >= MAX_ROWS or not self.encoder.has_room()
-        ):
-            return self.full_frame()
-        return None
+        if self.full:
+            msg = (
+                "the results do not fit in one frame: the lookups can't hold all of "
+                "their terms. A non-delimited stream can only have one frame. Write "
+                "a delimited stream, or use larger lookups."
+            )
+            raise JellyConformanceError(msg)
 
     def binding(
         self, binding: Mapping[Any, object | None], variables: Sequence[object]
@@ -293,17 +301,6 @@ class SparqlStream:
             frame = self.row(values)
             if frame is not None:
                 yield frame
-
-    def full_frame(self) -> jelly.SparqlResultsFrame:
-        """End the frame, which has no room for another row."""
-        if not self.options.delimited:
-            msg = (
-                "the results do not fit in one frame: the lookups can't hold all of "
-                "their terms. A non-delimited stream can only have one frame. Write "
-                "a delimited stream, or use larger lookups."
-            )
-            raise JellyConformanceError(msg)
-        return self.end_frame()
 
     def add(self, column: VariableColumn, term: object | None) -> None:
         """Add a value to its column, None for an unbound one."""
