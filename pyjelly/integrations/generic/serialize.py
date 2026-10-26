@@ -30,6 +30,33 @@ QUAD_ARITY = 4
 
 
 class GenericSinkTermEncoder(TermEncoder):
+    def same_term(self, a: object, b: object) -> bool:
+        """
+        Return whether two terms are equal, for repeated terms.
+
+        IRIs, blank nodes and literals are compared by their strings, without a
+        call to their __eq__.
+        """
+        if a is b:
+            return True
+        cls = type(a)
+        if cls is not type(b):
+            return False
+        if cls is IRI:
+            return cast(IRI, a)._iri == cast(IRI, b)._iri
+        if cls is BlankNode:
+            return cast(BlankNode, a)._id == cast(BlankNode, b)._id
+        if cls is Literal:
+            x = cast(Literal, a)
+            y = cast(Literal, b)
+            return (
+                x._lex == y._lex
+                and x._langtag == y._langtag
+                and x._datatype == y._datatype
+                and x._direction == y._direction
+            )
+        return a == b
+
     def encode_spo(self, term: object, out: EncodedTerm) -> None:
         """
         Encode term based on its GenericSink object.
