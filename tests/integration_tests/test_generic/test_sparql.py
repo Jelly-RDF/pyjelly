@@ -268,3 +268,26 @@ def test_sequence_writer() -> None:
     assert list(first) == ROWS
     assert second.boolean is False
     assert list(third) == [(A,)]
+
+
+def test_row_failing_after_a_full_frame() -> None:
+    # 128 names, so the 128th row with a new IRI fills the frame: the frame must
+    # still be written when the row after it fails
+    options = SparqlOptions(
+        lookup_preset=LookupPreset(max_names=128, max_prefixes=0, max_datatypes=0)
+    )
+    good: list[tuple[Node | None, ...]] = [(IRI(f"{EX}{i}"),) for i in range(128)]
+
+    def rows() -> Iterator[tuple[object, ...]]:
+        yield from good
+        yield (42,)
+
+    out = io.BytesIO()
+    with pytest.raises(NotImplementedError):
+        serialize_jelly_sparql(["x"], rows(), out, options)  # type: ignore[arg-type]
+    out.seek(0)
+    results = parse_jelly_sparql(out)
+    read: list[tuple[Node | None, ...]] = []
+    with pytest.raises(JellyIncompleteResultsError, match="NotImplementedError"):
+        read.extend(results)
+    assert read == good
