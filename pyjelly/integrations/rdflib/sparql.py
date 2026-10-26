@@ -10,16 +10,16 @@ With pyjelly installed, rdflib reads and writes them in the "jelly" format:
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
-from typing import IO, Any, cast
+from typing import IO, cast
 from typing_extensions import override
 
 from rdflib.query import Result, ResultParser, ResultSerializer
 from rdflib.term import Identifier, Variable
 
 from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
-from pyjelly.integrations.rdflib.decode import RDFLibAdapter
+from pyjelly.integrations.rdflib.decode import BindingRows, RDFLibAdapter
 from pyjelly.integrations.rdflib.encode import RDFLibTermEncoder
 from pyjelly.options import SparqlOptions
 from pyjelly.parse.decode import Adapter, ParserOptions
@@ -29,7 +29,7 @@ from pyjelly.parse.sparql import (
     read_result_set,
     read_result_sets,
 )
-from pyjelly.serialize.sparql import FrameWriter, SparqlStream, write_solutions
+from pyjelly.serialize.sparql import FrameWriter, SparqlStream, write_bindings
 
 #: The error that a result read from a truncated stream is passed on with
 TRUNCATED_ERROR = (
@@ -68,9 +68,13 @@ def _adapter_factory(*, validate_iris: bool) -> AdapterFactory:
 
 
 def _to_result(
-    result_set: SparqlResultSet, *, lazy: bool, raise_error: bool
+    result_set: SparqlResultSet,
+    binding_rows: BindingRows,
+    *,
+    lazy: bool,
+    raise_error: bool,
 ) -> JellySparqlResult:
-    """Return a result set as an rdflib Result."""
+    """Return a result set, whose rows are bindings, as an rdflib Result."""
     if result_set.is_boolean:
         result = JellySparqlResult("ASK")
         # The rest of the stream, which must not have more of the result
@@ -88,39 +92,44 @@ def _to_result(
         result.truncated = result_set.truncated
         return result
     result = JellySparqlResult("SELECT")
-    result.vars = [Variable(name) for name in result_set.variables]
+    # The Variables that the bindings have
+    result.vars = binding_rows.variables(result_set.variables)
     result.links = result_set.links
-    rows = _read_bindings(result_set, result, raise_error=raise_error)
     if lazy:
         # rdflib makes the bindings as the result is iterated, as for its own
         # query results
-        result.bindings = rows
+        result.bindings = _read_bindings(result_set, result, raise_error=raise_error)
         return result
     bindings: list[Mapping[Variable, Identifier]] = []
     result.bindings = bindings
-    # If the results are incomplete, the result has those read before the error
-    bindings.extend(rows)
+    try:
+        result_set.collect(bindings)
+    except JellyIncompleteResultsError as error:
+        # The result has the rows read before the error
+        _incomplete(result, error, raise_error=raise_error)
+    finally:
+        result.links = result_set.links
+        result.truncated = result_set.truncated
     return result
+
+
+def _incomplete(
+    result: JellySparqlResult, error: JellyIncompleteResultsError, *, raise_error: bool
+) -> None:
+    result.error = error.error
+    if raise_error:
+        error.result = result
+        raise error
 
 
 def _read_bindings(
     result_set: SparqlResultSet, result: JellySparqlResult, *, raise_error: bool
 ) -> Iterator[Mapping[Variable, Identifier]]:
-    """Yield the bindings of the rows, and when they end, what the stream said."""
-    variables = result.vars or []
+    """Yield the bindings, and when they end, what the stream said."""
     try:
-        for row in result_set:
-            # Unbound variables are left out, as rdflib does
-            yield {
-                variable: value
-                for variable, value in zip(variables, row, strict=True)
-                if value is not None
-            }
+        yield from result_set
     except JellyIncompleteResultsError as error:
-        result.error = error.error
-        if raise_error:
-            error.result = result
-            raise
+        _incomplete(result, error, raise_error=raise_error)
     finally:
         result.links = result_set.links
         result.truncated = result_set.truncated
@@ -151,14 +160,17 @@ def parse_jelly_sparql(
 
     """
     adapter_factory = _adapter_factory(validate_iris=validate_iris)
+    binding_rows = BindingRows()
     try:
-        result_set = read_result_set(inp, adapter_factory)
+        result_set = read_result_set(inp, adapter_factory, row_factory=binding_rows)
     except JellyIncompleteResultsError as error:
         # A boolean result that is incomplete
         result_set = cast("SparqlResultSet", error.result)
-        error.result = _to_result(result_set, lazy=False, raise_error=False)
+        error.result = _to_result(
+            result_set, binding_rows, lazy=False, raise_error=False
+        )
         raise
-    return _to_result(result_set, lazy=lazy, raise_error=True)
+    return _to_result(result_set, binding_rows, lazy=lazy, raise_error=True)
 
 
 def parse_jelly_sparql_sequence(
@@ -183,8 +195,9 @@ def parse_jelly_sparql_sequence(
 
     """
     adapter_factory = _adapter_factory(validate_iris=validate_iris)
-    for result_set in read_result_sets(inp, adapter_factory):
-        yield _to_result(result_set, lazy=False, raise_error=False)
+    binding_rows = BindingRows()
+    for result_set in read_result_sets(inp, adapter_factory, row_factory=binding_rows):
+        yield _to_result(result_set, binding_rows, lazy=False, raise_error=False)
 
 
 def sparql_stream(options: SparqlOptions | None = None) -> SparqlStream:
@@ -224,27 +237,24 @@ def _write_result(stream: SparqlStream, result: Result, writer: FrameWriter) -> 
     if result.vars is None:
         msg = "the result of the SELECT query has no variables (vars is None)"
         raise JellyConformanceError(msg)
-    variables = result.vars
-    rows = (_row(binding, variables) for binding in _made_bindings(result))
-    write_solutions(
-        stream, variables, rows, writer, links=links, error=_passed_on_error(result)
+    # Not result.bindings first: that would make all of them
+    made = getattr(result, "_genbindings", None)
+    bindings: Iterable[Mapping[Variable, Identifier]] = (
+        result.bindings if made is None else _made_bindings(result, made)
+    )
+    write_bindings(
+        stream,
+        result.vars,
+        bindings,
+        writer,
+        links=links,
+        error=_passed_on_error(result),
     )
 
 
-def _row(
-    binding: Mapping[Any, Identifier], variables: Sequence[Variable]
-) -> list[Identifier | None]:
-    """Return the values of the variables in a binding, None if unbound."""
-    row = [binding.get(variable) for variable in variables]
-    if len(binding) + row.count(None) != len(variables):
-        # Not all of the binding's keys are variables: rdflib's Variable("x") is
-        # not equal to "x". Look the values up by name instead.
-        by_name = {str(key): value for key, value in binding.items()}
-        row = [by_name.get(str(variable)) for variable in variables]
-    return row
-
-
-def _made_bindings(result: Result) -> Iterator[Mapping[Variable, Identifier]]:
+def _made_bindings(
+    result: Result, made: Iterator[Mapping[Variable, Identifier]]
+) -> Iterator[Mapping[Variable, Identifier]]:
     """
     Return the bindings of a result, as they are made.
 
@@ -252,10 +262,6 @@ def _made_bindings(result: Result) -> Iterator[Mapping[Variable, Identifier]]:
     one fails, nothing would be written at all. They are still kept in the result,
     as Result.__iter__() does.
     """
-    made = getattr(result, "_genbindings", None)
-    if made is None:
-        yield from result.bindings
-        return
     result._genbindings = None
     kept = result._bindings
     # Those made before, e.g. by an iteration of the result that stopped early
