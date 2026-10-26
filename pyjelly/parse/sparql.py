@@ -12,8 +12,7 @@ import warnings
 from collections.abc import Callable, Iterator
 from typing import IO, Any, Final
 
-from google.protobuf.message import DecodeError
-from google.protobuf.proto import parse, parse_length_prefixed
+from google.protobuf.proto import parse
 
 from pyjelly import jelly
 from pyjelly.errors import (
@@ -36,7 +35,12 @@ from pyjelly.options import (
 )
 from pyjelly.parse.columns import MAX_ROWS, ColumnDecoder
 from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
-from pyjelly.parse.ioutils import SPARQL_FRAME_TAGS, detect_delimited
+from pyjelly.parse.ioutils import (
+    DECODE_ERRORS,
+    SPARQL_FRAME_TAGS,
+    detect_delimited,
+    parse_delimited,
+)
 
 #: Metadata key for the links of a result set (head.link in SPARQL JSON results)
 LINK_KEY: Final = "link"
@@ -57,10 +61,6 @@ def tuple_rows(variables: list[str], cells: list[list[Any]], rows: int) -> list[
 # Methods are called through the message classes, not the messages: upb tries
 # every attribute name of a message as a field name first
 _FRAME_HAS_FIELD: Final = jelly.SparqlResultsFrame.HasField
-
-# What protobuf raises for bytes it can't decode. The pure-Python implementation
-# raises UnicodeDecodeError for a string that isn't UTF-8, the others DecodeError.
-_DECODE_ERRORS: Final = (DecodeError, UnicodeDecodeError)
 
 
 _STREAM_TYPES: Final = (
@@ -411,7 +411,7 @@ def sparql_frames(inp: IO[bytes] | bytes) -> Iterator[jelly.SparqlResultsFrame]:
             raise JellyConformanceError(msg)
         try:
             return iter((parse(jelly.SparqlResultsFrame, data),))
-        except _DECODE_ERRORS as error:
+        except DECODE_ERRORS as error:
             raise _not_sparql(error) from None
     return _delimited_frames(inp)
 
@@ -427,18 +427,16 @@ def _not_sparql(error: Exception) -> JellyConformanceError:
 def _delimited_frames(inp: IO[bytes]) -> Iterator[jelly.SparqlResultsFrame]:
     while True:
         try:
-            # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
-            frame = parse_length_prefixed(jelly.SparqlResultsFrame, inp)  # type: ignore[arg-type]
-        except _DECODE_ERRORS as error:
+            frame = parse_delimited(jelly.SparqlResultsFrame, inp)
+        except DECODE_ERRORS as error:
             raise _not_sparql(error) from None
         except ValueError as error:
-            if getattr(inp, "closed", False):
-                msg = (
-                    "the input was closed before all results were read. Read the "
-                    "rows before closing it."
-                )
-                raise ValueError(msg) from error
-            raise
+            # parse_delimited() raises it only if the input is closed
+            msg = (
+                "the input was closed before all results were read. Read the rows "
+                "before closing it."
+            )
+            raise ValueError(msg) from error
         if frame is None:
             return
         yield frame

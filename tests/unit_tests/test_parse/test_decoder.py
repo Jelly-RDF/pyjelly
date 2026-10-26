@@ -1,6 +1,7 @@
 import pytest
 
 from pyjelly import jelly
+from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.decode import GenericTriplesAdapter
 from pyjelly.integrations.generic.generic_sink import IRI, Literal
 from pyjelly.options import VERSION_1_1, LookupPreset, StreamParameters, StreamTypes
@@ -66,7 +67,7 @@ def test_repeated_terms_must_be_set_first() -> None:
     decoder.ingest_prefix_entry(jelly.RdfPrefixEntry(id=1, value="http://a/"))
     decoder.ingest_name_entry(jelly.RdfNameEntry(id=1, value="x"))
     iri = jelly.RdfIri(prefix_id=1, name_id=1)
-    with pytest.raises(ValueError, match="missing repeated term predicate"):
+    with pytest.raises(JellyConformanceError, match="missing repeated term predicate"):
         decoder.decode_triple(jelly.RdfTriple(s_iri=iri, o_iri=iri))
 
     # Terms set once can be repeated
@@ -80,5 +81,5 @@ def test_repeated_terms_must_be_set_first() -> None:
 
 def test_empty_row_is_an_error() -> None:
     frame = jelly.RdfStreamFrame(rows=[jelly.RdfStreamRow()])
-    with pytest.raises(TypeError, match="decoder not implemented for row None"):
+    with pytest.raises(JellyConformanceError, match="a row of the stream is empty"):
         list(make_decoder().iter_rows(frame))
