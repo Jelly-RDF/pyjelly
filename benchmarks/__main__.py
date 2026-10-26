@@ -88,7 +88,7 @@ def _add_timing(parser: argparse.ArgumentParser) -> None:
 
 
 def _fill_selection(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
-    """Choose the datasets and methods of the suite, unless given."""
+    """Fill in the suite's default datasets and methods, if none are given."""
     suite = SUITES[args.suite]
     args.datasets = args.datasets or list(suite.default_datasets)
     args.methods = args.methods or list(suite.methods)

@@ -62,7 +62,7 @@ class CaseResult:
     #: The CPU cores the case ran on
     cpus: list[int] | None = None
     sweep: int = 0
-    #: "rdf" or "sparql", see suites.py
+    #: Suite of the case: "rdf" or "sparql", see suites.py
     suite: str = "rdf"
 
 
@@ -114,6 +114,9 @@ def run_case(  # noqa: PLR0913
     data = benchmarks.load(dataset, rows)
     if not method.supports(data):
         result.skipped = "the format can't hold this kind of statements"
+        return result
+    if task == "write" and not getattr(method, "can_write", True):
+        result.skipped = "the library can't write the format"
         return result
 
     # Setup, not measured: make the terms (and the graph, for writers that need

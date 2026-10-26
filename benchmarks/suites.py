@@ -1,4 +1,4 @@
-"""The suites of benchmarks: Jelly-RDF and Jelly-SPARQL, each with other formats."""
+"""Benchmark suites: Jelly-RDF and Jelly-SPARQL, each compared with other formats."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from benchmarks.sparql_methods import SPARQL_METHODS, sparql_round_trip
 @dataclass(frozen=True)
 class Suite:
     name: str
-    #: What the throughput counts
+    #: Unit of the throughput: statements or cells
     unit: str
     datasets: tuple[str, ...]
     default_datasets: tuple[str, ...]

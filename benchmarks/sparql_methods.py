@@ -19,24 +19,28 @@ from rdflib.query import Result
 from benchmarks.sparql_data import SparqlBenchData
 from pyjelly.integrations.generic import generic_sink
 from pyjelly.integrations.generic import sparql as generic_sparql
+from pyjelly.options import STRING_DATATYPE_IRI
 
 
 class SparqlMethod(ABC):
     name: str
+    #: Whether the library can write the format. If not, `write` is only a helper
+    #: that produces the input for reading, and writing isn't measured.
+    can_write: bool = True
 
     def supports(self, data: SparqlBenchData) -> bool:  # noqa: ARG002
         return True
 
     @abstractmethod
     def rows(self, data: SparqlBenchData) -> list[tuple[Any, ...]]:
-        """Return the rows in this method's term model, None if unbound."""
+        """Get the rows as this method's terms, None if unbound."""
 
     def prepare(self, data: SparqlBenchData) -> None:
-        """Make everything the writer starts from, so that it isn't measured."""
+        """Build the writer's input in advance, outside the measurement."""
         self.rows(data)
 
     def write_count(self, data: SparqlBenchData) -> int:
-        """Return how many cells `write` writes."""
+        """Count the cells that `write` writes."""
         return data.cells
 
     @abstractmethod
@@ -46,14 +50,14 @@ class SparqlMethod(ABC):
     @abstractmethod
     def read(self, data: bytes, *, quads: bool = False) -> int:
         """
-        Read the rows, do nothing with them, and return how many cells there were.
+        Read the rows without keeping them, and return the number of cells read.
 
-        `quads` is not used: it is there to read like the methods of RDF.
+        `quads` is unused. It's there to match the RDF methods.
         """
 
     @abstractmethod
     def read_all(self, data: bytes) -> list[tuple[Any, ...]]:
-        """Read the rows and return them, for checking."""
+        """Read and return the rows, for the round-trip check."""
 
     def write_bytes(self, data: SparqlBenchData) -> bytes:
         out = io.BytesIO()
@@ -66,7 +70,7 @@ def _cells(rows: int, variables: int) -> int:
 
 
 class RdflibResults(SparqlMethod):
-    """A result format of rdflib, written and read with Result.serialize and parse."""
+    """An rdflib result format, written with Result.serialize, read with parse."""
 
     def __init__(self, name: str, rdflib_format: str) -> None:
         self.name = name
@@ -101,8 +105,50 @@ class RdflibResults(SparqlMethod):
         return [tuple(b.get(v) for v in variables) for b in result.bindings]
 
 
+def _tsv_term(term: Any) -> str:
+    """Format a term for SPARQL TSV results, in N-Triples syntax."""
+    if term is None:
+        return ""
+    if isinstance(term, URIRef):
+        return f"<{term}>"
+    if isinstance(term, BNode):
+        return f"_:{term}"
+    lex = (
+        str(term)
+        .replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
+    )
+    if term.language:
+        return f'"{lex}"@{term.language}'
+    if term.datatype is not None and str(term.datatype) != STRING_DATATYPE_IRI:
+        return f'"{lex}"^^<{term.datatype}>'
+    return f'"{lex}"'
+
+
+class RdflibTsv(RdflibResults):
+    """
+    SPARQL TSV results, read by rdflib.
+
+    rdflib has no TSV writer, so `write` is a helper written for these benchmarks.
+    """
+
+    can_write = False
+
+    def __init__(self) -> None:
+        super().__init__("rdflib-tsv", "tsv")
+
+    @override
+    def write(self, data: SparqlBenchData, out: IO[bytes]) -> None:
+        lines = ["\t".join(f"?{name}" for name in data.variables)]
+        lines += ["\t".join(map(_tsv_term, row)) for row in self.rows(data)]
+        out.write(("\n".join(lines) + "\n").encode())
+
+
 class GenericJelly(SparqlMethod):
-    """Jelly-SPARQL with pyjelly's generic API, with its own terms."""
+    """Jelly-SPARQL with pyjelly's generic API and its own terms."""
 
     name = "generic-jelly"
 
@@ -133,6 +179,7 @@ SPARQL_METHODS: dict[str, SparqlMethod] = {
         RdflibResults("rdflib-srj", "json"),
         RdflibResults("rdflib-srx", "xml"),
         RdflibResults("rdflib-csv", "csv"),
+        RdflibTsv(),
         # Jelly through rdflib's plugin API: Result.serialize and Result.parse
         RdflibResults("rdflib-jelly", "jelly"),
         GenericJelly(),
@@ -141,7 +188,7 @@ SPARQL_METHODS: dict[str, SparqlMethod] = {
 
 
 def _normalize(term: Any) -> Any:
-    """Make terms comparable. Blank node labels are not compared."""
+    """Normalize a term for comparison. Blank node labels are ignored."""
     if term is None:
         return None
     if isinstance(term, (BNode, generic_sink.BlankNode)):
@@ -157,8 +204,8 @@ def sparql_round_trip(
     """
     Write the result set with the method, read it back, and compare the rows.
 
-    Returns the written bytes, and a list of problems found (empty if none).
-    Raises the reader's exception if the method can't read its own output.
+    Returns the written bytes and a list of problems (empty if none). Raises the
+    reader's exception if the method can't read its own output.
     """
     written = method.write_bytes(data)
     expected = [tuple(map(_normalize, row)) for row in method.rows(data)]
