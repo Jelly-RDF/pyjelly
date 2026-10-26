@@ -1,9 +1,4 @@
-"""
-Jelly-SPARQL writer: SPARQL query results in frames, with one column per variable.
-
-The columns use the Jelly-RDF 1.2 column encoding (pyjelly.serialize.columns),
-except that any cell may be unbound.
-"""
+"""Jelly-SPARQL writer: SPARQL query results in frames."""
 
 from __future__ import annotations
 
