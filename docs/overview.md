@@ -7,6 +7,7 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 **pyjelly** is a Python implementation of the Jelly protocol. It provides:
 
 * Full support for reading and writing Jelly-encoded RDF data
+* Reading and writing SPARQL query results in [Jelly-SPARQL](sparql.md)
 * Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) (*"works just like Turtle"*)
 * Standalone generic API with no third-party dependencies [Generic API](generic-sink.md)
 * Support for all Jelly stream types
@@ -39,9 +40,13 @@ A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Mes
 
 The generic API supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and directional language-tagged strings, as `Literal("text", "en", direction="ltr")`. To declare the RDF version for a stream, set `rdf_version` in `StreamParameters`. RDFLib 7 doesn't support RDF 1.2 yet.
 
+### SPARQL query results
+
+pyjelly reads and writes the results of `SELECT` and `ASK` queries in [Jelly-SPARQL]({{ proto_link("specification/sparql/") }}), with RDFLib's `Result.parse` and `Result.serialize`, or with the generic API. See [SPARQL query results](sparql.md).
+
 ### Conformance to the Jelly specification
 
-pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests of Jelly-RDF 1.2]({{ proto_link("conformance/rdf-test-cases/") }}), and the [tests of Jelly-RDF 1.1]({{ proto_link("conformance/rdf-1-1-test-cases/") }}), except for writing the `GRAPHS` physical stream type.
+pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests of Jelly-RDF 1.2]({{ proto_link("conformance/rdf-test-cases/") }}), and the [tests of Jelly-RDF 1.1]({{ proto_link("conformance/rdf-1-1-test-cases/") }}), except for writing the `GRAPHS` physical stream type. It also passes the [conformance tests of Jelly-SPARQL]({{ proto_link("conformance/sparql-test-cases/") }}).
 
 See the [conformance tests]({{ git_link("tests/conformance_tests") }}) in the pyjelly repository.
 
