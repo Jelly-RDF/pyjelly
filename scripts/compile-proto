@@ -9,8 +9,11 @@ OUT_DIR=${2:-"pyjelly/jelly"}
 
 command mkdir -p "$OUT_DIR"
 
-: Compiling rdf.proto...
-python -m grpc_tools.protoc "$PROTO_PATH/rdf.proto" --proto_path="$PROTO_PATH" --{python,pyi}_out="$OUT_DIR"
+: Compiling rdf.proto and sparql.proto...
+python -m grpc_tools.protoc "$PROTO_PATH/rdf.proto" "$PROTO_PATH/sparql.proto" --proto_path="$PROTO_PATH" --{python,pyi}_out="$OUT_DIR"
+
+: sparql.proto imports rdf.proto, which is in this package...
+sed -i 's/^import rdf_pb2 as/from pyjelly.jelly import rdf_pb2 as/' "$OUT_DIR/sparql_pb2.py" "$OUT_DIR/sparql_pb2.pyi"
 
 # : Compiling grpc.proto...
 # python -m grpc_tools.protoc "$PROTO_PATH/grpc.proto" --proto_path="$PROTO_PATH" --{python,pyi,grpc_python}_out="$OUT_DIR"
