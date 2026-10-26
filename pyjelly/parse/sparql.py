@@ -58,6 +58,11 @@ def tuple_rows(variables: list[str], cells: list[list[Any]], rows: int) -> list[
 # every attribute name of a message as a field name first
 _FRAME_HAS_FIELD: Final = jelly.SparqlResultsFrame.HasField
 
+# What protobuf raises for bytes it can't decode. The pure-Python implementation
+# raises UnicodeDecodeError for a string that isn't UTF-8, the others DecodeError.
+_DECODE_ERRORS: Final = (DecodeError, UnicodeDecodeError)
+
+
 _STREAM_TYPES: Final = (
     jelly.SPARQL_STREAM_TYPE_FLAT,
     jelly.SPARQL_STREAM_TYPE_PUNCTUATED,
@@ -406,7 +411,7 @@ def sparql_frames(inp: IO[bytes] | bytes) -> Iterator[jelly.SparqlResultsFrame]:
             raise JellyConformanceError(msg)
         try:
             return iter((parse(jelly.SparqlResultsFrame, data),))
-        except DecodeError as error:
+        except _DECODE_ERRORS as error:
             raise _not_sparql(error) from None
     return _delimited_frames(inp)
 
@@ -424,7 +429,7 @@ def _delimited_frames(inp: IO[bytes]) -> Iterator[jelly.SparqlResultsFrame]:
         try:
             # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
             frame = parse_length_prefixed(jelly.SparqlResultsFrame, inp)  # type: ignore[arg-type]
-        except DecodeError as error:
+        except _DECODE_ERRORS as error:
             raise _not_sparql(error) from None
         except ValueError as error:
             if getattr(inp, "closed", False):
