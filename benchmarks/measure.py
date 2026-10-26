@@ -30,8 +30,8 @@ from pathlib import Path
 from typing import Any
 
 import pyjelly.parse.decode
-from benchmarks.data import load
-from benchmarks.methods import METHODS, NullOutput, round_trip
+from benchmarks.methods import NullOutput
+from benchmarks.suites import SUITES
 from pyjelly.options import MAX_VERSION
 
 # The folder that has the `benchmarks` package, where the cases run. With a
@@ -45,9 +45,10 @@ class CaseResult:
     dataset: str
     method: str
     #: Statements done in one operation: every statement the writer writes, or
-    #: every statement the reader found in the bytes
+    #: every statement the reader found in the bytes. In the sparql suite, cells
+    #: (rows times variables).
     statements: int = 0
-    #: Throughput of each iteration, in statements per second
+    #: Throughput of each iteration, in statements (or cells) per second
     warmup: list[float] = field(default_factory=list)
     measured: list[float] = field(default_factory=list)
     #: Mean throughput of the measured iterations, None if the case didn't run
@@ -61,6 +62,8 @@ class CaseResult:
     #: The CPU cores the case ran on
     cpus: list[int] | None = None
     sweep: int = 0
+    #: "rdf" or "sparql", see suites.py
+    suite: str = "rdf"
 
 
 def _iteration(
@@ -94,6 +97,7 @@ def run_case(  # noqa: PLR0913
     seconds: float,
     check: bool = True,
     profile: Path | None = None,
+    suite: str = "rdf",
 ) -> CaseResult:
     """
     Run one case in this process. See the module docstring.
@@ -101,11 +105,13 @@ def run_case(  # noqa: PLR0913
     With `check=False`, the round-trip check is skipped. Do that only when the
     code under test hasn't changed since the check last passed.
     """
-    result = CaseResult(task, dataset, method_name, checked=check)
+    result = CaseResult(task, dataset, method_name, checked=check, suite=suite)
     if hasattr(os, "sched_getaffinity"):
         result.cpus = sorted(os.sched_getaffinity(0))
-    method = METHODS[method_name]
-    data = load(dataset, rows)
+    benchmarks = SUITES[suite]
+    round_trip = benchmarks.round_trip
+    method = benchmarks.methods[method_name]
+    data = benchmarks.load(dataset, rows)
     if not method.supports(data):
         result.skipped = "the format can't hold this kind of statements"
         return result
@@ -140,7 +146,7 @@ def run_case(  # noqa: PLR0913
         result.statements = method.read(written, quads=data.quads)
 
         def operation() -> int:
-            return method.read(written, quads=data.quads)
+            return int(method.read(written, quads=data.quads))
 
     # Everything made so far lives until the end. Freezing it keeps the garbage
     # collector from going through it again and again during the measurement.
@@ -222,6 +228,7 @@ def _run_case_process(  # noqa: PLR0913
     seconds: float,
     check: bool,
     cpus: Sequence[int] | None,
+    suite: str,
 ) -> CaseResult:
     """Run one case in a new process, pinned to `cpus` if given."""
     command = [
@@ -232,6 +239,7 @@ def _run_case_process(  # noqa: PLR0913
         task,
         dataset,
         method,
+        f"--suite={suite}",
         f"--rows={rows}",
         f"--warmup={warmup}",
         f"--iterations={iterations}",
@@ -250,7 +258,7 @@ def _run_case_process(  # noqa: PLR0913
         # The JSON is the last line, in case a library printed something
         last_line = process.stdout.strip().splitlines()[-1]
         return CaseResult(**json.loads(last_line))
-    result = CaseResult(task, dataset, method, checked=check)
+    result = CaseResult(task, dataset, method, checked=check, suite=suite)
     result.skipped = f"the process failed with code {process.returncode}"
     return result
 
@@ -311,6 +319,7 @@ def run_sweeps(  # noqa: PLR0913
     seconds: float,
     check: bool = True,
     cpu_sets: Sequence[Sequence[int]] = (),
+    suite: str = "rdf",
 ) -> list[CaseResult]:
     """
     Run every case `sweeps` times, each time in a new process.
@@ -340,9 +349,11 @@ def run_sweeps(  # noqa: PLR0913
                 seconds=seconds,
                 check=check,
                 cpus=sets[worker],
+                suite=suite,
             )
             result.sweep = sweep
-            score = f"{result.score:,.0f} st/s" if result.score else result.skipped
+            unit = SUITES[suite].unit
+            score = f"{result.score:,.0f} {unit}/s" if result.score else result.skipped
             with lock:
                 results.append(result)
                 progress = f"[{len(results)}/{total}] sweep {sweep + 1}"
