@@ -57,38 +57,50 @@ def _adapter_factory(*, validate_iris: bool) -> AdapterFactory:
     return make
 
 
-def _to_result(result_set: SparqlResultSet) -> JellySparqlResult:
-    """Read a result set whole, into an rdflib Result."""
+def _to_result(result_set: SparqlResultSet, *, lazy: bool) -> JellySparqlResult:
+    """Return a result set as an rdflib Result."""
     if result_set.boolean is not None:
         result = JellySparqlResult("ASK")
         result.askAnswer = result_set.boolean
     else:
         result = JellySparqlResult("SELECT")
         result.vars = [Variable(name) for name in result_set.variables]
+    rows = _read_bindings(result_set, result)
+    if lazy and result_set.boolean is None:
+        # rdflib makes the bindings as the result is iterated, as for its own
+        # query results
+        result.bindings = rows
+        return result
     bindings: list[Mapping[Variable, Identifier]] = []
     result.bindings = bindings
+    # If the results are incomplete, the result has those read before the error
+    bindings.extend(rows)
+    return result
+
+
+def _read_bindings(
+    result_set: SparqlResultSet, result: JellySparqlResult
+) -> Iterator[Mapping[Variable, Identifier]]:
+    """Yield the bindings of the rows, and when they end, what the stream said."""
     variables = result.vars or []
     try:
-        # Unbound variables are left out, as rdflib does
-        bindings.extend(
-            {
+        for row in result_set:
+            # Unbound variables are left out, as rdflib does
+            yield {
                 variable: value
                 for variable, value in zip(variables, row, strict=True)
                 if value is not None
             }
-            for row in result_set
-        )
     except JellyIncompleteResultsError as error:
-        result.links = result_set.links
         error.result = result
         raise
-    result.links = result_set.links
-    result.truncated = result_set.truncated
-    return result
+    finally:
+        result.links = result_set.links
+        result.truncated = result_set.truncated
 
 
 def parse_jelly_sparql(
-    inp: IO[bytes], *, validate_iris: bool = False
+    inp: IO[bytes], *, validate_iris: bool = False, lazy: bool = False
 ) -> JellySparqlResult:
     """
     Read SPARQL query results from Jelly-SPARQL.
@@ -98,6 +110,9 @@ def parse_jelly_sparql(
             (the FLAT stream type, the default).
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
             still read, rdflib only logs a warning. Checking slows down parsing.
+        lazy (bool): whether to read the rows as the result is iterated, rather
+            than all of them now. The stream must then stay open until the result
+            was iterated, and the error of incomplete results is raised then.
 
     Returns:
         JellySparqlResult: the results, an rdflib Result.
@@ -109,7 +124,7 @@ def parse_jelly_sparql(
 
     """
     adapter_factory = _adapter_factory(validate_iris=validate_iris)
-    return _to_result(read_result_set(inp, adapter_factory))
+    return _to_result(read_result_set(inp, adapter_factory), lazy=lazy)
 
 
 def parse_jelly_sparql_results(
@@ -136,7 +151,7 @@ def parse_jelly_sparql_results(
     """
     adapter_factory = _adapter_factory(validate_iris=validate_iris)
     for result_set in read_result_sets(inp, adapter_factory):
-        yield _to_result(result_set)
+        yield _to_result(result_set, lazy=False)
 
 
 def sparql_stream(options: SparqlOptions | None = None) -> SparqlStream:
@@ -162,12 +177,12 @@ def _write_result(stream: SparqlStream, result: Result, writer: FrameWriter) -> 
     variables = result.vars or []
     rows = (
         [binding.get(variable) for variable in variables]
-        for binding in _bindings(result)
+        for binding in _made_bindings(result)
     )
     write_solutions(stream, variables, rows, writer, links)
 
 
-def _bindings(result: Result) -> Iterator[Mapping[Variable, Identifier]]:
+def _made_bindings(result: Result) -> Iterator[Mapping[Variable, Identifier]]:
     """
     Return the bindings of a result, as they are made.
 
@@ -232,12 +247,6 @@ def serialize_jelly_sparql_results(
         _write_result(stream, result, writer)
 
 
-def _input_stream(source: IO[bytes] | str | Path) -> IO[bytes]:
-    if isinstance(source, (str, Path)):
-        return Path(source).open("rb")
-    return source
-
-
 class RDFLibJellySparqlParser(ResultParser):
     """Reads SPARQL query results in Jelly-SPARQL, for rdflib's Result.parse()."""
 
@@ -248,6 +257,7 @@ class RDFLibJellySparqlParser(ResultParser):
         content_type: str | None = None,
         *,
         validate_iris: bool = False,
+        lazy: bool = False,
         **unused: Any,
     ) -> Result:
         """
@@ -258,13 +268,17 @@ class RDFLibJellySparqlParser(ResultParser):
             content_type (str | None): unused.
             validate_iris (bool): whether rdflib checks the IRIs, see
                 parse_jelly_sparql().
+            lazy (bool): whether to read the rows as the result is iterated, see
+                parse_jelly_sparql(). Only for streams, not paths.
             **unused (Any): unused arguments of Result.parse().
 
         """
-        inp = _input_stream(source)
-        if inp is source:
-            return parse_jelly_sparql(inp, validate_iris=validate_iris)
-        with inp:
+        if not isinstance(source, (str, Path)):
+            return parse_jelly_sparql(source, validate_iris=validate_iris, lazy=lazy)
+        if lazy:
+            msg = "lazy reading needs a stream that stays open, not a path"
+            raise ValueError(msg)
+        with Path(source).open("rb") as inp:
             return parse_jelly_sparql(inp, validate_iris=validate_iris)
 
 
