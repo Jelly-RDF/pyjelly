@@ -16,3 +16,7 @@ RDF_FROM_JELLY_MANIFESTS = [
 RDF_TO_JELLY_MANIFESTS = [
     RDF_TESTS_DIR / suite / "to_jelly" / "manifest.ttl" for suite in RDF_TEST_SUITES
 ]
+
+SPARQL_TESTS_DIR = CONFORMANCE_TESTS_DIR / "sparql"
+SPARQL_FROM_JELLY_MANIFEST = SPARQL_TESTS_DIR / "from_jelly" / "manifest.ttl"
+SPARQL_TO_JELLY_MANIFEST = SPARQL_TESTS_DIR / "to_jelly" / "manifest.ttl"

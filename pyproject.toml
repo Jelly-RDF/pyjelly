@@ -187,7 +187,8 @@ exclude = [
     ".*_pb2(_grpc)?\\.pyi?", 
     "examples/",
     "submodules/",
-    "tests/conformance_tests/rdf/"
+    "tests/conformance_tests/rdf/",
+    "tests/conformance_tests/sparql/"
 ]
 
 [[tool.mypy.overrides]]
@@ -200,10 +201,10 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**", "--ignore-glob=submodules/**", "--ignore-glob=tests/conformance_tests/rdf/**"]
+addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**", "--ignore-glob=submodules/**", "--ignore-glob=tests/conformance_tests/rdf/**", "--ignore-glob=tests/conformance_tests/sparql/**"]
 
 [tool.ruff]
-extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}", "submodules", "tests/conformance_tests/rdf"]
+extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}", "submodules", "tests/conformance_tests/rdf", "tests/conformance_tests/sparql"]
 
 [tool.setuptools]
 packages = ["pyjelly"]
