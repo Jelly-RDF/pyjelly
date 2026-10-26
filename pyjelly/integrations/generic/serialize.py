@@ -11,17 +11,15 @@ from pyjelly.integrations.generic.generic_sink import (
     Quad,
     Triple,
     DefaultGraph,
-    GraphName,
     IRI,
     BlankNode,
     Literal,
 )
 
 from pyjelly import jelly
-from pyjelly.serialize.encode import Rows, Slot, TermEncoder, HasGraph, Statement
+from pyjelly.serialize.encode import EncodedTerm, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited
 from pyjelly.serialize.streams import (
-    GraphStream,
     QuadStream,
     SerializerOptions,
     Stream,
@@ -32,75 +30,67 @@ QUAD_ARITY = 4
 
 
 class GenericSinkTermEncoder(TermEncoder):
-    def encode_spo(self, term: object, slot: Slot, statement: Statement) -> Rows:
+    def encode_spo(self, term: object, out: EncodedTerm) -> None:
         """
         Encode term based on its GenericSink object.
 
         Args:
             term (object): term to encode
-            slot (Slot): its place in statement.
-            statement (Statement): Triple/Quad/GraphStart message to fill with terms.
-
-        Returns:
-            Rows: encoded extra rows
+            out (EncodedTerm): where to put the encoded term.
 
         """
         if isinstance(term, IRI):
-            iri = self.get_iri_field(statement, slot)
-            return self.encode_iri(term._iri, iri)
+            self.encode_iri(term._iri, out)
+            return
 
         if isinstance(term, Literal):
-            literal = self.get_literal_field(statement, slot)
-            return self.encode_literal(
+            self.encode_literal(
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
-                literal=literal,
+                out=out,
             )
+            return
 
         if isinstance(term, BlankNode):
-            self.set_bnode_field(
-                statement,
-                slot,
-                term._identifier,
-            )
-            return ()
+            self.encode_bnode(term._id, out)
+            return
 
         if isinstance(term, Triple):
-            quoted_statement = self.get_triple_field(statement, slot)
-            return self.encode_quoted_triple(term, quoted_statement)
+            self.encode_quoted_triple(term, out)
+            return
 
-        return super().encode_spo(term, slot, statement)  # error if not handled
+        super().encode_spo(term, out)  # raises NotImplementedError
 
-    def encode_graph(self, term: object, statement: HasGraph) -> Rows:
+    def encode_graph(self, term: object, out: EncodedTerm) -> None:
         """
         Encode graph term based on its GenericSink object.
 
         Args:
             term (object): term to encode
-            statement (HasGraph): Quad/GraphStart message to fill g_{} in.
-
-        Returns:
-            Rows: encoded extra rows
+            out (EncodedTerm): where to put the encoded graph name.
 
         """
-        if term == DefaultGraph:
-            return self.encode_default_graph(statement.g_default_graph)
+        if term is DefaultGraph:
+            self.encode_default_graph(out)
+            return
         if isinstance(term, IRI):
-            return self.encode_iri(term._iri, statement.g_iri)
+            self.encode_iri(term._iri, out)
+            return
 
         if isinstance(term, Literal):
-            return self.encode_literal(
+            self.encode_literal(
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
-                literal=statement.g_literal,
+                out=out,
             )
+            return
 
         if isinstance(term, BlankNode):
-            statement.g_bnode = term._identifier
-            return ()
-        return super().encode_graph(term, statement)  # error if not handled
+            self.encode_bnode(term._id, out)
+            return
+        super().encode_graph(term, out)  # raises NotImplementedError
 
 
 def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:
@@ -185,84 +175,6 @@ def quads_stream_frames(
         yield frame
     if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
         yield frame
-
-
-@stream_frames.register(GraphStream)
-def graphs_stream_frames(
-    stream: GraphStream,
-    data: GenericStatementSink | Generator[Quad],
-) -> Generator[jelly.RdfStreamFrame]:
-    """
-    Serialize a GenericStatementSink into jelly frames as a stream of graphs.
-
-    Notes:
-        If flow of DatasetsFrameFlow type, the whole dataset
-        will be encoded into one frame.
-        Graphs are generated from the GenericStatementSink by
-        iterating over statements and yielding one new GenericStatementSink
-        per a sequence of quads with the same g term.
-
-    Args:
-        stream (GraphStream): stream that specifies graphs processing
-        data (GenericStatementSink | Generator[Quad]): Dataset to serialize.
-
-    Yields:
-        Generator[jelly.RdfStreamFrame]: jelly frames
-
-    """
-    stream.enroll()
-    if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
-
-    statements: Generator[Quad]
-    if isinstance(data, GenericStatementSink):
-        statements = cast(Generator[Quad], data.store)
-        graphs = split_to_graphs(statements)
-    elif iter(data):
-        statements = data
-        graphs = split_to_graphs(statements)
-
-    for graph in graphs:
-        yield from stream.graph(graph_id=graph.identifier, graph=graph)
-
-    if frame := stream.flow.frame_from_dataset():
-        yield frame
-    if stream.stream_types.flat and (frame := stream.flow.to_stream_frame()):
-        yield frame
-
-
-def split_to_graphs(data: Generator[Quad]) -> Generator[GenericStatementSink]:
-    """
-    Split a generator of quads to graphs.
-
-    Notes:
-        New graph is generated by
-        iterating over statements and yielding one new GenericStatementSink
-        per a sequence of quads with the same g term.
-
-    Args:
-        data (Generator[Quad]): generator of quads
-
-    Yields:
-        Generator[GenericStatementSink]: generator of GenericStatementSinks,
-        each having triples in store and identifier set.
-
-    """
-    current_g: GraphName | None = None
-    current_sink: GenericStatementSink | None = None
-    for statement in data:
-        if current_g != statement.g:
-            if current_sink is not None:
-                yield current_sink
-
-            current_g = statement.g
-            current_sink = GenericStatementSink(identifier=current_g)
-
-        assert current_sink is not None
-        current_sink.add(Triple(statement.s, statement.p, statement.o))
-
-    if current_sink is not None:
-        yield current_sink
 
 
 def guess_options(sink: GenericStatementSink) -> SerializerOptions:

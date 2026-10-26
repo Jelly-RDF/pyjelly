@@ -5,6 +5,7 @@ import re
 from collections.abc import Callable
 from contextlib import nullcontext
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -16,7 +17,7 @@ from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.rdflib.parse import parse_jelly_flat, parse_jelly_grouped
 from pyjelly.parse.ioutils import get_options_and_frames
-from pyjelly.serialize.streams import GraphStream, QuadStream, SerializerOptions, Stream
+from pyjelly.serialize.streams import QuadStream, SerializerOptions
 
 
 def test_flat_triples() -> None:
@@ -46,19 +47,18 @@ def test_flat_triples() -> None:
     assert quads_in == {(*triple, DATASET_DEFAULT_GRAPH_ID) for triple in triples_in}
 
 
-@pytest.mark.parametrize("stream_class", [QuadStream, GraphStream])
-def test_flat_quads(stream_class: type[Stream]) -> None:
+def test_flat_quads() -> None:
     ds_out = Dataset()
     ds_out.parse(source="tests/e2e_test_cases/quads_rdf_1_1/weather-quads.nq")
 
-    stream = stream_class.for_rdflib()
+    stream = QuadStream.for_rdflib()
 
     out = ds_out.serialize(encoding="jelly", format="jelly", stream=stream)
     quads_out = set(ds_out)
     assert len(quads_out) > 0
 
     options, _ = get_options_and_frames(io.BytesIO(out))
-    assert options.stream_types.physical_type == stream_class.physical_type
+    assert options.stream_types.physical_type == QuadStream.physical_type
     assert options.stream_types.logical_type == jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
 
     ds_in = Dataset()
@@ -116,17 +116,9 @@ def _make_flat_quads_bytes() -> bytes:
 
 
 def _make_physical_graphs_bytes() -> bytes:
-    ds = Dataset()
-    g1 = Graph(identifier="g1")
-    g1.parse("tests/e2e_test_cases/triples_rdf_1_1/nt-syntax-subm-01.nt")
-    g2 = Graph(identifier="g2")
-    g2.parse("tests/e2e_test_cases/triples_rdf_1_1/p2_ontology.nt")
-    ds.add_graph(g1)
-    ds.add_graph(g2)
-
-    return ds.serialize(
-        encoding="jelly", format="jelly", stream=GraphStream.for_rdflib()
-    )
+    # pyjelly doesn't write streams of the GRAPHS physical type, but reads them.
+    # This one is from the Jelly conformance tests (from_jelly/graphs_rdf_1_1/pos_004).
+    return Path("tests/integration_tests/graphs_physical_flat_quads.jelly").read_bytes()
 
 
 def _make_grouped_graphs_bytes() -> bytes:

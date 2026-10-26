@@ -2,259 +2,30 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
-from itertools import chain
-from typing import IO, Any, TypeAlias, cast
-from typing_extensions import Never, Self, override
+from typing import IO, Final, cast
 
-import rdflib
-from rdflib import BNode, Node, URIRef
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, Dataset, Graph
+from rdflib import Node
+from rdflib.graph import ConjunctiveGraph, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
-from pyjelly.options import StreamTypes
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
+from pyjelly.integrations.rdflib.decode import (
+    RDFLibGraphsAdapter,
+    RDFLibQuadsAdapter,
+    RDFLibQuadsBaseAdapter,
+    RDFLibTriplesAdapter,
+)
+from pyjelly.integrations.rdflib.statements import (
+    GraphName,
+    Prefix,
+    Quad,
+    Statement,
+    Triple,
+)
+from pyjelly.parse.decode import Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
-
-GraphName: TypeAlias = URIRef | BNode | str
-
-
-class Triple(tuple[Node, Node, Node]):
-    """
-    Describe RDFLib triple.
-
-    Args:
-        tuple (Node, Node, Node): s/p/o tuple of RDFLib Nodes.
-
-    Returns:
-        Triple: triple as tuple.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node) -> Self:
-        return tuple.__new__(cls, (s, p, o))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-
-class Quad(tuple[Node, Node, Node, GraphName]):
-    """
-    Describe RDFLib quad.
-
-    Args:
-        tuple (Node, Node, Node, GraphName):
-            s/p/o/g as a tuple of RDFLib nodes and a GraphName,
-
-    Returns:
-        Quad: quad as tuple.
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, s: Node, p: Node, o: Node, g: GraphName) -> Self:
-        return tuple.__new__(cls, (s, p, o, g))
-
-    @property
-    def s(self) -> Node:
-        return self[0]
-
-    @property
-    def p(self) -> Node:
-        return self[1]
-
-    @property
-    def o(self) -> Node:
-        return self[2]
-
-    @property
-    def g(self) -> GraphName:
-        return self[3]
-
-
-Statement = Triple | Quad
-
-
-class Prefix(tuple[str, rdflib.URIRef]):
-    """
-    Describe RDF Prefix(i.e, namespace declaration).
-
-    Args:
-        tuple (str, rdflib.URIRef): expects prefix as a string,
-            and full namespace URI as Rdflib.URIRef.
-
-    Returns:
-        Prefix: prefix as tuple(prefix, iri).
-
-    """
-
-    __slots__ = ()
-
-    def __new__(cls, prefix: str, iri: rdflib.URIRef) -> Self:
-        return tuple.__new__(cls, (prefix, iri))
-
-    @property
-    def prefix(self) -> str:
-        return self[0]
-
-    @property
-    def iri(self) -> rdflib.URIRef:
-        return self[1]
-
-
-class RDFLibAdapter(Adapter):
-    """
-    RDFLib adapter class, is extended by triples and quads implementations.
-
-    Args:
-        Adapter (): abstract adapter class
-
-    """
-
-    @override
-    def iri(self, iri: str) -> rdflib.URIRef:
-        return rdflib.URIRef(iri)
-
-    @override
-    def bnode(self, bnode: str) -> rdflib.BNode:
-        return rdflib.BNode(bnode)
-
-    @override
-    def default_graph(self) -> rdflib.URIRef:
-        return DATASET_DEFAULT_GRAPH_ID
-
-    @override
-    def literal(
-        self,
-        lex: str,
-        language: str | None = None,
-        datatype: str | None = None,
-    ) -> rdflib.Literal:
-        return rdflib.Literal(lex, lang=language, datatype=datatype)
-
-    @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
-
-
-def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
-    """
-    Raise error if functionality is missing in adapter.
-
-    Args:
-        feature (str): function which is not implemented
-        stream_types (StreamTypes): what combination of physical/logical types
-            triggered the error
-
-    Raises:
-        NotImplementedError: raises error with message with missing functionality
-            and types encountered
-
-    Returns:
-        Never: only raises errors
-
-    """
-    physical_type_name = jelly.PhysicalStreamType.Name(stream_types.physical_type)
-    logical_type_name = jelly.LogicalStreamType.Name(stream_types.logical_type)
-    msg = (
-        f"adapter with {physical_type_name} and {logical_type_name} "
-        f"does not implement {feature}"
-    )
-    raise NotImplementedError(msg)
-
-
-class RDFLibTriplesAdapter(RDFLibAdapter):
-    """
-    Triples adapter RDFLib implementation.
-
-    Notes: returns triple/namespace declaration as soon as receives them.
-    """
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
-
-
-class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(self, options: ParserOptions) -> None:
-        super().__init__(options=options)
-
-
-class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
-    """
-    Extended RDFLib adapter for the QUADS physical type.
-
-    Args:
-        RDFLibQuadsBaseAdapter (RDFLibAdapter): base quads adapter
-            (shared with graphs physical type)
-
-    """
-
-    @override
-    def quad(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*terms)
-
-
-class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
-    """
-    Extension of RDFLibQuadsBaseAdapter for the GRAPHS physical type.
-
-    Notes: introduces graph start/end, checks if graph exists.
-
-    Args:
-        RDFLibQuadsBaseAdapter (RDFLibAdapter): base adapter for quads management.
-
-    Raises:
-        JellyConformanceError: if no graph_start was encountered
-
-    """
-
-    _graph_id: str | None
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-        self._graph_id = None
-
-    @property
-    def graph(self) -> None:
-        if self._graph_id is None:
-            msg = "new graph was not started"
-            raise JellyConformanceError(msg)
-
-    @override
-    def graph_start(self, graph_id: str) -> None:
-        self._graph_id = graph_id
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*chain(terms, [self._graph_id]))
-
-    @override
-    def graph_end(self) -> None:
-        self._graph_id = None
 
 
 def parse_triples_stream(
@@ -421,6 +192,11 @@ def parse_jelly_grouped(
     raise NotImplementedError(msg)
 
 
+ADD_BATCH_SIZE: Final = 1000
+# How many context graphs to keep for reuse, by graph name
+MAX_CACHED_CONTEXTS: Final = 1024
+
+
 def parse_jelly_to_graph(
     inp: IO[bytes],
     graph_factory: Callable[[], Graph] = Graph,
@@ -444,25 +220,78 @@ def parse_jelly_to_graph(
     """
     options, frames = get_options_and_frames(inp)
 
+    sink: Graph
     if options.stream_types.physical_type == jelly.PHYSICAL_STREAM_TYPE_TRIPLES:
         sink = graph_factory()
-    if options.stream_types.physical_type in (
-        jelly.PHYSICAL_STREAM_TYPE_QUADS,
-        jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
-    ):
-        quad_sink = dataset_factory()
-        sink = quad_sink
+        # Graph.add only checks the terms before giving them to the store
+        to_store = type(sink).add is Graph.add
+    else:
+        # Other stream types fail in parse_jelly_flat
+        sink = dataset_factory()
+        # Dataset.add would also make a new context graph for every quad
+        to_store = type(sink).add is ConjunctiveGraph.add
 
-    for item in parse_jelly_flat(inp=inp, frames=frames, options=options):
+    items = parse_jelly_flat(inp=inp, frames=frames, options=options)
+    if to_store:
+        _add_to_store(sink, items)
+        return sink
+
+    # The Graph or Dataset class changes add(), so it gets every statement
+    for item in items:
         if isinstance(item, Prefix):
             sink.bind(item.prefix, item.iri)
         if isinstance(item, Triple):
             sink.add(item)
         if isinstance(item, Quad):
             s, p, o, graph_name = item
-            context = quad_sink.get_context(graph_name)
-            quad_sink.add((s, p, o, context))
+            context = cast(Dataset, sink).get_context(graph_name)
+            sink.add((s, p, o, context))  # type: ignore[arg-type]
     return sink
+
+
+def _context(
+    dataset: Dataset, contexts: dict[GraphName, Graph], graph_name: GraphName
+) -> Graph:
+    """Return the dataset's context graph for a graph name, reusing it if cached."""
+    context = contexts.get(graph_name)
+    if context is None:
+        context = dataset.get_context(graph_name)
+        if len(contexts) >= MAX_CACHED_CONTEXTS:
+            contexts.clear()
+        contexts[graph_name] = context
+    return context
+
+
+def _add_to_store(sink: Graph, items: Iterable[Statement | Prefix]) -> None:
+    """Add statements to the Graph's or Dataset's store directly, in batches."""
+    store = sink.store
+    batch: list[tuple[Node, Node, Node, Graph]] = []
+    contexts: dict[GraphName, Graph] = {}
+    # Repeated graph names are the same objects, so they are checked first
+    last_graph_name: object = None
+    context = sink
+
+    for item in items:
+        if isinstance(item, Quad):
+            s, p, o, graph_name = item
+            if graph_name is not last_graph_name:
+                context = _context(cast(Dataset, sink), contexts, graph_name)
+                last_graph_name = graph_name
+            batch.append((s, p, o, context))
+        elif isinstance(item, Triple):
+            s, p, o = item
+            batch.append((s, p, o, sink))
+        elif isinstance(item, Prefix):
+            # Statements before the prefix are added first, to keep the order
+            if batch:
+                store.addN(batch)
+                batch = []
+            sink.bind(item.prefix, item.iri)
+        if len(batch) >= ADD_BATCH_SIZE:
+            store.addN(batch)
+            batch = []
+    if batch:
+        store.addN(batch)
 
 
 def parse_jelly_flat(

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from collections import UserList
-from collections.abc import Iterable
-from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 from typing_extensions import override
 
 from pyjelly import jelly
@@ -11,28 +8,41 @@ from pyjelly import jelly
 DEFAULT_FRAME_SIZE = 250
 
 
-class FrameFlow(UserList[jelly.RdfStreamRow]):
+class FrameFlow:
     """
     Abstract base class for producing Jelly frames from RDF stream rows.
 
-    Collects stream rows and assembles them into RdfStreamFrame objects when ready.
+    Rows are added straight into the frame being built (see `new_row()`), so they
+    never have to be copied: protobuf copies a message by serializing it and
+    parsing it again.
 
     Allows for passing LogicalStreamType, required for
         logical subtypes and non-delimited streams.
     """
 
     logical_type: jelly.LogicalStreamType
+    #: The logical type of flows of this class, unless given when making one
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
     registry: ClassVar[dict[jelly.LogicalStreamType, type[FrameFlow]]] = {}
 
     def __init__(
         self,
-        initlist: Iterable[jelly.RdfStreamRow] | None = None,
         *,
         logical_type: jelly.LogicalStreamType | None = None,
-        **__kwargs: Any,
     ) -> None:
-        super().__init__(initlist)
-        self.logical_type = logical_type or self.__class__.logical_type
+        self.logical_type = logical_type or self.default_logical_type
+        self.frame = jelly.RdfStreamFrame()
+        self.rows = self.frame.rows
+
+    def new_row(self) -> jelly.RdfStreamRow:
+        """Add an empty row at the end of the current frame, and return it."""
+        return self.rows.add()
+
+    def __len__(self) -> int:
+        """Return how many rows the current frame has."""
+        return len(self.rows)
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
@@ -55,19 +65,17 @@ class FrameFlow(UserList[jelly.RdfStreamRow]):
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
         """
-        Create stream frame from flow content.
-
-        Notes:
-            Clears flow content after creating the frame.
+        Return the current frame, and start a new one.
 
         Returns:
-            jelly.RdfStreamFrame | None: stream frame
+            jelly.RdfStreamFrame | None: stream frame, None if it has no rows
 
         """
-        if not self:
+        if not len(self.rows):
             return None
-        frame = jelly.RdfStreamFrame(rows=self)
-        self.clear()
+        frame = self.frame
+        self.frame = jelly.RdfStreamFrame()
+        self.rows = self.frame.rows
         return frame
 
 
@@ -82,10 +90,11 @@ class ManualFrameFlow(FrameFlow):
     Used for non-delimited serialization.
     """
 
-    logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
 
 
-@dataclass
 class BoundedFrameFlow(FrameFlow):
     """
     Produce frames automatically when a fixed number of rows is reached.
@@ -93,18 +102,18 @@ class BoundedFrameFlow(FrameFlow):
     Used for delimited encoding (default mode).
     """
 
-    logical_type = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
+    )
     frame_size: int
 
-    @override
     def __init__(
         self,
-        initlist: Iterable[jelly.RdfStreamRow] | None = None,
-        logical_type: jelly.LogicalStreamType | None = None,
         *,
+        logical_type: jelly.LogicalStreamType | None = None,
         frame_size: int | None = None,
     ) -> None:
-        super().__init__(initlist, logical_type=logical_type)
+        super().__init__(logical_type=logical_type)
         self.frame_size = frame_size or DEFAULT_FRAME_SIZE
 
     @override
@@ -116,21 +125,27 @@ class BoundedFrameFlow(FrameFlow):
             jelly.RdfStreamFrame | None: stream frame
 
         """
-        if len(self) >= self.frame_size:
+        if len(self.rows) >= self.frame_size:
             return self.to_stream_frame()
         return None
 
 
 class FlatTriplesFrameFlow(BoundedFrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+    )
 
 
 class FlatQuadsFrameFlow(BoundedFrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+    )
 
 
 class GraphsFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    )
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
@@ -145,7 +160,9 @@ class GraphsFrameFlow(FrameFlow):
 
 
 class DatasetsFrameFlow(FrameFlow):
-    logical_type = jelly.LOGICAL_STREAM_TYPE_DATASETS
+    default_logical_type: ClassVar[jelly.LogicalStreamType] = (
+        jelly.LOGICAL_STREAM_TYPE_DATASETS
+    )
 
     def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
         """

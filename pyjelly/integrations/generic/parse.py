@@ -2,162 +2,26 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
-from itertools import chain
-from typing import IO, Any
-from typing_extensions import override
-
-from mypy_extensions import mypyc_attr
+from typing import IO
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
+from pyjelly.integrations.generic.decode import (
+    GenericGraphsAdapter,
+    GenericQuadsAdapter,
+    GenericQuadsBaseAdapter,
+    GenericTriplesAdapter,
+)
 from pyjelly.integrations.generic.generic_sink import (
-    IRI,
-    BlankNode,
-    DefaultGraph,
     GenericStatementSink,
-    GraphName,
-    Literal,
     Prefix,
     Quad,
     Triple,
 )
-from pyjelly.parse.decode import Adapter, Decoder, ParserOptions
+from pyjelly.parse.decode import Decoder, ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 
 Statement = Triple | Quad
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class GenericStatementSinkAdapter(Adapter):
-    """
-    Implement Adapter for generic statements.
-
-    Notes:
-        Returns custom RDF terms expected by GenericStatementSink,
-        handles namespace declarations, and quoted triples.
-
-    Args:
-        Adapter (_type_): base Adapter class
-
-    """
-
-    @override
-    def iri(self, iri: str) -> IRI:
-        return IRI(iri)
-
-    @override
-    def bnode(self, bnode: str) -> BlankNode:
-        return BlankNode(bnode)
-
-    @override
-    def default_graph(self) -> GraphName:
-        return DefaultGraph
-
-    @override
-    def literal(
-        self,
-        lex: str,
-        language: str | None = None,
-        datatype: str | None = None,
-    ) -> Literal:
-        return Literal(lex, language, datatype)
-
-    @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
-
-    @override
-    def quoted_triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class GenericTriplesAdapter(GenericStatementSinkAdapter):
-    """
-    Triples adapted implementation for GenericStatementSink.
-
-    Args:
-        GenericStatementSinkAdapter (_type_): base GenericStatementSink
-            adapter implementation that handles terms and namespaces.
-
-    """
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Triple:
-        return Triple(*terms)
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class GenericQuadsBaseAdapter(GenericStatementSinkAdapter):
-    def __init__(self, options: ParserOptions) -> None:
-        super().__init__(options=options)
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class GenericQuadsAdapter(GenericQuadsBaseAdapter):
-    """
-    Extends GenericQuadsBaseAdapter for QUADS physical type.
-
-    Args:
-        GenericQuadsBaseAdapter (_type_): quads adapter that handles
-            base quads processing.
-
-    """
-
-    @override
-    def quad(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*terms)
-
-
-@mypyc_attr(allow_interpreted_subclasses=True)
-class GenericGraphsAdapter(GenericQuadsBaseAdapter):
-    """
-    Extends GenericQuadsBaseAdapter for GRAPHS physical type.
-
-    Notes:
-        introduces graph start/end, checks if graph exists.
-
-    Args:
-        GenericQuadsBaseAdapter (_type_): quads adapter that handles
-            base quads processing.
-
-    Raises:
-        JellyConformanceError: raised if graph start message was not received.
-
-    """
-
-    _graph_id: GraphName | None
-
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
-        self._graph_id = None
-
-    @property
-    def graph(self) -> None:
-        if self._graph_id is None:
-            msg = "new graph was not started"
-            raise JellyConformanceError(msg)
-
-    @override
-    def graph_start(self, graph_id: GraphName) -> None:
-        self._graph_id = graph_id
-
-    @override
-    def triple(self, terms: Iterable[Any]) -> Quad:
-        return Quad(*chain(terms, [self._graph_id]))
-
-    @override
-    def graph_end(self) -> None:
-        self._graph_id = None
 
 
 def parse_triples_stream(

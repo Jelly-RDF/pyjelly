@@ -11,6 +11,10 @@ import pytest
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic import parse as gparse
+from pyjelly.integrations.generic.decode import (
+    GenericGraphsAdapter,
+    GenericStatementSinkAdapter,
+)
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
     Literal,
@@ -19,8 +23,6 @@ from pyjelly.integrations.generic.generic_sink import (
     Triple,
 )
 from pyjelly.integrations.generic.parse import (
-    GenericGraphsAdapter,
-    GenericStatementSinkAdapter,
     parse_jelly_flat,
     parse_jelly_grouped,
     parse_jelly_to_graph,

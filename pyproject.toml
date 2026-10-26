@@ -28,10 +28,16 @@ modules = ["pyjelly"]
 
 include = [
   "pyjelly/serialize/ioutils.py",
+  "pyjelly/integrations/generic/generic_sink.py",
+  "pyjelly/integrations/generic/decode.py",
   "pyjelly/integrations/generic/serialize.py",
+  "pyjelly/integrations/rdflib/decode.py",
+  "pyjelly/integrations/rdflib/encode.py",
+  "pyjelly/integrations/rdflib/walk.py",
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
   "pyjelly/serialize/streams.py",
+  "pyjelly/serialize/flows.py",
   "pyjelly/parse/decode.py",
   "pyjelly/serialize/encode.py",
   "pyjelly/serialize/lookup.py",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Generator, Iterable
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
 
@@ -10,11 +10,14 @@ from pyjelly import jelly
 from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
 from pyjelly.serialize.encode import (
     Slot,
+    Statement,
     TermEncoder,
     encode_namespace_declaration,
     encode_options,
     encode_quad,
     encode_triple,
+    write_graph,
+    write_term,
 )
 from pyjelly.serialize.flows import (
     DEFAULT_FRAME_SIZE,
@@ -59,7 +62,14 @@ class Stream:
         if flow is None:
             flow = self.infer_flow()
         self.flow = flow
+        # The encoder adds rows for new lookup entries to the same flow
+        encoder.flow = flow
         self.repeated_terms = [None] * len(Slot)
+        # Which terms the cursor API set since the last emit()
+        self.subject_changed = False
+        self.predicate_changed = False
+        self.object_changed = False
+        self.graph_changed = False
         self.enrolled = False
         self.stream_types = StreamTypes(
             physical_type=self.physical_type,
@@ -81,9 +91,12 @@ class Stream:
             else:
                 flow_class = self.default_delimited_flow_class
 
-            if self.options.logical_type in (
-                jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
-                jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+            if issubclass(flow_class, BoundedFrameFlow) and (
+                self.options.logical_type
+                in (
+                    jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
+                    jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
+                )
             ):
                 flow = flow_class(
                     logical_type=self.options.logical_type,
@@ -103,7 +116,7 @@ class Stream:
 
     def stream_options(self) -> None:
         """Encode and append stream options row to the current flow."""
-        self.flow.append(
+        self.flow.new_row().options.CopyFrom(
             encode_options(
                 stream_types=self.stream_types,
                 params=self.options.params,
@@ -120,12 +133,79 @@ class Stream:
             iri (str): namespace iri
 
         """
-        rows = encode_namespace_declaration(
-            name=name,
-            value=iri,
-            term_encoder=self.encoder,
-        )
-        self.flow.extend(rows)
+        encode_namespace_declaration(name=name, value=iri, term_encoder=self.encoder)
+
+    # Cursor API: instead of passing whole statements, the caller sets only the
+    # terms that changed since the previous statement, and then emits it.
+    # This is used when writing from an indexed Graph or Dataset.
+
+    def set_subject(self, s: object) -> None:
+        """Set the subject of the next statement."""
+        self.repeated_terms[0] = s
+        self.subject_changed = True
+
+    def set_predicate(self, p: object) -> None:
+        """Set the predicate of the next statement."""
+        self.repeated_terms[1] = p
+        self.predicate_changed = True
+
+    def set_object(self, o: object) -> None:
+        """Set the object of the next statement."""
+        self.repeated_terms[2] = o
+        self.object_changed = True
+
+    def emit(self) -> jelly.RdfStreamFrame | None:
+        """
+        Add a statement made of the terms set with the cursor API.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
+        raise NotImplementedError
+
+    def encode_changed_spo(self) -> int:
+        """
+        Encode the subject, predicate and object that were set since the last emit.
+
+        They are encoded in this order no matter in which order they were set:
+        IRIs are encoded relative to the IRI before them, in the order the parser
+        reads them. Rows for new lookup entries are added to the flow.
+
+        Returns:
+            int: which of them were encoded, as bits 0 (subject) to 2 (object).
+
+        """
+        terms = self.repeated_terms
+        encoded = self.encoder.encoded
+        changed = 0
+        if self.subject_changed:
+            self.encoder.encode_spo(terms[0], encoded[0])
+            self.subject_changed = False
+            changed = 1
+        if self.predicate_changed:
+            self.encoder.encode_spo(terms[1], encoded[1])
+            self.predicate_changed = False
+            changed |= 2
+        if self.object_changed:
+            self.encoder.encode_spo(terms[2], encoded[2])
+            self.object_changed = False
+            changed |= 4
+        return changed
+
+    def write_changed_spo(self, statement: Statement, changed: int) -> None:
+        """Write the terms encoded by encode_changed_spo() into the statement."""
+        encoded = self.encoder.encoded
+        if not changed:
+            # Every term is repeated: the row is an empty statement
+            statement.SetInParent()
+        if changed & 1:
+            write_term(encoded[0], statement, 0)
+        if changed & 2:
+            write_term(encoded[1], statement, 1)
+        if changed & 4:
+            write_term(encoded[2], statement, 2)
 
     @classmethod
     def for_rdflib(cls, options: SerializerOptions | None = None) -> Stream:
@@ -146,7 +226,7 @@ class Stream:
         if cls is Stream:
             msg = "Stream is an abstract base class, use a subclass instead"
             raise TypeError(msg)
-        from pyjelly.integrations.rdflib.serialize import (  # noqa: PLC0415
+        from pyjelly.integrations.rdflib.encode import (  # noqa: PLC0415
             RDFLibTermEncoder,
         )
 
@@ -176,10 +256,16 @@ def stream_for_type(physical_type: jelly.PhysicalStreamType) -> type[Stream]:
     try:
         stream_cls = STREAM_DISPATCH[physical_type]
     except KeyError:
-        msg = (
-            "no stream class for physical type "
-            f"{jelly.PhysicalStreamType.Name(physical_type)}"
-        )
+        if physical_type == jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
+            msg = (
+                "writing streams of the GRAPHS physical type is not supported "
+                "(they can still be read). Use QUADS instead."
+            )
+        else:
+            msg = (
+                "no stream class for physical type "
+                f"{jelly.PhysicalStreamType.Name(physical_type)}"
+            )
         raise NotImplementedError(msg) from None
     return stream_cls
 
@@ -206,12 +292,37 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        new_rows = encode_triple(
-            terms,
-            term_encoder=self.encoder,
-            repeated_terms=self.repeated_terms,
-        )
-        self.flow.extend(new_rows)
+        encode_triple(terms, self.encoder, self.repeated_terms)
+        return self.flow.frame_from_bounds()
+
+    def triples(
+        self, statements: Iterable[Iterable[object]]
+    ) -> Iterator[jelly.RdfStreamFrame]:
+        """
+        Process triples, see triple().
+
+        Yields:
+            jelly.RdfStreamFrame: full frames.
+
+        """
+        for terms in statements:
+            frame = self.triple(terms)
+            if frame is not None:
+                yield frame
+
+    def emit(self) -> jelly.RdfStreamFrame | None:
+        """
+        Add a triple made of the terms set with the cursor API.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
+        self.encoder.new_epoch()
+        # The terms first, as they add rows for new lookup entries
+        changed = self.encode_changed_spo()
+        self.write_changed_spo(self.flow.new_row().triple, changed)
         return self.flow.frame_from_bounds()
 
 
@@ -231,51 +342,55 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        new_rows = encode_quad(
-            terms,
-            term_encoder=self.encoder,
-            repeated_terms=self.repeated_terms,
-        )
-        self.flow.extend(new_rows)
+        encode_quad(terms, self.encoder, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
-
-class GraphStream(TripleStream):
-    physical_type = jelly.PHYSICAL_STREAM_TYPE_GRAPHS
-    default_delimited_flow_class: ClassVar[type[BoundedFrameFlow]] = FlatQuadsFrameFlow
-
-    def graph(
-        self,
-        graph_id: object,
-        graph: Iterable[Iterable[object]],
-    ) -> Generator[jelly.RdfStreamFrame]:
+    def quads(
+        self, statements: Iterable[Iterable[object]]
+    ) -> Iterator[jelly.RdfStreamFrame]:
         """
-        Process one graph into a sequence of jelly frames.
-
-        Args:
-            graph_id (object): graph id (BN, Literal, iri, default)
-            graph (Iterable[Iterable[object]]): iterable of triples (graph's content)
+        Process quads, see quad().
 
         Yields:
-            Generator[jelly.RdfStreamFrame]: jelly frames.
+            jelly.RdfStreamFrame: full frames.
 
         """
-        graph_start = jelly.RdfGraphStart()
-        [*graph_rows] = self.encoder.encode_graph(graph_id, graph_start)
-        start_row = jelly.RdfStreamRow(graph_start=graph_start)
-        graph_rows.append(start_row)
-        self.flow.extend(graph_rows)
-        for triple in graph:
-            if frame := self.triple(triple):  # has frame slicing inside
+        for terms in statements:
+            frame = self.quad(terms)
+            if frame is not None:
                 yield frame
-        end_row = jelly.RdfStreamRow(graph_end=jelly.RdfGraphEnd())
-        self.flow.append(end_row)
-        if frame := self.flow.frame_from_bounds():
-            yield frame
+
+    def set_graph(self, g: object) -> None:
+        """Set the graph name of the next quad."""
+        self.repeated_terms[3] = g
+        self.graph_changed = True
+
+    def emit(self) -> jelly.RdfStreamFrame | None:
+        """
+        Add a quad made of the terms set with the cursor API.
+
+        Returns:
+            jelly.RdfStreamFrame | None: stream frame if
+                flow supports frames slicing and current flow is full
+
+        """
+        self.encoder.new_epoch()
+        # The terms first, as they add rows for new lookup entries. The graph
+        # comes last, as in the parser.
+        changed = self.encode_changed_spo()
+        graph_changed = self.graph_changed
+        if graph_changed:
+            self.encoder.encode_graph(self.repeated_terms[3], self.encoder.encoded[3])
+            self.graph_changed = False
+            changed |= 8
+        quad = self.flow.new_row().quad
+        self.write_changed_spo(quad, changed)
+        if graph_changed:
+            write_graph(self.encoder.encoded[3], quad)
+        return self.flow.frame_from_bounds()
 
 
 STREAM_DISPATCH: dict[jelly.PhysicalStreamType, type[Stream]] = {
     jelly.PHYSICAL_STREAM_TYPE_TRIPLES: TripleStream,
     jelly.PHYSICAL_STREAM_TYPE_QUADS: QuadStream,
-    jelly.PHYSICAL_STREAM_TYPE_GRAPHS: GraphStream,
 }

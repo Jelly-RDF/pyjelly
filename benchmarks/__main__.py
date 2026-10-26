@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sys
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,7 +47,7 @@ def _add_selection(parser: argparse.ArgumentParser) -> None:
 
 def _add_timing(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
-        "--warmup", type=int, default=5, help="warmup iterations (default: %(default)s)"
+        "--warmup", type=int, default=1, help="warmup iterations (default: %(default)s)"
     )
     parser.add_argument(
         "--iterations",
@@ -59,6 +61,107 @@ def _add_timing(parser: argparse.ArgumentParser) -> None:
         default=1.0,
         help="seconds per iteration, at least one operation (default: %(default)s)",
     )
+    parser.add_argument(
+        "--no-check",
+        dest="check",
+        action="store_false",
+        help="skip the round-trip check (only if the code under test hasn't changed)",
+    )
+
+
+def _format_cpus(cpus: list[int]) -> str:
+    """Format CPU cores like taskset does: "5-9,15"."""
+    ranges: list[list[int]] = []
+    for cpu in sorted(cpus):
+        if ranges and cpu == ranges[-1][1] + 1:
+            ranges[-1][1] = cpu
+        else:
+            ranges.append([cpu, cpu])
+    return ",".join(str(a) if a == b else f"{a}-{b}" for a, b in ranges)
+
+
+def _default_cpu_sets() -> list[list[int]]:
+    """
+    Return where to run the cases when --cpus is not given.
+
+    Results are only comparable on one kind of core, and cores of the same kind
+    can still differ by cluster (see measure.performance_cluster()), so the cases
+    run on one cluster of the fastest cores. If this process is already pinned to
+    some cores (e.g. with taskset), they are used instead.
+    """
+    affinity = (
+        sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else []
+    )
+    if affinity and len(affinity) < (os.cpu_count() or 0):
+        print(f"Running on cores {_format_cpus(affinity)}, which this is pinned to")
+        return [affinity]
+    cluster = measure.performance_cluster()
+    if cluster:
+        print(
+            f"Running on cores {_format_cpus(cluster)}, one cluster of the fastest "
+            "cores (choose others with --cpus)"
+        )
+        return [cluster]
+    print("Running on any core: could not find out which cores are the fastest")
+    return []
+
+
+def _case(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """Run the `case` command."""
+    if args.cpus:
+        if sys.platform != "linux":
+            parser.error("--cpus works only on Linux")
+        os.sched_setaffinity(0, args.cpus)
+    result = measure.run_case(
+        args.task,
+        args.dataset,
+        args.method,
+        rows=args.rows,
+        warmup=args.warmup,
+        iterations=args.iterations,
+        seconds=args.time,
+        check=args.check,
+        profile=args.profile,
+    )
+    print(json.dumps(asdict(result)))
+
+
+def _run(args: argparse.Namespace) -> None:
+    """Run the `run` command."""
+    if not args.cpus:
+        args.cpus = _default_cpu_sets()
+    settings = {
+        name: getattr(args, name)
+        for name in (
+            "task",
+            "datasets",
+            "methods",
+            "rows",
+            "warmup",
+            "iterations",
+            "time",
+            "sweeps",
+            "check",
+            "cpus",
+        )
+    }
+    results = measure.run_sweeps(
+        args.task,
+        args.datasets,
+        args.methods,
+        sweeps=args.sweeps,
+        rows=args.rows,
+        warmup=args.warmup,
+        iterations=args.iterations,
+        seconds=args.time,
+        check=args.check,
+        cpu_sets=args.cpus,
+    )
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    out = args.out or RESULTS_DIR / f"{stamp}-{args.task}.json"
+    measure.save(out, settings, results)
+    print(f"\nSaved to {out}\n")
+    print(report.throughput_table(args.task, results))
 
 
 def main() -> None:
@@ -76,6 +179,17 @@ def main() -> None:
         "--sweeps", type=int, default=3, help="how many sweeps (default: %(default)s)"
     )
     run.add_argument("--out", type=Path, help="where to save the results as JSON")
+    run.add_argument(
+        "--cpus",
+        type=measure.parse_cpu_list,
+        action="append",
+        default=[],
+        help=(
+            "a set of CPU cores to pin cases to, e.g. 15-19 (default: one cluster "
+            "of the fastest cores, or the cores this is already pinned to). Give it "
+            "several times to run that many cases in parallel, one per set"
+        ),
+    )
 
     case = commands.add_parser(
         "case", help="run one case in this process and print its result as JSON"
@@ -84,6 +198,9 @@ def main() -> None:
     case.add_argument("dataset")
     case.add_argument("method", choices=list(METHODS))
     case.add_argument("--rows", type=int, default=data.DEFAULT_ROWS)
+    case.add_argument(
+        "--cpus", type=measure.parse_cpu_list, help="CPU cores to pin the case to"
+    )
     _add_timing(case)
     case.add_argument(
         "--profile",
@@ -101,46 +218,9 @@ def main() -> None:
     if args.command == "fetch":
         data.fetch(args.datasets)
     elif args.command == "case":
-        result = measure.run_case(
-            args.task,
-            args.dataset,
-            args.method,
-            rows=args.rows,
-            warmup=args.warmup,
-            iterations=args.iterations,
-            seconds=args.time,
-            profile=args.profile,
-        )
-        print(json.dumps(asdict(result)))
+        _case(args, parser)
     elif args.command == "run":
-        settings = {
-            name: getattr(args, name)
-            for name in (
-                "task",
-                "datasets",
-                "methods",
-                "rows",
-                "warmup",
-                "iterations",
-                "time",
-                "sweeps",
-            )
-        }
-        results = measure.run_sweeps(
-            args.task,
-            args.datasets,
-            args.methods,
-            sweeps=args.sweeps,
-            rows=args.rows,
-            warmup=args.warmup,
-            iterations=args.iterations,
-            seconds=args.time,
-        )
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        out = args.out or RESULTS_DIR / f"{stamp}-{args.task}.json"
-        measure.save(out, settings, results)
-        print(f"\nSaved to {out}\n")
-        print(report.throughput_table(args.task, results))
+        _run(args)
     elif args.command == "size":
         print(report.size_tables(args.datasets, args.methods, args.rows))
     elif args.command == "report":

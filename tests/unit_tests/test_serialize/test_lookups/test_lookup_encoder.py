@@ -94,96 +94,27 @@ def test_encode_term_index() -> None:
     assert encoder.encode_term_index("biz") == 3
 
 
-@pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
-def test_encode_name_term_index(subtests: SubTests) -> None:
-    with subtests.test("lookup size = 3 encodes correctly"):
-        encoder = DummyLookupEncoder(lookup_size=3)
-
-        encoder.encode_entry_index("foo")
-        encoder.encode_entry_index("bar")
-
-        # Default value of 0 MUST be interpreted as previous_name_id + 1
-        previous_id = encoder.last_reused_index
-        assert encoder.lookup.data["foo"] == previous_id + 1
-        assert encoder.encode_name_term_index("foo") == 0
-
-        previous_id = encoder.last_reused_index
-        assert encoder.lookup.data["bar"] == previous_id + 1
-        assert encoder.encode_name_term_index("bar") == 0
-
-        encoder.encode_entry_index("baz")
-        previous_id = encoder.last_reused_index
-        assert encoder.lookup.data["baz"] == previous_id + 1
-        assert encoder.encode_name_term_index("baz") == 0
-
-        # Test all non-specialized cases are delegated to previously tested
-        # encode_term_index
-        passthrough = object()
-
-        with patch.object(encoder, "encode_term_index", return_value=passthrough):
-            assert encoder.encode_name_term_index("baz") is passthrough
-
-    # [max_name_table_size] (...) MUST be set to a value greater than or equal to 8.
-    with subtests.test("lookup size = 0 fails"):
-        encoder = DummyLookupEncoder(lookup_size=0)
-
-        with pytest.raises(KeyError):
-            encoder.encode_name_term_index("foo")
-
-        with pytest.raises(KeyError):
-            encoder.encode_name_term_index("bar")
+def test_name_index_to_write() -> None:
+    encoder = DummyLookupEncoder(lookup_size=3)
+    # 0 MUST be interpreted as the previous name index + 1
+    assert encoder.name_index_to_write(1) == 0
+    assert encoder.name_index_to_write(2) == 0
+    assert encoder.name_index_to_write(2) == 2
+    assert encoder.name_index_to_write(1) == 1
+    assert encoder.name_index_to_write(2) == 0
 
 
-@pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
-def test_encode_prefix_term_index(subtests: SubTests) -> None:
-    with subtests.test("empty prefix encodes 0 at first"):
-        encoder = DummyLookupEncoder(lookup_size=3)
-        assert encoder.encode_prefix_term_index("") == 0
-        assert not encoder.lookup.data
-
-    with subtests.test("empty prefix encoded after non-empty prefix"):
-        encoder = DummyLookupEncoder(lookup_size=3)
-        encoder.encode_entry_index("foo")
-        encoder.encode_entry_index("")
-
-        assert encoder.encode_prefix_term_index("foo") == 1
-        assert encoder.encode_prefix_term_index("") == 2
-
-    with subtests.test("lookup size = 3 encodes correctly"):
-        encoder = DummyLookupEncoder(lookup_size=3)
-
-        encoder.encode_entry_index("foo")
-        encoder.encode_entry_index("bar")
-
-        # The default value of 0 MUST be interpreted as the same value
-        # as in the last explicitly specified (non-zero) prefix identifier
-        assert encoder.encode_prefix_term_index("foo") == 1
-        assert encoder.encode_prefix_term_index("foo") == 0
-        assert encoder.encode_prefix_term_index("bar") == 2
-        assert encoder.encode_prefix_term_index("bar") == 0
-
-        encoder.encode_entry_index("baz")
-        assert encoder.encode_prefix_term_index("baz") == 3
-        assert encoder.encode_prefix_term_index("baz") == 0
-
-        encoder.encode_entry_index("qux")
-
-        # Test all non-specialized cases are delegated to previously tested
-        # encode_term_index
-        passthrough = object()
-
-        with patch.object(encoder, "encode_term_index", return_value=passthrough):
-            assert encoder.encode_prefix_term_index("baz") is passthrough
-
-    with subtests.test("lookup size = 0 always encodes 0"):
-        encoder = DummyLookupEncoder(lookup_size=0)
-        assert encoder.encode_prefix_term_index("foo") == 0
-        assert encoder.encode_prefix_term_index("bar") == 0
-
-        # If the [max_prefix_table_size] field is set to 0, the prefix lookup
-        # MUST NOT be used in the stream
-        with patch.object(encoder, "encode_term_index") as mock:
-            mock.assert_not_called()
+def test_prefix_index_to_write() -> None:
+    encoder = DummyLookupEncoder(lookup_size=3)
+    # An empty prefix before any other is written as 0
+    assert encoder.prefix_index_to_write(1, empty=True) == 0
+    assert encoder.prefix_index_to_write(1, empty=False) == 1
+    # 0 MUST be interpreted as the same prefix as in the previous IRI
+    assert encoder.prefix_index_to_write(1, empty=False) == 0
+    assert encoder.prefix_index_to_write(2, empty=False) == 2
+    assert encoder.prefix_index_to_write(2, empty=False) == 0
+    # After another prefix, an empty one needs its own entry
+    assert encoder.prefix_index_to_write(3, empty=True) == 3
 
 
 @pytest.mark.skipif(IS_COMPILED, reason="compiled extension; patching wont work here")
