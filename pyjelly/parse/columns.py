@@ -96,6 +96,29 @@ def _check_kinds(kinds: bytes, value_count: int, position: str) -> None:
         raise JellyConformanceError(msg)
 
 
+# More cells than this are added at once, fewer one by one: cheaper than making a
+# list of a few cells to add
+_FEW_CELLS: Final = 16
+
+
+def _add_values(cells: list[Any], values: list[Any], start: int, count: int) -> None:
+    """Add `count` values, from values[start], one per cell."""
+    if count > _FEW_CELLS:
+        cells += values[start : start + count]
+    else:
+        for i in range(start, start + count):
+            cells.append(values[i])
+
+
+def _add_run(cells: list[Any], term: Any, count: int) -> None:
+    """Add `count` cells of one term."""
+    if count > _FEW_CELLS:
+        cells += [term] * count
+    else:
+        for _ in range(count):
+            cells.append(term)
+
+
 def _too_many_cells(position: str) -> JellyConformanceError:
     msg = f"the {position} column has more cells than the frame has rows"
     return JellyConformanceError(msg)
@@ -133,7 +156,7 @@ def _layout_cells(
                     f"corrupt layout of the {position} column: it skips past its values"
                 )
                 raise JellyConformanceError(msg)
-            cells += values[index : index + skip]
+            _add_values(cells, values, index, skip)
             index += skip
         if token & _UNBOUND:
             term = None
@@ -151,7 +174,7 @@ def _layout_cells(
         # Checked before the cells are made, as a run can claim any length
         if len(cells) + count > rows:
             raise _too_many_cells(position)
-        cells += [term] * count
+        _add_run(cells, term, count)
     if index < len(values):
         cells += values[index:]
     return cells
