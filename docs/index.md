@@ -7,6 +7,7 @@
 ## Features
 
 - **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
+- **[SPARQL query results](sparql.md)** in [Jelly-SPARQL]({{ proto_link("specification/sparql/") }})
 - **Seamless integration with [RDFLib](https://rdflib.readthedocs.io/)**
 - **Stream processing support** for large datasets or streams of many RDF graphs/datasets
 
@@ -15,6 +16,7 @@
 - **[Getting started](getting-started.md)**
 - **[Overview and supported features](overview.md)**
 - **[Generic interface (usage without RDFLib)](generic-sink.md)**
+- **[SPARQL query results](sparql.md)**
 - **[API reference](api.md)**
 - **[Contributing](contributing/index.md)** – how to report issues, contribute code, and request features
 
