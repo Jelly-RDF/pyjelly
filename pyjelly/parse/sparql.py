@@ -10,7 +10,6 @@ from __future__ import annotations
 import io
 import warnings
 from collections.abc import Callable, Iterator
-from itertools import chain
 from typing import IO, Any, Final
 
 from google.protobuf.message import DecodeError
@@ -43,6 +42,17 @@ from pyjelly.parse.ioutils import SPARQL_FRAME_TAGS, detect_delimited
 LINK_KEY: Final = "link"
 
 AdapterFactory = Callable[[ParserOptions], Adapter]
+#: Makes the rows of a frame from its variables, its cells (one list per variable,
+#: None if unbound) and its row count
+RowFactory = Callable[[list[str], list[list[Any]], int], list[Any]]
+
+
+def tuple_rows(variables: list[str], cells: list[list[Any]], rows: int) -> list[Any]:
+    """Return the rows of a frame as tuples, with one value per variable."""
+    if not variables:
+        return [()] * rows
+    return list(zip(*cells, strict=True))
+
 
 # Methods called through the message classes rather than on messages: upb looks
 # up any attribute of a message as a field name first
@@ -147,8 +157,8 @@ class DecodedFrame:
         self.variables: list[str] = []
         #: The boolean result, if the frame has one
         self.boolean: bool | None = None
-        #: The rows of the frame: one value per variable, None if it is unbound
-        self.rows: list[tuple[Any, ...]] = []
+        #: The rows of the frame, made by the decoder's row factory
+        self.rows: list[Any] = []
         #: The links describing the result set, if the frame has them
         self.links: list[str] | None = None
         #: The trailer: None if the frame has none, else "" if the result set is
@@ -163,6 +173,7 @@ class SparqlDecoder:
     Args:
         adapter_factory (AdapterFactory): makes the adapter that makes the terms,
             given the options of the stream.
+        row_factory (RowFactory): makes the rows of a frame. Tuples by default.
         max_rows (int): the most rows a frame can have.
         max_values (int): the most values (rows times variables) a frame can have.
             Each frame is decoded at once, so this limits the memory it can take.
@@ -173,10 +184,12 @@ class SparqlDecoder:
         self,
         adapter_factory: AdapterFactory,
         *,
+        row_factory: RowFactory = tuple_rows,
         max_rows: int = MAX_SPARQL_FRAME_ROWS,
         max_values: int = MAX_SPARQL_FRAME_VALUES,
     ) -> None:
         self.adapter_factory = adapter_factory
+        self.row_factory = row_factory
         self.max_rows = min(max_rows, MAX_ROWS)
         self.max_values = max_values
         #: The stream options, once read
@@ -319,13 +332,13 @@ class SparqlDecoder:
             if column_count:
                 msg = "a result set with no variables cannot have columns"
                 raise JellyConformanceError(msg)
-            out.rows = [()] * rows
+            out.rows = self.row_factory(variables, [], rows)
         elif column_count == len(variables):
             cells = [
                 columns.cells(column, rows, "?" + name)
                 for column, name in zip(frame.columns, variables, strict=True)
             ]
-            out.rows = list(zip(*cells, strict=True))
+            out.rows = self.row_factory(variables, cells, rows)
         elif column_count or rows:
             msg = (
                 f"the frame has {column_count} columns, but the result set has "
@@ -483,9 +496,9 @@ class SparqlResultSet:
         #: Whether the stream ended without a trailer after the result set: the
         #: result set may be cut short. Known once all rows were read.
         self.truncated = False
-        self._rows = self._read()
-        # The rows kept when the next result set was read before they were
-        self._kept: Iterator[tuple[Any, ...]] = iter(())
+        # The rows of each frame, and those of the current frame not yet read
+        self._frames = self._read()
+        self._rows: Iterator[Any] = iter(())
         # Whether all rows were read by an iteration
         self._done = False
         if first.boolean is not None:
@@ -513,18 +526,42 @@ class SparqlResultSet:
         """Whether this is a boolean result (of an ASK query)."""
         return self._boolean is not None
 
-    def __iter__(self) -> Iterator[tuple[Any, ...]]:
+    def __iter__(self) -> Iterator[Any]:
+        self._check_not_done()
+        while True:
+            # An iterator of a list: an iteration stopped early leaves it where it
+            # was, and the next one goes on from there
+            yield from self._rows
+            rows = next(self._frames, None)
+            if rows is None:
+                break
+            self._rows = iter(rows)
+        self._end()
+
+    def collect(self, rows: list[Any]) -> None:
+        """
+        Read the rest of the rows into a list, faster than iterating them.
+
+        Raises:
+            JellyIncompleteResultsError: if the result set is incomplete, after the
+                rows are read.
+
+        """
+        self._check_not_done()
+        rows.extend(self._rows)
+        for frame_rows in self._frames:
+            rows.extend(frame_rows)
+        self._end()
+
+    def _check_not_done(self) -> None:
         if self._done:
             msg = (
                 "the rows of the result set were already read: they can be "
                 "iterated only once"
             )
             raise RuntimeError(msg)
-        # Not `yield from`, which would close them if this iteration is stopped
-        for row in self._kept:
-            yield row
-        for row in self._rows:
-            yield row
+
+    def _end(self) -> None:
         self._done = True
         if self.error:
             raise _incomplete(self.error, self)
@@ -539,8 +576,8 @@ class SparqlResultSet:
                 stacklevel=3,
             )
 
-    def _read(self) -> Iterator[tuple[Any, ...]]:
-        """Yield the rows, and note the trailers, until the result set ends."""
+    def _read(self) -> Iterator[list[Any]]:
+        """Yield the rows of each frame, and note the trailers, until it ends."""
         reader = self.reader
         frame = self.first
         self.first = None
@@ -558,7 +595,8 @@ class SparqlResultSet:
                 ended = False
             if frame.links is not None and not self.links:
                 self.links = frame.links
-            yield from frame.rows
+            if frame.rows:
+                yield frame.rows
             if ended and reader.decoder.punctuated:
                 return
             frame = reader.next()
@@ -572,13 +610,17 @@ class SparqlResultSet:
     def keep(self) -> None:
         """Read the rest of the result set, and keep its rows for later."""
         if not self._done:
-            self._kept = chain(self._kept, list(self._rows))
+            kept = list(self._rows)
+            for rows in self._frames:
+                kept += rows
+            self._rows = iter(kept)
 
 
 def read_result_sets(
     inp: IO[bytes] | bytes,
     adapter_factory: AdapterFactory,
     *,
+    row_factory: RowFactory = tuple_rows,
     max_rows: int = MAX_SPARQL_FRAME_ROWS,
     max_values: int = MAX_SPARQL_FRAME_VALUES,
 ) -> Iterator[SparqlResultSet]:
@@ -594,6 +636,7 @@ def read_result_sets(
         inp (IO[bytes] | bytes): the stream, delimited or not.
         adapter_factory (AdapterFactory): makes the adapter that makes the terms,
             given the options of the stream.
+        row_factory (RowFactory): makes the rows. Tuples by default.
         max_rows (int): the most rows a frame can have.
         max_values (int): the most values (rows times variables) a frame can have.
 
@@ -601,7 +644,12 @@ def read_result_sets(
         SparqlResultSet: the result sets, in order.
 
     """
-    decoder = SparqlDecoder(adapter_factory, max_rows=max_rows, max_values=max_values)
+    decoder = SparqlDecoder(
+        adapter_factory,
+        row_factory=row_factory,
+        max_rows=max_rows,
+        max_values=max_values,
+    )
     reader = ResultSetReader(sparql_frames(inp), decoder)
     while (first := reader.next()) is not None:
         result_set = SparqlResultSet(reader, first)
@@ -613,6 +661,7 @@ def read_result_set(
     inp: IO[bytes] | bytes,
     adapter_factory: AdapterFactory,
     *,
+    row_factory: RowFactory = tuple_rows,
     max_rows: int = MAX_SPARQL_FRAME_ROWS,
     max_values: int = MAX_SPARQL_FRAME_VALUES,
 ) -> SparqlResultSet:
@@ -629,7 +678,11 @@ def read_result_set(
 
     """
     result_sets = read_result_sets(
-        inp, adapter_factory, max_rows=max_rows, max_values=max_values
+        inp,
+        adapter_factory,
+        row_factory=row_factory,
+        max_rows=max_rows,
+        max_values=max_values,
     )
     result_set = next(result_sets)
     if result_set.reader.decoder.punctuated:

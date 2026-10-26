@@ -7,9 +7,9 @@ any cell may be unbound.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import suppress
-from typing import IO, Final
+from typing import IO, Any, Final
 
 from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
@@ -114,6 +114,8 @@ class SparqlStream:
         #: The variables of the result set being written, None between result sets
         self.variables: list[str] | None = None
         self.columns: list[VariableColumn] = []
+        # The values of a row given as a binding, see binding()
+        self.values: list[object | None] = []
         self.row_count = 0
         self.rows_per_frame = 1
         self.links: list[str] = []
@@ -142,6 +144,7 @@ class SparqlStream:
         names = variable_names(variables)
         self.variables = names
         self.columns = [VariableColumn() for _ in names]
+        self.values = [None] * len(names)
         self.rows_per_frame = self.options.rows_per_frame(len(names))
         self.header_pending = True
         self.links = list(links)
@@ -210,6 +213,40 @@ class SparqlStream:
         if self.row_count >= self.rows_per_frame and self.options.delimited:
             return self.end_frame()
         return frame
+
+    def binding(
+        self, binding: Mapping[Any, object | None], variables: Sequence[object]
+    ) -> jelly.SparqlResultsFrame | None:
+        """
+        Add a row (solution) given as a binding, which maps variables to values.
+
+        Args:
+            binding (Mapping[Any, object | None]): the values of the bound
+                variables. The keys are the variables, or their names.
+            variables (Sequence[object]): the variables of the result set, in its
+                order.
+
+        Returns:
+            jelly.SparqlResultsFrame | None: a frame, if one is full.
+
+        """
+        values = self.values
+        if len(variables) != len(values):
+            msg = f"expected {len(values)} variables, got {len(variables)}"
+            raise JellyConformanceError(msg)
+        bound = 0
+        for i in range(len(values)):
+            value = binding.get(variables[i])
+            values[i] = value
+            if value is not None:
+                bound += 1
+        if bound != len(binding):
+            # Not all keys are variables: e.g., rdflib's Variable("x") is not equal
+            # to "x". The values are looked up by name instead.
+            by_name = {str(key): value for key, value in binding.items()}
+            for i in range(len(values)):
+                values[i] = by_name.get(str(variables[i]))
+        return self.row(values)
 
     def rows(
         self, rows: Iterable[Sequence[object | None]]
@@ -471,8 +508,47 @@ def write_solutions(  # noqa: PLR0913 keyword-only options
             if frame is not None:
                 writer.write(frame)
     except Exception as failure:
-        # If the frame that says so can still be written
-        with suppress(Exception):
-            writer.write(stream.end(error_message(failure)))
+        _end_with(stream, writer, failure)
         raise
     writer.write(stream.end(error))
+
+
+def write_bindings(  # noqa: PLR0913 keyword-only options
+    stream: SparqlStream,
+    variables: Sequence[object],
+    bindings: Iterable[Mapping[Any, object | None]],
+    writer: FrameWriter,
+    *,
+    links: Sequence[str] = (),
+    error: str = "",
+) -> None:
+    """
+    Write a solution sequence whose rows are bindings, see write_solutions().
+
+    Args:
+        stream (SparqlStream): the stream.
+        variables (Sequence[object]): the variables, each a str (e.g., rdflib's
+            Variable), whose names are written.
+        bindings (Iterable[Mapping[Any, object | None]]): the rows, see
+            SparqlStream.binding().
+        writer (FrameWriter): where the frames go.
+        links (Sequence[str]): IRIs of links that describe the results.
+        error (str): why the rows are incomplete, if they are known to be.
+
+    """
+    stream.start([str(variable) for variable in variables], links)
+    try:
+        for binding in bindings:
+            frame = stream.binding(binding, variables)
+            if frame is not None:
+                writer.write(frame)
+    except Exception as failure:
+        _end_with(stream, writer, failure)
+        raise
+    writer.write(stream.end(error))
+
+
+def _end_with(stream: SparqlStream, writer: FrameWriter, failure: Exception) -> None:
+    """End the result set with an error, if the frame that says so can be written."""
+    with suppress(Exception):
+        writer.write(stream.end(error_message(failure)))

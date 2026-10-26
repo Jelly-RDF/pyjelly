@@ -15,6 +15,7 @@ from typing_extensions import Never, override
 import rdflib
 from mypy_extensions import mypyc_attr
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
+from rdflib.term import Variable
 
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.rdflib.statements import Prefix, Quad, Triple
@@ -168,3 +169,37 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     @override
     def graph_end(self) -> None:
         self._graph_id = None
+
+
+class BindingRows:
+    """
+    Makes the rows of Jelly-SPARQL frames as rdflib bindings.
+
+    A binding is a dict that maps each bound Variable to its value, as in rdflib's
+    query results. The same names get the same Variable objects (see variables()).
+    """
+
+    def __init__(self) -> None:
+        self.names: list[str] = []
+        self.vars: list[Variable] = []
+
+    def variables(self, names: list[str]) -> list[Variable]:
+        """Return the Variables with these names."""
+        if names != self.names:
+            self.names = names
+            self.vars = [Variable(name) for name in names]
+        return self.vars
+
+    def __call__(
+        self, names: list[str], cells: list[list[Any]], rows: int
+    ) -> list[Any]:
+        bindings: list[dict[Variable, Any]] = [{} for _ in range(rows)]
+        variables = self.variables(names)
+        for j in range(len(cells)):
+            variable = variables[j]
+            column = cells[j]
+            for r in range(rows):
+                value = column[r]
+                if value is not None:
+                    bindings[r][variable] = value
+        return bindings
