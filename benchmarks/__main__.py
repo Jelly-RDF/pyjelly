@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from benchmarks import data, measure, report
-from benchmarks.methods import METHODS
+from benchmarks.suites import SUITES
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -24,18 +24,36 @@ def _names(value: str) -> list[str]:
     return [name.strip() for name in value.split(",") if name.strip()]
 
 
+def _add_suite(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--suite",
+        choices=list(SUITES),
+        default="rdf",
+        help=(
+            "rdf: Jelly-RDF and RDF formats, sparql: Jelly-SPARQL and SPARQL "
+            "result formats (default: %(default)s)"
+        ),
+    )
+
+
 def _add_selection(parser: argparse.ArgumentParser) -> None:
+    _add_suite(parser)
     parser.add_argument(
         "--datasets",
         type=_names,
-        default=list(data.DATASETS),
-        help="comma-separated RiverBench datasets (default: all 13)",
+        help=(
+            "comma-separated datasets (default: the 13 RiverBench datasets, and in "
+            "the sparql suite, also a few synthetic ones)"
+        ),
     )
     parser.add_argument(
         "--methods",
         type=_names,
-        default=list(METHODS),
-        help=f"comma-separated methods (default: all of {', '.join(METHODS)})",
+        help=(
+            "comma-separated methods (default: all of the suite: "
+            + "; ".join(f"{s.name}: {', '.join(s.methods)}" for s in SUITES.values())
+            + ")"
+        ),
     )
     parser.add_argument(
         "--rows",
@@ -67,6 +85,16 @@ def _add_timing(parser: argparse.ArgumentParser) -> None:
         action="store_false",
         help="skip the round-trip check (only if the code under test hasn't changed)",
     )
+
+
+def _fill_selection(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    """Choose the datasets and methods of the suite, unless given."""
+    suite = SUITES[args.suite]
+    args.datasets = args.datasets or list(suite.default_datasets)
+    args.methods = args.methods or list(suite.methods)
+    for name in args.methods:
+        if name not in suite.methods:
+            parser.error(f"no method {name} in the {args.suite} suite")
 
 
 def _format_cpus(cpus: list[int]) -> str:
@@ -112,10 +140,13 @@ def _case(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
         if sys.platform != "linux":
             parser.error("--cpus works only on Linux")
         os.sched_setaffinity(0, args.cpus)
+    if args.method not in SUITES[args.suite].methods:
+        parser.error(f"no method {args.method} in the {args.suite} suite")
     result = measure.run_case(
         args.task,
         args.dataset,
         args.method,
+        suite=args.suite,
         rows=args.rows,
         warmup=args.warmup,
         iterations=args.iterations,
@@ -133,6 +164,7 @@ def _run(args: argparse.Namespace) -> None:
     settings = {
         name: getattr(args, name)
         for name in (
+            "suite",
             "task",
             "datasets",
             "methods",
@@ -156,9 +188,11 @@ def _run(args: argparse.Namespace) -> None:
         seconds=args.time,
         check=args.check,
         cpu_sets=args.cpus,
+        suite=args.suite,
     )
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    out = args.out or RESULTS_DIR / f"{stamp}-{args.task}.json"
+    prefix = "sparql-" if args.suite == "sparql" else ""
+    out = args.out or RESULTS_DIR / f"{stamp}-{prefix}{args.task}.json"
     measure.save(out, settings, results)
     print(f"\nSaved to {out}\n")
     print(report.throughput_table(args.task, results))
@@ -196,7 +230,8 @@ def main() -> None:
     )
     case.add_argument("task", choices=["write", "read"])
     case.add_argument("dataset")
-    case.add_argument("method", choices=list(METHODS))
+    case.add_argument("method")
+    _add_suite(case)
     case.add_argument("--rows", type=int, default=data.DEFAULT_ROWS)
     case.add_argument(
         "--cpus", type=measure.parse_cpu_list, help="CPU cores to pin the case to"
@@ -215,6 +250,8 @@ def main() -> None:
     show.add_argument("results", type=Path, nargs="+")
 
     args = parser.parse_args()
+    if args.command in ("run", "size"):
+        _fill_selection(args, parser)
     if args.command == "fetch":
         data.fetch(args.datasets)
     elif args.command == "case":
@@ -222,7 +259,7 @@ def main() -> None:
     elif args.command == "run":
         _run(args)
     elif args.command == "size":
-        print(report.size_tables(args.datasets, args.methods, args.rows))
+        print(report.size_tables(args.datasets, args.methods, args.rows, args.suite))
     elif args.command == "report":
         for path in args.results:
             content = json.loads(path.read_text())
