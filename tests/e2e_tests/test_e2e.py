@@ -8,7 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from pyjelly.options import LookupPreset
+from pyjelly.options import (
+    MIN_COLUMN_NAME_LOOKUP_SIZE,
+    VERSION_1_1,
+    VERSION_1_2,
+    LookupPreset,
+)
 from tests.e2e_tests.ser_des.base_ser_des import BaseSerDes
 from tests.e2e_tests.ser_des.generic_ser_des import GenericSerDes
 from tests.e2e_tests.ser_des.rdflib_ser_des import RdflibSerDes
@@ -16,6 +21,28 @@ from tests.utils.rdf_test_cases import jelly_cli, needs_jelly_cli
 
 DEFAULT_PRESET = replace(LookupPreset.small(), max_prefixes=0)
 DEFAULT_FRAME_SIZE = 200
+
+
+def presets_and_versions() -> list[tuple[LookupPreset, int]]:
+    """
+    Return a variety of lookup sizes, for each protocol version.
+
+    Particularly small lookups, and a lack of prefixes. In Jelly-RDF 1.2, the
+    name lookup can't be as small as in Jelly-RDF 1.1.
+    """
+    small = LookupPreset.small()
+    no_prefixes = replace(LookupPreset.small(), max_prefixes=0)
+    tiny_lookups = replace(LookupPreset.small(), max_names=16, max_prefixes=8)
+    big = LookupPreset()
+    cases = []
+    for version in (VERSION_1_1, VERSION_1_2):
+        for preset in (small, no_prefixes, tiny_lookups, big):
+            if version == VERSION_1_2:
+                max_names = max(preset.max_names, MIN_COLUMN_NAME_LOOKUP_SIZE)
+                preset = replace(preset, max_names=max_names)  # noqa: PLW2901
+            cases.append((preset, version))
+    return cases
+
 
 jelly_validate = partial(jelly_cli, "rdf", "validate", "--compare-ordered")
 jelly_from_jelly = partial(jelly_cli, "rdf", "from-jelly")
@@ -27,24 +54,18 @@ class End2EndOptionSetup:
 
     test_root: Path = Path("tests/e2e_test_cases/")
 
-    def setup_ser_des(self) -> list[tuple[BaseSerDes, BaseSerDes, LookupPreset, int]]:
+    def setup_ser_des(
+        self,
+    ) -> list[tuple[BaseSerDes, BaseSerDes, tuple[LookupPreset, int], int]]:
         """Set up test serializer, deserializer, options and frame_size."""
         ser = [RdflibSerDes()]
         des = [RdflibSerDes()]
-        # We want to have a variety of options to test
-        # Particularly examples of small lookup sizes
-        # and a lack of prefix
-        small = LookupPreset.small()
-        no_prefixes = replace(LookupPreset.small(), max_prefixes=0)
-        tiny_lookups = replace(LookupPreset.small(), max_names=16, max_prefixes=8)
-        big = LookupPreset()
-        presets = [small, no_prefixes, tiny_lookups, big]
         frame_sizes = [1, 4, 200, 10_000]
-        return list(product(ser, des, presets, frame_sizes))
+        return list(product(ser, des, presets_and_versions(), frame_sizes))
 
     def setup_triple_files(
         self,
-    ) -> list[tuple[BaseSerDes, BaseSerDes, LookupPreset, int, Path]]:
+    ) -> list[tuple[BaseSerDes, BaseSerDes, tuple[LookupPreset, int], int, Path]]:
         """Set up options for each of the test triple files."""
         test_dir: Path = self.test_root / "triples_rdf_1_1"
         files = test_dir.glob("*.nt")
@@ -53,7 +74,7 @@ class End2EndOptionSetup:
 
     def setup_quad_files(
         self,
-    ) -> list[tuple[BaseSerDes, BaseSerDes, LookupPreset, int, Path]]:
+    ) -> list[tuple[BaseSerDes, BaseSerDes, tuple[LookupPreset, int], int, Path]]:
         """Set up options for each of the test quad files."""
         test_dir: Path = self.test_root / "quads_rdf_1_1"
         files = test_dir.glob("*.nq")
@@ -68,20 +89,15 @@ class End2EndOptionSetupGeneric:
 
     def setup_ser_des(
         self,
-    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int]]:
+    ) -> list[tuple[GenericSerDes, GenericSerDes, tuple[LookupPreset, int], int]]:
         ser = [GenericSerDes()]
         des = [GenericSerDes()]
-        small = LookupPreset.small()
-        no_prefixes = replace(LookupPreset.small(), max_prefixes=0)
-        tiny_lookups = replace(LookupPreset.small(), max_names=16, max_prefixes=8)
-        big = LookupPreset()
-        presets = [small, no_prefixes, tiny_lookups, big]
         frame_sizes = [1, 4, 200, 10_000]
-        return list(product(ser, des, presets, frame_sizes))
+        return list(product(ser, des, presets_and_versions(), frame_sizes))
 
     def setup_triple_files(
         self,
-    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
+    ) -> list[tuple[GenericSerDes, GenericSerDes, tuple[LookupPreset, int], int, Path]]:
         test_dir: Path = self.test_root / "triples_rdf_1_1"
         files = test_dir.glob("*.nt")
         options = self.setup_ser_des()
@@ -89,7 +105,7 @@ class End2EndOptionSetupGeneric:
 
     def setup_quad_files(
         self,
-    ) -> list[tuple[GenericSerDes, GenericSerDes, LookupPreset, int, Path]]:
+    ) -> list[tuple[GenericSerDes, GenericSerDes, tuple[LookupPreset, int], int, Path]]:
         test_dir: Path = self.test_root / "quads_rdf_1_1"
         files = test_dir.glob("*.nq")
         options = self.setup_ser_des()
@@ -112,38 +128,42 @@ class TestEnd2End:
     setup = End2EndOptionSetup()
 
     @pytest.mark.parametrize(
-        ("ser", "des", "preset", "frame_size", "file"), setup.setup_triple_files()
+        ("ser", "des", "preset_and_version", "frame_size", "file"),
+        setup.setup_triple_files(),
     )
     def test_triple_files(
         self,
         ser: BaseSerDes,
         des: BaseSerDes,
-        preset: LookupPreset,
+        preset_and_version: tuple[LookupPreset, int],
         frame_size: int,
         file: Path,
     ) -> None:
+        preset, version = preset_and_version
         nt_reader = RdflibSerDes()
         with file.open("rb") as f:
             triples = nt_reader.read_triples(f.read())
-            jelly_io = ser.write_triples_jelly(triples, preset, frame_size)
+            jelly_io = ser.write_triples_jelly(triples, preset, frame_size, version)
             new_g = des.read_triples_jelly(jelly_io)
             assert set(triples) == set(new_g)
 
     @pytest.mark.parametrize(
-        ("ser", "des", "preset", "frame_size", "file"), setup.setup_quad_files()
+        ("ser", "des", "preset_and_version", "frame_size", "file"),
+        setup.setup_quad_files(),
     )
     def test_quad_files(
         self,
         ser: BaseSerDes,
         des: BaseSerDes,
-        preset: LookupPreset,
+        preset_and_version: tuple[LookupPreset, int],
         frame_size: int,
         file: Path,
     ) -> None:
+        preset, version = preset_and_version
         nq_reader = RdflibSerDes()
         with file.open("rb") as f:
             quads = nq_reader.read_quads(f.read())
-            jelly_io = ser.write_quads_jelly(quads, preset, frame_size)
+            jelly_io = ser.write_quads_jelly(quads, preset, frame_size, version)
             new_g = des.read_quads_jelly(jelly_io)
             assert set(quads) == set(new_g)
 
@@ -153,39 +173,43 @@ class TestEnd2EndGeneric:
 
     @needs_jelly_cli
     @pytest.mark.parametrize(
-        ("ser", "des", "preset", "frame_size", "file"), setup.setup_triple_files()
+        ("ser", "des", "preset_and_version", "frame_size", "file"),
+        setup.setup_triple_files(),
     )
     def test_triple_files(
         self,
         ser: GenericSerDes,
         des: GenericSerDes,
-        preset: LookupPreset,
+        preset_and_version: tuple[LookupPreset, int],
         frame_size: int,
         file: Path,
     ) -> None:
+        preset, version = preset_and_version
         reader = GenericSerDes()
         gen_input_jelly = rdf_to_jelly(file)
         triples = reader.read_triples(gen_input_jelly)
-        jelly = ser.write_triples_jelly(triples, preset, frame_size)
+        jelly = ser.write_triples_jelly(triples, preset, frame_size, version)
         new_g = des.read_triples(jelly)
         assert set(triples) == set(new_g)
 
     @needs_jelly_cli
     @pytest.mark.parametrize(
-        ("ser", "des", "preset", "frame_size", "file"), setup.setup_quad_files()
+        ("ser", "des", "preset_and_version", "frame_size", "file"),
+        setup.setup_quad_files(),
     )
     def test_quad_files(
         self,
         ser: GenericSerDes,
         des: GenericSerDes,
-        preset: LookupPreset,
+        preset_and_version: tuple[LookupPreset, int],
         frame_size: int,
         file: Path,
     ) -> None:
+        preset, version = preset_and_version
         reader = GenericSerDes()
         gen_input_jelly = rdf_to_jelly(file)
         quads = reader.read_quads(gen_input_jelly)
-        jelly = ser.write_quads_jelly(quads, preset, frame_size)
+        jelly = ser.write_quads_jelly(quads, preset, frame_size, version)
         new_g = des.read_quads(jelly)
         assert set(quads) == set(new_g)
 

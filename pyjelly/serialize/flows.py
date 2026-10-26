@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 from typing_extensions import override
 
 from pyjelly import jelly
+
+if TYPE_CHECKING:
+    from pyjelly.serialize.columns import ColumnBatch
 
 DEFAULT_FRAME_SIZE = 250
 
@@ -15,6 +18,10 @@ class FrameFlow:
     Rows are added straight into the frame being built (see `new_row()`), so they
     never have to be copied: protobuf copies a message by serializing it and
     parsing it again.
+
+    In Jelly-RDF 1.2 streams, the frame's statements are in its column batch (see
+    `batch`), and the rows only store the stream options. A frame may then also
+    end because the lookups are full.
 
     Allows for passing LogicalStreamType, required for
         logical subtypes and non-delimited streams.
@@ -35,32 +42,53 @@ class FrameFlow:
         self.logical_type = logical_type or self.default_logical_type
         self.frame = jelly.RdfStreamFrame()
         self.rows = self.frame.rows
+        #: Set by streams of Jelly-RDF 1.2: the statements of the frame being built
+        self.batch: ColumnBatch | None = None
 
     def new_row(self) -> jelly.RdfStreamRow:
         """Add an empty row at the end of the current frame, and return it."""
         return self.rows.add()
 
     def __len__(self) -> int:
-        """Return how many rows the current frame has."""
+        """Return how many rows (in Jelly-RDF 1.2, statements) the frame has."""
+        batch = self.batch
+        if batch is not None:
+            return batch.row_count
         return len(self.rows)
 
     def frame_from_graph(self) -> jelly.RdfStreamFrame | None:
         """
-        Treat the current rows as a graph and produce a frame.
+        End a graph: in a stream of RDF Messages, end its message.
 
-        Default implementation returns None.
+        Default implementation returns None: the frame goes on.
         """
+        self.end_message()
         return None
 
     def frame_from_dataset(self) -> jelly.RdfStreamFrame | None:
         """
-        Treat the current rows as a dataset and produce a frame.
+        End a dataset: in a stream of RDF Messages, end its message.
 
-        Default implementation returns None.
+        Default implementation returns None: the frame goes on.
         """
+        self.end_message()
         return None
 
+    def end_message(self) -> None:
+        """End the current RDF Message, in a stream of RDF Messages."""
+        batch = self.batch
+        if batch is not None and batch.messages:
+            batch.end_message()
+
     def frame_from_bounds(self) -> jelly.RdfStreamFrame | None:
+        """
+        Produce a frame if no more statements fit in it.
+
+        Only in Jelly-RDF 1.2, where the lookups must fit all the frame's entries.
+        """
+        batch = self.batch
+        if batch is not None and not batch.has_room():
+            return self.to_stream_frame()
         return None
 
     def to_stream_frame(self) -> jelly.RdfStreamFrame | None:
@@ -68,10 +96,13 @@ class FrameFlow:
         Return the current frame, and start a new one.
 
         Returns:
-            jelly.RdfStreamFrame | None: stream frame, None if it has no rows
+            jelly.RdfStreamFrame | None: stream frame, None if it is empty
 
         """
-        if not len(self.rows):
+        batch = self.batch
+        if batch is not None and batch.has_content():
+            batch.write(self.frame.columns)
+        elif not len(self.rows):
             return None
         frame = self.frame
         self.frame = jelly.RdfStreamFrame()
@@ -99,7 +130,8 @@ class BoundedFrameFlow(FrameFlow):
     """
     Produce frames automatically when a fixed number of rows is reached.
 
-    Used for delimited encoding (default mode).
+    In Jelly-RDF 1.2, it is a number of statements. Used for delimited encoding
+    (default mode).
     """
 
     default_logical_type: ClassVar[jelly.LogicalStreamType] = (
@@ -125,7 +157,11 @@ class BoundedFrameFlow(FrameFlow):
             jelly.RdfStreamFrame | None: stream frame
 
         """
-        if len(self.rows) >= self.frame_size:
+        batch = self.batch
+        if batch is None:
+            if len(self.rows) >= self.frame_size:
+                return self.to_stream_frame()
+        elif batch.row_count >= self.frame_size or not batch.has_room():
             return self.to_stream_frame()
         return None
 
@@ -156,6 +192,7 @@ class GraphsFrameFlow(FrameFlow):
                 flow is empty.
 
         """
+        self.end_message()
         return self.to_stream_frame()
 
 
@@ -173,6 +210,7 @@ class DatasetsFrameFlow(FrameFlow):
                 flow is empty.
 
         """
+        self.end_message()
         return self.to_stream_frame()
 
 

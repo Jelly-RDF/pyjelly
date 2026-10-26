@@ -36,6 +36,8 @@ include = [
   "pyjelly/integrations/rdflib/walk.py",
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
+  "pyjelly/parse/columns.py",
+  "pyjelly/serialize/columns.py",
   "pyjelly/serialize/streams.py",
   "pyjelly/serialize/flows.py",
   "pyjelly/parse/decode.py",

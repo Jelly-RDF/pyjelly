@@ -48,6 +48,7 @@ class GenericSinkTermEncoder(TermEncoder):
                 lex=term._lex,
                 language=term._langtag,
                 datatype=term._datatype,
+                direction=term._direction,
                 out=out,
             )
             return
@@ -93,9 +94,12 @@ class GenericSinkTermEncoder(TermEncoder):
         super().encode_graph(term, out)  # raises NotImplementedError
 
 
-def namespace_declarations(store: GenericStatementSink, stream: Stream) -> None:
+def namespace_declarations(
+    store: GenericStatementSink, stream: Stream
+) -> Generator[jelly.RdfStreamFrame]:
     for prefix, namespace in store.namespaces:
-        stream.namespace_declaration(name=prefix, iri=str(namespace))
+        if frame := stream.namespace_declaration(name=prefix, iri=namespace._iri):
+            yield frame
 
 
 @singledispatch
@@ -129,7 +133,7 @@ def triples_stream_frames(
         isinstance(data, GenericStatementSink)
         and stream.options.params.namespace_declarations
     ):
-        namespace_declarations(data, stream)
+        yield from namespace_declarations(data, stream)
 
     graphs = (data,)
     for graph in graphs:
@@ -160,7 +164,7 @@ def quads_stream_frames(
     """
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
+        yield from namespace_declarations(data, stream)  # type: ignore[arg-type]
 
     iterator: Generator[Quad]
     if isinstance(data, GenericStatementSink):
@@ -177,13 +181,27 @@ def quads_stream_frames(
         yield frame
 
 
-def guess_options(sink: GenericStatementSink) -> SerializerOptions:
-    """Guess the serializer options based on the store type."""
-    logical_type = (
-        jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
-        if sink.is_triples_sink
-        else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-    )
+def guess_options(
+    sink: GenericStatementSink, *, grouped: bool = False
+) -> SerializerOptions:
+    """
+    Guess the serializer options based on the store type.
+
+    For a stream of graphs or datasets (`grouped`), each is an RDF Message in
+    Jelly-RDF 1.2, and one frame in Jelly-RDF 1.1.
+    """
+    if sink.is_triples_sink:
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_GRAPHS
+            if grouped
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
+    else:
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_DATASETS
+            if grouped
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+        )
     # Generic sink supports both RDF-star and generalized statements by default
     # as it can handle any term types including quoted triples and generalized RDF terms
     params = StreamParameters(generalized_statements=True, rdf_star=True)
@@ -238,7 +256,7 @@ def grouped_stream_to_frames(
     for sink in sink_generator:
         if not stream:
             if options is None:
-                options = guess_options(sink)
+                options = guess_options(sink, grouped=True)
             stream = guess_stream(options, sink)
         yield from stream_frames(stream, sink)
 

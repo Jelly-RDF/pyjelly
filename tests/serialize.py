@@ -1,12 +1,15 @@
-"""pyjelly CLI with RDFLib backend for tests."""
+"""Writing Jelly files from N-Triples and N-Quads files, for tests."""
 
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterable
+from dataclasses import replace
 from pathlib import Path
 
 import rdflib
 
+from pyjelly import jelly
 from pyjelly.integrations.generic.generic_sink import GenericStatementSink
 from pyjelly.integrations.generic.serialize import GenericSinkTermEncoder
 from pyjelly.integrations.generic.serialize import (
@@ -16,64 +19,9 @@ from pyjelly.integrations.rdflib.serialize import stream_frames
 from pyjelly.parse.decode import ParserOptions
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.ioutils import write_delimited
-from pyjelly.serialize.streams import SerializerOptions, stream_for_type
+from pyjelly.serialize.streams import SerializerOptions, Stream, stream_for_type
 from tests.utils.generic_sink_test_parser import GenericSinkParser
 from tests.utils.ordered_memory import OrderedMemory
-
-
-def write_dataset(
-    filenames: list[str | Path],
-    out_filename: str | Path,
-    options: str | ParserOptions | Path | None = None,
-) -> None:
-    if not isinstance(options, ParserOptions):
-        options = get_options_from(options)
-    assert options
-    stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
-        SerializerOptions(
-            logical_type=options.stream_types.logical_type,
-            lookup_preset=options.lookup_preset,
-            params=options.params,
-        )
-    )
-    with Path(out_filename).open("wb") as file:
-        sink: rdflib.Dataset | rdflib.Graph
-        for filename in map(str, filenames):
-            if filename.endswith(".nq"):
-                sink = rdflib.Dataset(store=OrderedMemory())
-                sink.parse(location=filename)
-            else:
-                sink = rdflib.Graph(identifier=filename, store=OrderedMemory())
-                sink.parse(location=filename)
-            if frames := next(stream_frames(stream, sink)):
-                write_delimited(frames, file)
-
-
-def write_graph(
-    filename: str | Path,
-    *,
-    out_filename: str | Path,
-    options: str | ParserOptions | Path | None = None,
-) -> None:
-    if not isinstance(options, ParserOptions):
-        options = get_options_from(options)
-    assert options
-    graph = rdflib.Graph(store=OrderedMemory())
-    graph.parse(location=str(filename))
-
-    stream = stream_for_type(options.stream_types.physical_type).for_rdflib(
-        SerializerOptions(
-            lookup_preset=options.lookup_preset,
-            logical_type=options.stream_types.logical_type,
-            params=options.params,
-        )
-    )
-    with Path(out_filename).open("wb") as file:
-        graph.serialize(
-            destination=file,
-            format="jelly",
-            stream=stream,
-        )
 
 
 def get_options_from(
@@ -87,55 +35,87 @@ def get_options_from(
     return options
 
 
+def _stream(options: str | Path | ParserOptions, *, generic: bool) -> Stream:
+    """Make a stream with the options of a test (a stream options file)."""
+    if not isinstance(options, ParserOptions):
+        parsed = get_options_from(options)
+        assert parsed
+        options = parsed
+    serializer_options = SerializerOptions(
+        logical_type=options.stream_types.logical_type,
+        lookup_preset=options.lookup_preset,
+        # The inputs have no namespaces, but rdflib binds some by default
+        params=replace(options.params, namespace_declarations=False),
+    )
+    stream_class = stream_for_type(options.stream_types.physical_type)
+    if not generic:
+        return stream_class.for_rdflib(serializer_options)
+    return stream_class(
+        encoder=GenericSinkTermEncoder(lookup_preset=options.lookup_preset),
+        options=serializer_options,
+    )
+
+
+def _write(frames: Iterable[jelly.RdfStreamFrame], out_filename: str | Path) -> None:
+    with Path(out_filename).open("wb") as file:
+        for frame in frames:
+            write_delimited(frame, file)
+
+
 def write_graph_or_dataset(
     first: str | Path,
     *extra: str | Path,
     out_filename: str | Path = "out.jelly",
-    options: str | Path | ParserOptions | None = None,
+    options: str | Path | ParserOptions,
 ) -> None:
-    if str(first).endswith(".nq") or extra:
-        write_dataset([first, *extra], out_filename=out_filename, options=options)
-    else:
-        write_graph(first, out_filename=out_filename, options=options)
+    """Write the files with the rdflib integration, one graph or dataset each."""
+    stream = _stream(options, generic=False)
+    quads = stream.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS
+    messages = stream.batch is not None and stream.batch.messages
+    # Blank node labels are scoped to the stream, or to each RDF Message
+    bnode_context: dict[str, rdflib.BNode] = {}
+
+    def frames() -> Iterable[jelly.RdfStreamFrame]:
+        for filename in map(str, [first, *extra]):
+            sink: rdflib.Graph
+            if quads:
+                sink = rdflib.Dataset(store=OrderedMemory())
+            else:
+                sink = rdflib.Graph(store=OrderedMemory())
+            sink.parse(
+                location=filename,
+                format="nquads" if quads else "nt",
+                bnode_context={} if messages else bnode_context,
+            )
+            yield from stream_frames(stream, sink)
+
+    _write(frames(), out_filename)
 
 
 def write_generic_sink(
     first: str | Path,
     *extra: str | Path,
     out_filename: str | Path = "out.jelly",
-    options: str | Path | ParserOptions | None = None,
+    options: str | Path | ParserOptions,
 ) -> None:
-    if not isinstance(options, ParserOptions):
-        options = get_options_from(options)
-    assert options
-    if options is not None:
-        lookup_preset = options.lookup_preset
-    stream_class = stream_for_type(options.stream_types.physical_type)
-    stream = stream_class(
-        encoder=GenericSinkTermEncoder(lookup_preset=lookup_preset),
-        options=SerializerOptions(
-            lookup_preset=options.lookup_preset,
-            logical_type=options.stream_types.logical_type,
-            params=options.params,
-        ),
-    )
-    filenames = [first, *extra]
-    with Path(out_filename).open("wb") as file:
-        sink: GenericStatementSink
-        for filename in map(str, filenames):
+    """Write the files with the generic integration, one sink each."""
+    stream = _stream(options, generic=True)
+
+    def frames() -> Iterable[jelly.RdfStreamFrame]:
+        for filename in [first, *extra]:
             sink = GenericStatementSink()
-            sink_parser = GenericSinkParser(sink)
-            sink_parser.parse(Path(filename))
-            if frames := next(generic_stream_frames(stream, sink)):
-                write_delimited(frames, file)
+            GenericSinkParser(sink).parse(Path(filename))
+            yield from generic_stream_frames(stream, sink)
+
+    _write(frames(), out_filename)
 
 
 if __name__ == "__main__":
     cli = argparse.ArgumentParser()
     cli.add_argument("first", type=str)
     cli.add_argument("extra", nargs="*", type=str)
-    cli.add_argument("out", nargs="?", default="out.jelly", type=str)
-    cli.add_argument("--options-from", type=str)
+    cli.add_argument("--out", default="out.jelly", type=str)
+    cli.add_argument("--options-from", type=str, required=True)
     args = cli.parse_args()
     write_graph_or_dataset(
         args.first,

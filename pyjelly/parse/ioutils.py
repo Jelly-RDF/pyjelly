@@ -8,8 +8,8 @@ from google.protobuf.descriptor import Descriptor, FieldDescriptor
 from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError
-from pyjelly.parse.decode import ParserOptions, options_from_frame
+from pyjelly.options import MIN_COLUMN_NAME_LOOKUP_SIZE, VERSION_1_2
+from pyjelly.parse.decode import ParserOptions, options_from_frame, parser_options
 
 # Protobuf wire types. Fields of any other type use a varint.
 _WIRE_VARINT: Final = 0
@@ -280,19 +280,31 @@ def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
         yield frame
 
 
+def _empty_stream_options(*, delimited: bool) -> ParserOptions:
+    """Return the options of a stream that has none: an empty graph."""
+    options = jelly.RdfStreamOptions(
+        physical_type=jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+        max_name_table_size=MIN_COLUMN_NAME_LOOKUP_SIZE,
+        version=VERSION_1_2,
+    )
+    return parser_options(options, delimited=delimited)
+
+
 def get_options_and_frames(
     inp: IO[bytes],
 ) -> tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]:
     """
     Return stream options and frames from the buffered binary stream.
 
+    The options are in the first frame that has rows. A stream with no such frame
+    (e.g., an empty file) is an empty graph, with the options of an empty
+    Jelly-RDF 1.2 stream of triples.
+
     Args:
         inp (IO[bytes]): jelly buffered binary stream
 
     Raises:
-        JellyConformanceError: if no non-empty frames detected in the delimited stream
-        JellyConformanceError: if non-delimited,
-            error is raised if no rows are detected (empty frame)
+        JellyConformanceError: if the parser can't read the stream
 
     Returns:
         tuple[ParserOptions, Iterator[jelly.RdfStreamFrame]]: ParserOptions holds:
@@ -322,8 +334,7 @@ def get_options_and_frames(
                 first_frame = frame
                 break
         if first_frame is None:
-            msg = "No non-empty frames found in the stream"
-            raise JellyConformanceError(msg)
+            return _empty_stream_options(delimited=True), iter(skipped_frames)
 
         options = options_from_frame(first_frame, delimited=True)
         return options, chain(skipped_frames, (first_frame,), frames)
@@ -331,8 +342,7 @@ def get_options_and_frames(
     frame = parse(jelly.RdfStreamFrame, inp.read())
 
     if not frame.rows:
-        msg = "The stream is corrupted (only contains an empty frame)"
-        raise JellyConformanceError(msg)
+        return _empty_stream_options(delimited=False), iter((frame,))
 
     options = options_from_frame(frame, delimited=False)
     return options, iter((frame,))

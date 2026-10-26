@@ -2,7 +2,7 @@ import io
 
 from rdflib import Dataset, Graph
 
-from pyjelly.options import LookupPreset
+from pyjelly.options import VERSION_1_2, LookupPreset, StreamParameters
 from pyjelly.serialize.flows import FlatQuadsFrameFlow, FlatTriplesFrameFlow
 from pyjelly.serialize.streams import (
     QuadStream,
@@ -53,12 +53,17 @@ class RdflibSerDes(BaseSerDes):
         return g
 
     def write_quads_jelly(
-        self, in_graph: QuadGraphType, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: QuadGraphType,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         destination = io.BytesIO()
         options = SerializerOptions(
             flow=FlatQuadsFrameFlow(frame_size=frame_size),
             lookup_preset=preset,
+            params=StreamParameters(version=version),
         )
         stream = QuadStream.for_rdflib(options)
         in_graph.serialize(destination=destination, format="jelly", stream=stream)
@@ -82,12 +87,17 @@ class RdflibSerDes(BaseSerDes):
         return g
 
     def write_triples_jelly(
-        self, in_graph: TripleGraphType, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: TripleGraphType,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         destination = io.BytesIO()
         options = SerializerOptions(
             flow=FlatTriplesFrameFlow(frame_size=frame_size),
             lookup_preset=preset,
+            params=StreamParameters(version=version),
         )
         stream = TripleStream.for_rdflib(options)
         in_graph.serialize(destination=destination, format="jelly", stream=stream)

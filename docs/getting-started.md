@@ -71,13 +71,17 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 `parse_jelly_flat` returns a generator of stream events (i.e., statements parsed). This case allows you to efficiently process the file triple-by-triple and build custom aggregations from the stream.
 
+### Checking IRIs
+
+By default, the IRIs in a Jelly file are not checked when it is read into RDFLib, which makes reading faster. To turn it on, set `validate_iris=True`, e.g., `graph.parse("data.jelly", format="jelly", validate_iris=True)`. The parsing functions in `pyjelly.integrations.rdflib.parse` take the same argument.
+
 ### Serializing a stream of graphs
 
 If you have a generator object containing graphs, you can easily serialize it into the Jelly format: 
 
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
-This method allows for transmitting logically grouped data, preserving their original division. 
+This method allows for transmitting logically grouped data, preserving their original division: each graph is one [RDF Message]({{ proto_link("specification/serialization/#stream-types") }}).
 For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of statements

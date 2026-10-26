@@ -122,10 +122,10 @@ def test_bn_str(input_id: str, expected_repr: str) -> None:
             "http://www.w3.org/2001/XMLSchema#string",
             '"hello"^^<http://www.w3.org/2001/XMLSchema#string>',
         ),
-        ('He said "hello"', None, None, '"He said "hello""'),
-        ("line1\nline2", None, None, '"line1\nline2"'),
+        ('He said "hello"', None, None, '"He said \\"hello\\""'),
+        ("line1\nline2", None, None, '"line1\\nline2"'),
         ("tab\there", None, None, '"tab\there"'),
-        ("backslash\\here", None, None, '"backslash\\here"'),
+        ("backslash\\here", None, None, '"backslash\\\\here"'),
         ("résumé", "fr", None, '"résumé"@fr'),
         ("München", "de", None, '"München"@de'),
         ("日本語", "ja", None, '"日本語"@ja'),
@@ -359,3 +359,13 @@ def test_parse_serialize() -> None:
     assert len(new_sink) == len(sink)
     for s_in, s_out in zip(sink.store, new_sink.store, strict=False):
         assert repr(s_in) == repr(s_out)
+
+
+def test_literal_with_base_direction() -> None:
+    literal = Literal("مرحبا", "ar", direction="rtl")
+    assert str(literal) == '"مرحبا"@ar--rtl'
+    assert repr(literal) == (
+        "Literal('مرحبا', langtag='ar', datatype=None, direction='rtl')"
+    )
+    assert literal != Literal("مرحبا", "ar")
+    assert hash(literal) != hash(Literal("مرحبا", "ar"))

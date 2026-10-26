@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import warnings
 from pathlib import Path
 
 from pyjelly.integrations.generic.generic_sink import (
@@ -12,300 +11,165 @@ from pyjelly.integrations.generic.generic_sink import (
     GenericStatementSink,
     Literal,
     Node,
-    Prefix,
     Quad,
     Triple,
 )
 
+_ESCAPES = {
+    "t": "\t",
+    "b": "\b",
+    "n": "\n",
+    "r": "\r",
+    "f": "\f",
+    '"': '"',
+    "'": "'",
+    "\\": "\\",
+}
+_UNICODE_ESCAPE_LENGTHS = {"u": 4, "U": 8}
+_BNODE_LABEL = re.compile(r"[^\s<>()\"]+")
+_LANGTAG = re.compile(r"@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*)(?:--(ltr|rtl))?")
+_PREFIX = re.compile(r"@prefix\s+([\w-]*):\s*<([^>]*)>\s*\.")
+
+
+class _Reader:
+    """Reads the terms of one statement."""
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+        self.pos = 0
+
+    def error(self, message: str) -> ValueError:
+        return ValueError(f"{message} at {self.pos}: {self.text!r}")
+
+    def skip_spaces(self) -> None:
+        while self.pos < len(self.text) and self.text[self.pos] in " \t":
+            self.pos += 1
+
+    def at(self, token: str) -> bool:
+        self.skip_spaces()
+        return self.text.startswith(token, self.pos)
+
+    def expect(self, token: str) -> None:
+        if not self.at(token):
+            msg = f"expected {token!r}"
+            raise self.error(msg)
+        self.pos += len(token)
+
+    def term(self) -> Node:
+        if self.at("<<("):
+            self.pos += 3
+            triple = Triple(self.term(), self.term(), self.term())
+            self.expect(")>>")
+            return triple
+        if self.at("<<"):
+            # A quoted triple of RDF-star, used by the Jelly-RDF 1.1 tests
+            self.pos += 2
+            triple = Triple(self.term(), self.term(), self.term())
+            self.expect(">>")
+            return triple
+        if self.at("<"):
+            end = self.text.index(">", self.pos)
+            iri = self.unescape(self.text[self.pos + 1 : end])
+            self.pos = end + 1
+            return IRI(iri)
+        if self.at("_:"):
+            match = _BNODE_LABEL.match(self.text, self.pos + 2)
+            if not match:
+                msg = "expected a blank node label"
+                raise self.error(msg)
+            label = match.group().rstrip(".")
+            self.pos += 2 + len(label)
+            return BlankNode(label)
+        if self.at('"'):
+            return self.literal()
+        msg = "expected a term"
+        raise self.error(msg)
+
+    def literal(self) -> Literal:
+        self.pos += 1
+        chars = []
+        while self.text[self.pos] != '"':
+            char = self.text[self.pos]
+            if char == "\\":
+                char, self.pos = self.escape(self.text, self.pos)
+            else:
+                self.pos += 1
+            chars.append(char)
+        self.pos += 1
+        lex = "".join(chars)
+        langtag = _LANGTAG.match(self.text, self.pos)
+        if langtag:
+            self.pos = langtag.end()
+            return Literal(lex, langtag.group(1), None, langtag.group(2))
+        if self.text.startswith("^^", self.pos):
+            self.pos += 2
+            datatype = self.term()
+            assert isinstance(datatype, IRI)
+            return Literal(lex, None, datatype._iri)
+        return Literal(lex)
+
+    @staticmethod
+    def escape(text: str, pos: int) -> tuple[str, int]:
+        """Return the character of the escape sequence at pos, and the pos after."""
+        kind = text[pos + 1]
+        length = _UNICODE_ESCAPE_LENGTHS.get(kind)
+        if length:
+            return chr(int(text[pos + 2 : pos + 2 + length], 16)), pos + 2 + length
+        return _ESCAPES[kind], pos + 2
+
+    def unescape(self, text: str) -> str:
+        chars = []
+        pos = 0
+        while pos < len(text):
+            if text[pos] == "\\":
+                char, pos = self.escape(text, pos)
+            else:
+                char = text[pos]
+                pos += 1
+            chars.append(char)
+        return "".join(chars)
+
 
 class GenericSinkParser:
-    _uri_re = re.compile(r"<([^>\s]+)>")  # returns URI
-    _bn_re = re.compile(r"_:(\S+)")  # returns blank node identificator
-    _literal_re = re.compile(
-        r""""([^"]*)"(?:@(\S+)|\^\^<(\S+)>)?"""
-    )  # returns lex part of the literal and optional langtag and datatype
-    _quoted_triple_re = re.compile(
-        r"<<.*?>>"
-    )  # matches the quoted triple quotation marks syntax
-    _token_quoted_triple_re = re.compile(
-        r"<<\s*(.*?)\s*>>"
-    )  # returns the quoted triple
-    _prefix_re = re.compile(
-        r"@prefix\s+(\w+):\s*<([^>]+)>\s*\."
-    )  # returns prefix and namespace IRI
-    _split_tokens = re.compile(  # matches str to quoted triple/literal, IRI, or BN
-        r"""
-        <<.+?>>         |
-        "[^"]*"(?:@\S+|\^\^\S+)?  |
-        <[^>]+>         |
-        _:\S+           |
-        """,
-        re.VERBOSE,
-    )
+    """
+    Parser of N-Triples and N-Quads into generic statements, for tests only.
+
+    It reads the syntax of RDF 1.2 (triple terms, base directions), the quoted
+    triples of RDF-star, and generalized statements, as used by the Jelly
+    conformance tests. It does not check that the input is valid.
+    """
 
     def __init__(self, sink: GenericStatementSink) -> None:
         self._sink = sink
 
-    def process_term(self, term: str) -> Node:
-        """
-        Process one term.
-
-        Notes:
-            terms are not validated to match RDF spec.
-
-        Args:
-            term (str): term to process
-
-        Raises:
-            TypeError: if literal decoded has multiple parts except for lex, i.e.,
-                possibly both langtag and datatype are specified.
-            TypeError: if fail to parse quoted triple into valid s/p/o.
-            TypeError: if term did not match any pattern
-
-        Returns:
-            Node: processed term
-
-        """
-        match_bn = self._bn_re.match(term)
-        if match_bn:
-            return BlankNode(match_bn.groups()[0])
-        match_iri = self._uri_re.match(term)
-        if match_iri:
-            return IRI(match_iri.groups()[0])
-        match_literal = self._literal_re.match(term)
-        if match_literal:
-            lex, langtag, datatype = match_literal.groups()
-            if langtag is not None and datatype is not None:
-                msg = "invalid literal encountered"
-                raise TypeError(msg)
-            return Literal(lex, langtag, datatype)
-
-        match_quoted_triple = self._quoted_triple_re.match(term)
-        if match_quoted_triple:
-            triple_tokens = self.split_statement(term.strip())
-            return Triple(
-                *(
-                    self.process_term(group)
-                    for _, group in zip(Triple._fields, triple_tokens, strict=False)
-                )
-            )
-
-        msg = "failed to parse input file"
-        raise TypeError(msg)
-
-    def find_closing_quotation(self, text: str, start: int) -> int:
-        """
-        Find the closing >> to a passed one.
-
-        Notes:
-            Examines what is inside the current quoted triple.
-            Counts nesting levels and reports only the paired
-            closing quote.
-
-        Args:
-            text (str): the current quoted triple parsed
-            start (int): location of the opning quotation
-
-        Returns:
-            int: position of the closing quotation mark.
-
-        """
-        depth = 1
-        pos = start + 2
-        while pos < len(text) - 1 and depth > 0:
-            if text[pos : pos + 2] == "<<":
-                depth += 1
-                pos += 2
-            elif text[pos : pos + 2] == ">>":
-                depth -= 1
-                pos += 2
-            else:
-                pos += 1
-        return pos
-
-    def process_quoted(self, statement: str) -> list[str]:
-        """
-        Process quoted triple or its part.
-
-        Notes:
-            Allows having more quoted triples inside.
-            Decides whether to:
-                - tokenize the current triple, if no more nesting found or a part of
-                    quoted triple is given
-                - return as is -- if the statement is this only triple,
-                    used during splitting statements into s/p/o/g
-                - split quoted triple further -- during active term processing,
-                    goes until all nesting levels are exhausted and the first
-                    if is triggered
-
-        Args:
-            statement (str): quoted triple to process or a part of one
-
-        Returns:
-            list[str]: list of processed triple terms
-
-        """
-        start = statement.find("<<")
-        if start == -1:
-            split = self.generate_statement_tokens(statement.strip())
-        else:
-            if start == 0 and self.find_closing_quotation(statement, start) == len(
-                statement
-            ):
-                return [statement]
-            split = self.split_statement(statement.strip())
-        return split
-
-    def split_statement(self, text: str) -> list[str]:
-        """
-        Split the statement based on quotation marks position.
-
-        Notes:
-            If no quotation is found, uses tokenizer right away.
-            If quotation is found, locates the first quoted triple and
-            its surrounding terms and processes them separately, combining
-            all in s/p/o list.
-
-        Args:
-            text (str): quoted triple to process
-
-        Returns:
-            list[str]: list of processed triple terms
-
-        """
-        start = text.find("<<")
-        if start == -1:
-            return self.generate_statement_tokens(text)
-        pos = self.find_closing_quotation(text, start)
-
-        if start == 0 and pos == len(text):
-            triple = text[start + 2 : pos - 2].strip()
-            split_triple = self.process_quoted(triple)
-        else:
-            split_triple = []
-            if start > 0:
-                text_before_quoted_triple = text[:start].strip()
-                split_triple.extend(self.process_quoted(text_before_quoted_triple))
-            split_triple.append(text[start:pos].strip())
-            if pos < len(text):
-                text_after_quoted_triple = text[pos:].strip()
-                split_triple.extend(self.process_quoted(text_after_quoted_triple))
-        return split_triple
-
-    def generate_statement_tokens(self, statement: str) -> list[str]:
-        """
-        Split statement into separate tokens.
-
-        Notes:
-            Tokens are not validated to follow RDF spec.
-
-        Args:
-            statement (str): Triple/Quad to split.
-
-        Returns:
-            list[str]: tokens to further process, matching simple
-                IRI, Literal, blank node, quoted triple formats.
-
-        """
-        return [
-            m.group(0)
-            for m in self._split_tokens.finditer(statement)
-            if m.group(0).strip()
-        ]
-
     def parse_statement(
         self, statement: str, statement_structure: type[Triple | Quad]
     ) -> Triple | Quad:
-        """
-        Create Triple/Quad from statement string.
-
-        Args:
-            statement (str): full statement string (triple/quad).
-            statement_structure (type[Triple  |  Quad]): a data structure for statement.
-
-        Returns:
-            Triple | Quad: resulting triple/quad
-
-        """
-        terms = self.split_statement(statement)
-        generic_terms = [
-            self.process_term(term.strip())
-            for _, term in zip(statement_structure._fields, terms, strict=False)
-        ]
-        if statement_structure == Quad and len(terms) == TRIPLE_ARITY:
-            s, p, o = generic_terms
-            return Quad(s, p, o, DefaultGraph)
-        return statement_structure(*generic_terms)
-
-    def parse_prefix(self, namespace: str) -> Prefix:
-        """
-        Create Prefix from namespace declaration string.
-
-        Args:
-            namespace (str): plain namespace declaration string.
-
-        Raises:
-            TypeError: raised if fail to match prefix and namespace IRI.
-
-        Returns:
-            Prefix: resulting Prefix
-
-        """
-        matched_namespace_declaration = self._prefix_re.match(namespace)
-        if matched_namespace_declaration:
-            matched_parts = matched_namespace_declaration.groups()
-            return Prefix(matched_parts[0], IRI(matched_parts[1]))
-        msg = "failed to parse namespace declaration"
-        raise TypeError(msg)
-
-    def parse_line(
-        self, line: str, statement_structure: type[Triple | Quad]
-    ) -> Triple | Quad | Prefix:
-        """
-        Parse one line from input into a respective statement or prefix.
-
-        Args:
-            line (str): plain line from source file.
-            statement_structure (type[Triple  |  Quad]): a data structure for statement.
-
-        Returns:
-            Triple | Quad | Prefix: resulting parsed statement or namespace declaration.
-
-        """
-        if line.startswith("@prefix"):
-            return self.parse_prefix(line)
-        return self.parse_statement(line, statement_structure)
+        """Parse a statement, with or without the dot at its end."""
+        reader = _Reader(statement)
+        terms = []
+        while True:
+            reader.skip_spaces()
+            if reader.pos == len(statement) or reader.at("."):
+                break
+            terms.append(reader.term())
+        if len(terms) == TRIPLE_ARITY:
+            s, p, o = terms
+            if statement_structure is Quad:
+                return Quad(s, p, o, DefaultGraph)
+            return Triple(s, p, o)
+        s, p, o, g = terms
+        return Quad(s, p, o, g)
 
     def parse(self, input_filename: Path) -> None:
-        """
-        Parse input lines into statements and prefixes.
-
-        Note:
-            comments and blank lines in input file are ignored.
-
-        """
-        warnings.warn(
-            (
-                "This is a minimal parser for the NT/NQ format, "
-                "not intended for use outside of conformance tests. "
-                "Proceed with caution."
-            ),
-            category=UserWarning,
-            stacklevel=2,
-        )
-
-        statement_structure = (
-            Quad if str(input_filename).split(".")[-1] in ("nq") else Triple
-        )
-        with input_filename.open("r") as input_file:
-            for line in input_file:
-                line_trimmed = line[: line.rfind(".")] + line[line.rfind(".") + 1 :]
-                line_trimmed = line_trimmed.strip()
-                comment_index = line_trimmed.find("#")
-                if comment_index == 0 or len(line_trimmed) == 0:
-                    continue
-                event = self.parse_line(line_trimmed, statement_structure)
-                if isinstance(event, Prefix):
-                    self._sink.bind(*event)
-                else:
-                    self._sink.add(event)
+        """Parse a file into the sink. `@prefix` lines declare namespaces."""
+        statement_structure = Quad if input_filename.suffix == ".nq" else Triple
+        for line in input_filename.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            prefix = _PREFIX.match(stripped)
+            if prefix:
+                self._sink.bind(prefix.group(1), IRI(prefix.group(2)))
+            else:
+                self._sink.add(self.parse_statement(stripped, statement_structure))

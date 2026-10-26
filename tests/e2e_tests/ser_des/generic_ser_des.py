@@ -9,7 +9,7 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 from pyjelly.integrations.generic.parse import parse_jelly_flat
 from pyjelly.integrations.generic.serialize import flat_stream_to_file
-from pyjelly.options import LookupPreset
+from pyjelly.options import VERSION_1_2, LookupPreset, StreamParameters
 from pyjelly.parse.ioutils import get_options_and_frames
 from pyjelly.serialize.flows import FlatQuadsFrameFlow, FlatTriplesFrameFlow
 from pyjelly.serialize.streams import SerializerOptions
@@ -37,13 +37,18 @@ class GenericSerDes:
         return out.getvalue()
 
     def write_quads_jelly(
-        self, in_graph: GenericStatementSink, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: GenericStatementSink,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         out = io.BytesIO()
         options = SerializerOptions(
             flow=FlatQuadsFrameFlow(frame_size=frame_size),
             logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS,
             lookup_preset=preset,
+            params=StreamParameters(version=version),
         )
         flat_stream_to_file(in_graph.store, out, options=options)
         return out.getvalue()
@@ -66,13 +71,18 @@ class GenericSerDes:
         return out.getvalue()
 
     def write_triples_jelly(
-        self, in_graph: GenericStatementSink, preset: LookupPreset, frame_size: int
+        self,
+        in_graph: GenericStatementSink,
+        preset: LookupPreset,
+        frame_size: int,
+        version: int = VERSION_1_2,
     ) -> bytes:
         out = io.BytesIO()
         options = SerializerOptions(
             flow=FlatTriplesFrameFlow(frame_size=frame_size),
             logical_type=jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES,
             lookup_preset=preset,
+            params=StreamParameters(version=version),
         )
         flat_stream_to_file(in_graph.store, out, options=options)
         return out.getvalue()

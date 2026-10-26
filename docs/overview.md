@@ -15,17 +15,35 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 ## Overview
 
+### Jelly-RDF versions
+
+pyjelly reads all versions of Jelly-RDF: 1.0, 1.1 and 1.2. It writes [Jelly-RDF 1.2]({{ proto_link("specification/serialization/") }}) by default, which is smaller and faster than Jelly-RDF 1.1.
+
+Older Jelly parsers can't read Jelly-RDF 1.2. To write Jelly-RDF 1.1 for them, set the protocol version to 2:
+
+```python
+from pyjelly.options import StreamParameters
+from pyjelly.serialize.streams import SerializerOptions
+
+options = SerializerOptions(params=StreamParameters(version=2))
+graph.serialize("out.jelly", format="jelly", options=options)
+```
+
 ### Supported stream types
 
-pyjelly supports all [physical stream types]({{ proto_link("specification/reference/#physicalstreamtype") }}): `TRIPLES`, `QUADS` and `GRAPHS` (read-only).
+pyjelly writes the `TRIPLES` and `QUADS` [physical stream types]({{ proto_link("specification/serialization/#physical-stream-types") }}). It can also read `GRAPHS`, which only exists in Jelly-RDF 1.0 and 1.1.
 
-See the full [stream type matrix]({{ proto_link("specification/serialization/#consistency-with-physical-stream-types") }}) for an overview of valid combinations.
+A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Messages]({{ proto_link("specification/serialization/#stream-types") }}). When you write a stream of graphs or datasets (e.g., with `grouped_stream_to_file`), each is an RDF Message. When you read such a stream with `parse_jelly_grouped`, you get one graph or dataset per message.
+
+### RDF 1.2
+
+The generic API supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and directional language-tagged strings, as `Literal("text", "en", direction="ltr")`. To declare the RDF version for a stream, set `rdf_version` in `StreamParameters`. RDFLib 7 doesn't support RDF 1.2 yet.
 
 ### Conformance to the Jelly specification
 
-pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). While the vast majority of features are implemented, there are a few edge cases left to resolve.
+pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests of Jelly-RDF 1.2]({{ proto_link("conformance/rdf-test-cases/") }}), and the [tests of Jelly-RDF 1.1]({{ proto_link("conformance/rdf-1-1-test-cases/") }}), except for writing the `GRAPHS` physical stream type.
 
-You can track the progress in [the conformance test suite definition]({{ git_link("tests/utils/rdf_test_cases.py") }}).
+See the [conformance tests]({{ git_link("tests/conformance_tests") }}) in the pyjelly repository.
 
 ## Use cases
 

@@ -3,7 +3,7 @@ import pytest
 from pyjelly import jelly
 from pyjelly.integrations.generic.decode import GenericTriplesAdapter
 from pyjelly.integrations.generic.generic_sink import IRI, Literal
-from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
+from pyjelly.options import VERSION_1_1, LookupPreset, StreamParameters, StreamTypes
 from pyjelly.parse.decode import Decoder, ParserOptions
 
 
@@ -11,7 +11,7 @@ def make_decoder() -> Decoder:
     options = ParserOptions(
         stream_types=StreamTypes(),
         lookup_preset=LookupPreset(max_names=8, max_prefixes=8),
-        params=StreamParameters(),
+        params=StreamParameters(version=VERSION_1_1),
     )
     return Decoder(adapter=GenericTriplesAdapter(options))
 

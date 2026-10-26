@@ -9,9 +9,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import rdflib
 from mypy_extensions import mypyc_attr
-from rdflib import Literal, URIRef
+from rdflib import BNode, Literal, URIRef
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 
 from pyjelly.serialize.encode import EncodedTerm, TermEncoder
@@ -36,7 +35,7 @@ class RDFLibTermEncoder(TermEncoder):
         cls = type(a)
         other_cls = type(b)
         if cls is other_cls:
-            if cls is URIRef or cls is rdflib.BNode:
+            if cls is URIRef or cls is BNode:
                 a_str: str = cast("str", a)
                 b_str: str = cast("str", b)
                 return a_str == b_str
@@ -45,8 +44,8 @@ class RDFLibTermEncoder(TermEncoder):
                 b_lex: str = cast("str", b)
                 if a_lex != b_lex:
                     return False
-        elif (cls is URIRef or cls is rdflib.BNode or cls is Literal) and (
-            other_cls is URIRef or other_cls is rdflib.BNode or other_cls is Literal
+        elif (cls is URIRef or cls is BNode or cls is Literal) and (
+            other_cls is URIRef or other_cls is BNode or other_cls is Literal
         ):
             return False
         return a == b
@@ -62,29 +61,34 @@ class RDFLibTermEncoder(TermEncoder):
         """
         # Exact type checks first, as rdflib almost always makes terms of these
         # exact classes: they are cheaper than isinstance(), which is the fallback
-        # for subclasses. `node` is Any, because the type checks don't narrow
-        # the type when rdflib isn't installed (as during the mypyc compilation).
+        # for subclasses, and runs Python code for rdflib's abstract classes.
+        # `node` is Any, because the type checks don't narrow the type when
+        # rdflib isn't installed (as during the mypyc compilation).
         node: Any = term
-        if type(node) is URIRef or (
-            type(node) is not Literal and isinstance(node, URIRef)
+        cls = type(node)
+        if cls is URIRef or (
+            cls is not Literal and cls is not BNode and isinstance(node, URIRef)
         ):
             # A plain str, so that the IRI cache never calls rdflib's __eq__
             self.encode_iri(str(node), out)
             return
 
-        if type(node) is Literal or isinstance(node, Literal):
+        if cls is Literal or (cls is not BNode and isinstance(node, Literal)):
+            # The slots behind the language and datatype properties, which are
+            # Python functions
+            datatype = node._datatype
             self.encode_literal(
                 lex=str(node),
-                language=node.language,
+                language=node._language,
                 # `datatype` is cast to `str` explicitly because
                 # `URIRef.__eq__` overrides `str.__eq__` in an incompatible manner
-                datatype=node.datatype and str(node.datatype),
+                datatype=datatype and str(datatype),
                 out=out,
             )
             return
 
-        if isinstance(term, rdflib.BNode):
-            self.encode_bnode(str(term), out)
+        if isinstance(node, BNode):
+            self.encode_bnode(str(node), out)
             return
 
         super().encode_spo(term, out)  # raises NotImplementedError
@@ -102,11 +106,13 @@ class RDFLibTermEncoder(TermEncoder):
             self.encode_default_graph(out)
             return
 
-        if isinstance(term, rdflib.URIRef):
+        # Exact type checks first, see encode_spo()
+        cls = type(term)
+        if cls is URIRef or (cls is not BNode and isinstance(term, URIRef)):
             self.encode_iri(str(term), out)
             return
 
-        if isinstance(term, rdflib.BNode):
+        if isinstance(term, BNode):
             self.encode_bnode(str(term), out)
             return
         super().encode_graph(term, out)  # raises NotImplementedError

@@ -3,13 +3,31 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from enum import Enum, auto
+from functools import partial
+from itertools import chain
+from operator import is_not
 from typing import Any, ClassVar, Final, NamedTuple, cast
 from typing_extensions import Never
 
 from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly
-from pyjelly.options import MAX_VERSION, LookupPreset, StreamParameters, StreamTypes
+from pyjelly.errors import JellyConformanceError
+from pyjelly.options import (
+    MAX_DATATYPE_LOOKUP_SIZE,
+    MAX_NAME_LOOKUP_SIZE,
+    MAX_PREFIX_LOOKUP_SIZE,
+    MAX_VERSION,
+    MIN_COLUMN_NAME_LOOKUP_SIZE,
+    MIN_NAME_LOOKUP_SIZE,
+    MIN_VERSION,
+    VERSION_1_1,
+    LookupPreset,
+    StreamParameters,
+    StreamTypes,
+    is_row_layout,
+)
+from pyjelly.parse.columns import MESSAGE_END, ColumnDecoder
 from pyjelly.parse.lookup import LookupDecoder
 
 TermHandler = Callable[[Any], Any | None]
@@ -59,35 +77,107 @@ class ParserOptions(NamedTuple):
     params: StreamParameters
 
 
-def options_from_frame(
-    frame: jelly.RdfStreamFrame,
-    *,
-    delimited: bool,
+_PHYSICAL_TYPES: Final = (
+    jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+    jelly.PHYSICAL_STREAM_TYPE_QUADS,
+    jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+)
+_LOGICAL_TYPES: Final = frozenset(jelly.LogicalStreamType.values())
+_RDF_VERSIONS: Final = frozenset(jelly.RdfVersion.values())
+
+
+def check_stream_options(options: jelly.RdfStreamOptions) -> None:
+    """
+    Check that the parser can read a stream with these options.
+
+    The fields of one layout must not be set in a stream of the
+    other. The lookups must not be larger than the parser allows (see the
+    MAX_*_LOOKUP_SIZE constants).
+
+    Raises:
+        JellyConformanceError: if it can't.
+
+    """
+    version = options.version
+    if not MIN_VERSION <= version <= MAX_VERSION:
+        msg = (
+            f"unsupported protocol version {version}, "
+            f"expected {MIN_VERSION} to {MAX_VERSION}"
+        )
+        raise JellyConformanceError(msg)
+    physical_type = options.physical_type
+    if physical_type not in _PHYSICAL_TYPES:
+        msg = f"unknown physical stream type: {physical_type}"
+        raise JellyConformanceError(msg)
+    if is_row_layout(version):
+        if options.stream_type or options.rdf_version:
+            msg = (
+                "the stream type and RDF version are only valid in Jelly-RDF 1.2 "
+                "streams (protocol version 3)"
+            )
+            raise JellyConformanceError(msg)
+        if options.logical_type not in _LOGICAL_TYPES:
+            msg = f"unknown logical stream type: {options.logical_type}"
+            raise JellyConformanceError(msg)
+        min_names = MIN_NAME_LOOKUP_SIZE
+    else:
+        if options.generalized_statements or options.rdf_star or options.logical_type:
+            msg = (
+                "generalized statements, RDF-star and logical stream types are only "
+                "valid in Jelly-RDF 1.0 and 1.1 streams (protocol versions 1 and 2)"
+            )
+            raise JellyConformanceError(msg)
+        if physical_type == jelly.PHYSICAL_STREAM_TYPE_GRAPHS:
+            msg = "Jelly-RDF 1.2 streams cannot be of the GRAPHS physical type"
+            raise JellyConformanceError(msg)
+        if options.stream_type not in (
+            jelly.RDF_STREAM_TYPE_FLAT,
+            jelly.RDF_STREAM_TYPE_MESSAGES,
+        ):
+            msg = f"unknown stream type: {options.stream_type}"
+            raise JellyConformanceError(msg)
+        if options.rdf_version not in _RDF_VERSIONS:
+            msg = f"unknown RDF version: {options.rdf_version}"
+            raise JellyConformanceError(msg)
+        min_names = MIN_COLUMN_NAME_LOOKUP_SIZE
+    _check_size("name", options.max_name_table_size, min_names, MAX_NAME_LOOKUP_SIZE)
+    _check_size("prefix", options.max_prefix_table_size, 0, MAX_PREFIX_LOOKUP_SIZE)
+    _check_size(
+        "datatype", options.max_datatype_table_size, 0, MAX_DATATYPE_LOOKUP_SIZE
+    )
+
+
+def _check_size(lookup: str, size: int, smallest: int, largest: int) -> None:
+    if not smallest <= size <= largest:
+        msg = (
+            f"the {lookup} lookup size is {size}, "
+            f"but it must be from {smallest} to {largest}"
+        )
+        raise JellyConformanceError(msg)
+
+
+def parser_options(
+    options: jelly.RdfStreamOptions, *, delimited: bool
 ) -> ParserOptions:
     """
-    Fill stream options based on the options row.
-
-    Notes:
-        generalized_statements, rdf_star, and namespace declarations
-        are set to false by default
+    Return the parser options of a stream, after checking them.
 
     Args:
-        frame (jelly.RdfStreamFrame): first non-empty frame from the stream
-        delimited (bool): derived delimited flag
+        options (jelly.RdfStreamOptions): the stream options
+        delimited (bool): whether the stream is delimited
 
     Returns:
-        ParserOptions: filled options with types/lookups/stream parameters information
+        ParserOptions: types, lookup sizes and other parameters of the stream
+
+    Raises:
+        JellyConformanceError: if the parser can't read the stream.
 
     """
-    row = frame.rows[0]
-    options = row.options
-    nd = getattr(options, "namespace_declarations", False) or (
-        options.version >= MAX_VERSION
-    )
+    check_stream_options(options)
     return ParserOptions(
         stream_types=StreamTypes(
             physical_type=options.physical_type,
-            logical_type=options.logical_type,
+            logical_type=_logical_type(options),
         ),
         lookup_preset=LookupPreset(
             max_names=options.max_name_table_size,
@@ -100,9 +190,113 @@ def options_from_frame(
             rdf_star=options.rdf_star,
             version=options.version,
             delimited=delimited,
-            namespace_declarations=nd,
+            namespace_declarations=options.version >= VERSION_1_1,
+            stream_type=options.stream_type,
+            rdf_version=options.rdf_version,
         ),
     )
+
+
+def _logical_type(options: jelly.RdfStreamOptions) -> jelly.LogicalStreamType:
+    """
+    Return the logical type of a stream.
+
+    Jelly-RDF 1.2 streams don't have logical types, but we can map the 1.2
+    stream types to logical ones.
+    """
+    if is_row_layout(options.version):
+        return options.logical_type
+    quads = options.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS
+    if options.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
+        if quads:
+            return jelly.LOGICAL_STREAM_TYPE_DATASETS
+        return jelly.LOGICAL_STREAM_TYPE_GRAPHS
+    if quads:
+        return jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+    return jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+
+
+def options_from_frame(
+    frame: jelly.RdfStreamFrame,
+    *,
+    delimited: bool,
+) -> ParserOptions:
+    """
+    Fill stream options based on the options row.
+
+    Args:
+        frame (jelly.RdfStreamFrame): first non-empty frame from the stream
+        delimited (bool): derived delimited flag
+
+    Returns:
+        ParserOptions: filled options with types/lookups/stream parameters information
+
+    Raises:
+        JellyConformanceError: if the parser can't read the stream.
+
+    """
+    row = frame.rows[0]
+    if _ROW_WHICH_ONEOF(row, "row") != "options":
+        msg = "the stream does not start with the stream options"
+        raise JellyConformanceError(msg)
+    return parser_options(row.options, delimited=delimited)
+
+
+def messages(rows: Iterable[Iterable[Any]]) -> Iterator[list[Any]]:
+    """
+    Group the rows of a stream of RDF Messages by message.
+
+    Args:
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
+            for each frame, and Decoder.end_of_stream()
+
+    Yields:
+        list[Any]: the namespace declarations and statements of each message
+
+    """
+    message: list[Any] = []
+    for frame_rows in rows:
+        for row in frame_rows:
+            if row is MESSAGE_END:
+                yield message
+                message = []
+            else:
+                message.append(row)
+
+
+def grouped_rows(
+    rows: Iterable[Iterable[Any]], options: ParserOptions
+) -> Iterable[Iterable[Any]]:
+    """
+    Return the rows of each frame, or of each message in a stream of RDF Messages.
+
+    Args:
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
+            for each frame, and Decoder.end_of_stream()
+        options (ParserOptions): the stream's options
+
+    """
+    if options.params.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
+        return messages(rows)
+    return rows
+
+
+def flat_rows(rows: Iterable[Iterable[Any]], options: ParserOptions) -> Iterator[Any]:
+    """
+    Return the rows of all frames, without the ends of RDF Messages.
+
+    Args:
+        rows (Iterable[Iterable[Any]]): the rows that Decoder.iter_rows() returns
+            for each frame, and Decoder.end_of_stream()
+        options (ParserOptions): the stream's options
+
+    """
+    # Not a generator: the rows of the frames reach the caller without passing
+    # through one more Python frame
+    all_rows = chain.from_iterable(rows)
+    if options.params.stream_type == jelly.RDF_STREAM_TYPE_MESSAGES:
+        return filter(partial(is_not, MESSAGE_END), all_rows)
+    return all_rows
 
 
 def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
@@ -147,6 +341,13 @@ class Adapter(metaclass=ABCMeta):
         """Return a literal term. The decoder reuses it, so it must be immutable."""
         raise NotImplementedError
 
+    def directional_literal(self, lex: str, language: str, direction: str) -> Any:  # noqa: ARG002
+        """Return a language-tagged string with a base direction, "ltr" or "rtl"."""
+        _adapter_missing(
+            "decoding literals with a base direction",
+            stream_types=self.options.stream_types,
+        )
+
     # Optional abstract methods--not required to be implemented by all adapters
     def triple(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
         _adapter_missing("decoding triples", stream_types=self.options.stream_types)
@@ -164,7 +365,8 @@ class Adapter(metaclass=ABCMeta):
             "decoding graph end markers", stream_types=self.options.stream_types
         )
 
-    def namespace_declaration(self, name: str, iri: str) -> Any:  # noqa: ARG002
+    def namespace_declaration(self, name: str, iri: Any) -> Any:  # noqa: ARG002
+        """Return a namespace declaration. `iri` is a term made by iri()."""
         _adapter_missing(
             "decoding namespace declarations",
             stream_types=self.options.stream_types,
@@ -212,32 +414,50 @@ class Decoder:
 
         """
         self.adapter = adapter
-        self.names = LookupDecoder(lookup_size=self.options.lookup_preset.max_names)
-        self.prefixes = LookupDecoder(
-            lookup_size=self.options.lookup_preset.max_prefixes
-        )
-        self.datatypes = LookupDecoder(
-            lookup_size=self.options.lookup_preset.max_datatypes
-        )
+        self.new_lookups()
         # The last s, p, o and g terms, for repeated terms
         self.repeated_terms: list[object] = [_MISSING] * 4
-        # One IRI term per name table entry, as in Jelly-JVM: an IRI is mostly
-        # used with the same prefix again, so its term can be reused. Index 0 is
-        # unused, as table indices start from 1
-        self.iri_cache: list[_CachedIri | None] = [None] * (
-            self.options.lookup_preset.max_names + 1
-        )
         # Literals often repeat (e.g., the same values in many entities), and
-        # making one is often slow (rdflib parses the value)
-        self.literal_cache: dict[tuple[str, str | None, str | None], Any] = {}
+        # making one is often slow (rdflib parses the value). By language tag and
+        # datatype, then by lexical form, see literal_cache()
+        self.literal_caches: dict[tuple[str | None, str | None], dict[str, Any]] = {}
+        self.literal_cache_size = 0
 
         self.term_handlers: dict[type[Any], TermHandler] = {
             t: getattr(self, name) for t, name in self._TERM_HANDLER_NAMES.items()
         }
+        #: Decodes the frames of Jelly-RDF 1.2 streams, None for older ones
+        self.column_decoder: ColumnDecoder | None = None
+        if not is_row_layout(self.options.params.version):
+            self.column_decoder = ColumnDecoder(self)
+
+    def new_lookups(self) -> None:
+        """Make empty lookups, of the sizes in the options."""
+        lookup_preset = self.options.lookup_preset
+        self.names = LookupDecoder(lookup_size=lookup_preset.max_names)
+        self.prefixes = LookupDecoder(lookup_size=lookup_preset.max_prefixes)
+        self.datatypes = LookupDecoder(lookup_size=lookup_preset.max_datatypes)
+        # One IRI term per name table entry: an IRI is often
+        # used with the same prefix again, so its term can be reused. Index 0 is
+        # unused, as table indices start from 1
+        self.iri_cache: list[_CachedIri | None] = [None] * (lookup_preset.max_names + 1)
 
     @property
     def options(self) -> ParserOptions:
         return self.adapter.options
+
+    def restate_options(self, options: jelly.RdfStreamOptions) -> None:
+        """Use restated options of a Jelly-RDF 1.2 stream. This empties the lookups."""
+        self.adapter.options = parser_options(
+            options, delimited=self.options.params.delimited
+        )
+        self.new_lookups()
+
+    def end_of_stream(self) -> Iterator[Any]:
+        """Yield what ends with the stream: the last RDF Message, if any."""
+        column_decoder = self.column_decoder
+        if column_decoder is not None:
+            yield from column_decoder.end_of_stream()
 
     def iter_rows(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
         """
@@ -245,10 +465,19 @@ class Decoder:
 
         Args:
             frame (jelly.RdfStreamFrame): jelly frame
-        Yields:
-            Iterator[Any]: decoded rows
+
+        Returns:
+            Iterator[Any]: decoded rows, and in streams of RDF Messages, MESSAGE_END
+                at the end of each message
 
         """
+        column_decoder = self.column_decoder
+        if column_decoder is not None:
+            return column_decoder.iter_frame(frame)
+        return self.iter_row_layout(frame)
+
+    def iter_row_layout(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
+        """Yield the decoded rows of a frame of a Jelly-RDF 1.0 or 1.1 stream."""
         # Rows are told apart by the name of their field, most common ones first
         for row_owner in frame.rows:
             kind: str | None = _ROW_WHICH_ONEOF(row_owner, "row")
@@ -364,6 +593,19 @@ class Decoder:
         cached = self.iri_cache[name_index]
         if cached is not None and cached.name is name and cached.prefix is prefix:
             return cached.term
+        return self.new_iri(name_index, name, prefix)
+
+    def iri_term(self, prefix_index: int, name_index: int) -> Any:
+        """Return the IRI made of the entries at the indices (prefix 0 is none)."""
+        name = self.names.at(name_index)
+        prefix = self.prefixes.at(prefix_index) if prefix_index else ""
+        cached = self.iri_cache[name_index]
+        if cached is not None and cached.name is name and cached.prefix is prefix:
+            return cached.term
+        return self.new_iri(name_index, name, prefix)
+
+    def new_iri(self, name_index: int, name: str, prefix: str) -> Any:
+        """Make an IRI term, and cache it for its name entry."""
         term = self.adapter.iri(iri=prefix + name)
         self.iri_cache[name_index] = _CachedIri(name, prefix, term)
         return term
@@ -405,14 +647,54 @@ class Decoder:
         elif kind == "datatype" and self.datatypes.lookup_size:
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         lex = literal.lex
-        cache = self.literal_cache
-        key = (lex, language, datatype)
-        term = cache.get(key)
+        cache = self.literal_cache(language, datatype)
+        term = cache.get(lex)
         if term is None:
-            term = self.adapter.literal(lex=lex, language=language, datatype=datatype)
-            if len(cache) >= LITERAL_CACHE_SIZE:
-                cache.clear()
-            cache[key] = term
+            term = self.new_literal(lex, language, datatype, cache)
+        return term
+
+    def literal_term(
+        self,
+        lex: str,
+        language: str | None,
+        datatype: str | None,
+        direction: str | None,
+    ) -> Any:
+        """Return a literal, reusing a recently made one if it's the same."""
+        if direction:
+            assert language
+            return self.adapter.directional_literal(lex, language, direction)
+        cache = self.literal_cache(language, datatype)
+        term = cache.get(lex)
+        if term is None:
+            term = self.new_literal(lex, language, datatype, cache)
+        return term
+
+    def literal_cache(
+        self, language: str | None, datatype: str | None
+    ) -> dict[str, Any]:
+        """Return recent literals of a language tag and datatype, by lexical form."""
+        key = (language, datatype)
+        cache = self.literal_caches.get(key)
+        if cache is None:
+            cache = self.literal_caches[key] = {}
+        return cache
+
+    def new_literal(
+        self,
+        lex: str,
+        language: str | None,
+        datatype: str | None,
+        cache: dict[str, Any],
+    ) -> Any:
+        """Make a literal term, and keep it in its literal_cache()."""
+        term = self.adapter.literal(lex=lex, language=language, datatype=datatype)
+        if self.literal_cache_size >= LITERAL_CACHE_SIZE:
+            for full in self.literal_caches.values():
+                full.clear()
+            self.literal_cache_size = 0
+        cache[lex] = term
+        self.literal_cache_size += 1
         return term
 
     def decode_namespace_declaration(

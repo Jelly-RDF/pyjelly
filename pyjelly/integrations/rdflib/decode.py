@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from itertools import chain
-from typing import Any
+from typing import Any, Final
 from typing_extensions import override
 
 import rdflib
@@ -20,6 +20,10 @@ from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.rdflib.statements import Prefix, Quad, Triple
 from pyjelly.parse.decode import Adapter, ParserOptions
 
+# Bound once: mypyc would look up __new__ on the type at every call
+_new_tuple: Final = tuple.__new__
+_new_str: Final = str.__new__
+
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibAdapter(Adapter):
@@ -27,17 +31,27 @@ class RDFLibAdapter(Adapter):
     RDFLib adapter class, is extended by triples and quads implementations.
 
     Args:
-        Adapter (): abstract adapter class
+        options (ParserOptions): options of the stream
+        validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     """
 
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options)
+        self.validate_iris = validate_iris
+
     @override
     def iri(self, iri: str) -> rdflib.URIRef:
-        return rdflib.URIRef(iri)
+        if self.validate_iris:
+            return rdflib.URIRef(iri)
+        # The same term, without the check
+        return _new_str(rdflib.URIRef, iri)
 
     @override
     def bnode(self, bnode: str) -> rdflib.BNode:
-        return rdflib.BNode(bnode)
+        # What BNode(bnode) makes, without running its __new__ in Python
+        return _new_str(rdflib.BNode, bnode)
 
     @override
     def default_graph(self) -> rdflib.URIRef:
@@ -56,8 +70,8 @@ class RDFLibAdapter(Adapter):
         return rdflib.Literal(lex, lang=language, datatype=datatype, normalize=False)
 
     @override
-    def namespace_declaration(self, name: str, iri: str) -> Prefix:
-        return Prefix(name, self.iri(iri))
+    def namespace_declaration(self, name: str, iri: rdflib.URIRef) -> Prefix:
+        return Prefix(name, iri)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -68,23 +82,20 @@ class RDFLibTriplesAdapter(RDFLibAdapter):
     Notes: returns triple/namespace declaration as soon as receives them.
     """
 
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
 
     @override
     def triple(self, terms: Iterable[Any]) -> Triple:
         # Faster than Triple(*terms), which runs Triple.__new__ in Python. The
         # decoder always gives the right number of terms
-        return tuple.__new__(Triple, terms)
+        return _new_tuple(Triple, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibQuadsBaseAdapter(RDFLibAdapter):
-    def __init__(self, options: ParserOptions) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -100,7 +111,7 @@ class RDFLibQuadsAdapter(RDFLibQuadsBaseAdapter):
 
     @override
     def quad(self, terms: Iterable[Any]) -> Quad:
-        return tuple.__new__(Quad, terms)
+        return _new_tuple(Quad, terms)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -120,11 +131,8 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 
     _graph_id: str | None
 
-    def __init__(
-        self,
-        options: ParserOptions,
-    ) -> None:
-        super().__init__(options=options)
+    def __init__(self, options: ParserOptions, *, validate_iris: bool = False) -> None:
+        super().__init__(options=options, validate_iris=validate_iris)
         self._graph_id = None
 
     @property

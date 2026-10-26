@@ -7,7 +7,16 @@ from typing import TYPE_CHECKING, ClassVar
 from mypy_extensions import mypyc_attr
 
 from pyjelly import jelly
-from pyjelly.options import LookupPreset, StreamParameters, StreamTypes
+from pyjelly.errors import JellyConformanceError
+from pyjelly.options import (
+    MIN_COLUMN_NAME_LOOKUP_SIZE,
+    LookupPreset,
+    StreamParameters,
+    StreamTypes,
+    is_row_layout,
+    stream_type_for,
+)
+from pyjelly.serialize.columns import ColumnBatch
 from pyjelly.serialize.encode import (
     Slot,
     Statement,
@@ -62,7 +71,8 @@ class Stream:
         if flow is None:
             flow = self.infer_flow()
         self.flow = flow
-        # The encoder adds rows for new lookup entries to the same flow
+        # In the row layout, the encoder adds rows for new lookup entries to the
+        # same flow
         encoder.flow = flow
         self.repeated_terms = [None] * len(Slot)
         # Which terms the cursor API set since the last emit()
@@ -75,6 +85,32 @@ class Stream:
             physical_type=self.physical_type,
             logical_type=self.flow.logical_type,
         )
+        #: Jelly-RDF 1.2: the statements of the frame being built
+        self.batch: ColumnBatch | None = None
+        params = options.params
+        if not is_row_layout(params.version):
+            self.batch = self.column_batch(params)
+
+    def column_batch(self, params: StreamParameters) -> ColumnBatch:
+        """Set the stream up to write Jelly-RDF 1.2, and return its column batch."""
+        max_names = self.options.lookup_preset.max_names
+        if max_names < MIN_COLUMN_NAME_LOOKUP_SIZE:
+            msg = (
+                f"the name lookup size is {max_names}, but in Jelly-RDF 1.2 it must "
+                f"be at least {MIN_COLUMN_NAME_LOOKUP_SIZE}"
+            )
+            raise JellyConformanceError(msg)
+        encoder = self.encoder
+        encoder.column_layout = True
+        encoder.rdf_version = params.rdf_version
+        stream_type = stream_type_for(params, self.stream_types.logical_type)
+        batch = ColumnBatch(
+            encoder,
+            quads=self.physical_type == jelly.PHYSICAL_STREAM_TYPE_QUADS,
+            messages=stream_type == jelly.RDF_STREAM_TYPE_MESSAGES,
+        )
+        self.flow.batch = batch
+        return batch
 
     def infer_flow(self) -> FrameFlow:
         """
@@ -124,7 +160,7 @@ class Stream:
             )
         )
 
-    def namespace_declaration(self, name: str, iri: str) -> None:
+    def namespace_declaration(self, name: str, iri: str) -> jelly.RdfStreamFrame | None:
         """
         Add namespace declaration to jelly stream.
 
@@ -132,8 +168,23 @@ class Stream:
             name (str): namespace prefix label
             iri (str): namespace iri
 
+        Returns:
+            jelly.RdfStreamFrame | None: the frame before, if the declaration has
+                to start a new one
+
         """
-        encode_namespace_declaration(name=name, value=iri, term_encoder=self.encoder)
+        batch = self.batch
+        if batch is None:
+            encode_namespace_declaration(
+                name=name, value=iri, term_encoder=self.encoder
+            )
+            return None
+        # In Jelly-RDF 1.2, the declarations of a frame come before its statements
+        frame = None
+        if batch.row_count or not batch.has_room():
+            frame = self.flow.to_stream_frame()
+        batch.add_namespace(name, iri)
+        return frame
 
     # Cursor API: instead of passing whole statements, the caller sets only the
     # terms that changed since the previous statement, and then emits it.
@@ -193,6 +244,16 @@ class Stream:
             self.object_changed = False
             changed |= 4
         return changed
+
+    def add_changed_spo(self, batch: ColumnBatch) -> None:
+        """Add the subject, predicate and object of the cursor API to their columns."""
+        terms = self.repeated_terms
+        batch.add_changed(batch.subjects, terms[0], changed=self.subject_changed)
+        batch.add_changed(batch.predicates, terms[1], changed=self.predicate_changed)
+        batch.add_changed(batch.objects, terms[2], changed=self.object_changed)
+        self.subject_changed = False
+        self.predicate_changed = False
+        self.object_changed = False
 
     def write_changed_spo(self, statement: Statement, changed: int) -> None:
         """Write the terms encoded by encode_changed_spo() into the statement."""
@@ -292,7 +353,11 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        encode_triple(terms, self.encoder, self.repeated_terms)
+        batch = self.batch
+        if batch is None:
+            encode_triple(terms, self.encoder, self.repeated_terms)
+        else:
+            batch.add_triple(terms, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
     def triples(
@@ -319,6 +384,11 @@ class TripleStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
+        batch = self.batch
+        if batch is not None:
+            self.add_changed_spo(batch)
+            batch.row_count += 1
+            return self.flow.frame_from_bounds()
         self.encoder.new_epoch()
         # The terms first, as they add rows for new lookup entries
         changed = self.encode_changed_spo()
@@ -342,7 +412,11 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
-        encode_quad(terms, self.encoder, self.repeated_terms)
+        batch = self.batch
+        if batch is None:
+            encode_quad(terms, self.encoder, self.repeated_terms)
+        else:
+            batch.add_quad(terms, self.repeated_terms)
         return self.flow.frame_from_bounds()
 
     def quads(
@@ -374,6 +448,13 @@ class QuadStream(Stream):
                 flow supports frames slicing and current flow is full
 
         """
+        batch = self.batch
+        if batch is not None:
+            self.add_changed_spo(batch)
+            batch.add_graph_changed(self.repeated_terms[3], changed=self.graph_changed)
+            self.graph_changed = False
+            batch.row_count += 1
+            return self.flow.frame_from_bounds()
         self.encoder.new_epoch()
         # The terms first, as they add rows for new lookup entries. The graph
         # comes last, as in the parser.

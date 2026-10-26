@@ -21,6 +21,7 @@ from rdflib.serializer import Serializer as RDFLibSerializer
 
 
 from pyjelly import jelly
+from pyjelly.errors import JellyConformanceError
 from pyjelly.serialize.ioutils import write_delimited, write_single
 from pyjelly.serialize.streams import (
     QuadStream,
@@ -32,9 +33,12 @@ from pyjelly.serialize.streams import (
 QUAD_ARITY = 4
 
 
-def namespace_declarations(store: Graph, stream: Stream) -> None:
+def namespace_declarations(
+    store: Graph, stream: Stream
+) -> Generator[jelly.RdfStreamFrame]:
     for prefix, namespace in store.namespaces():
-        stream.namespace_declaration(name=prefix, iri=namespace)
+        if frame := stream.namespace_declaration(name=prefix, iri=str(namespace)):
+            yield frame
 
 
 @singledispatch
@@ -69,7 +73,7 @@ def triples_stream_frames(
     """
     stream.enroll()
     if isinstance(data, Graph) and stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)
+        yield from namespace_declarations(data, stream)
 
     graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
     for graph in graphs:
@@ -107,7 +111,7 @@ def quads_stream_frames(
     """
     stream.enroll()
     if stream.options.params.namespace_declarations:
-        namespace_declarations(data, stream)  # type: ignore[arg-type]
+        yield from namespace_declarations(data, stream)  # type: ignore[arg-type]
     trees = gspo_trees(data) if isinstance(data, Dataset) else None
     if trees is not None:
         # An in-memory dataset, grouped by graph, subject and predicate
@@ -124,20 +128,32 @@ def quads_stream_frames(
         yield frame
 
 
-def guess_options(sink: Graph | Dataset) -> SerializerOptions:
+def guess_options(sink: Graph | Dataset, *, grouped: bool = False) -> SerializerOptions:
     """
     Guess the serializer options based on the store type.
+
+    For a stream of graphs or datasets (`grouped`), each is an RDF Message in
+    Jelly-RDF 1.2, and one frame in Jelly-RDF 1.1.
 
     >>> guess_options(Graph()).logical_type
     1
     >>> guess_options(Dataset()).logical_type
     2
+    >>> guess_options(Dataset(), grouped=True).logical_type
+    4
     """
-    logical_type = (
-        jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
-        if isinstance(sink, Dataset)
-        else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
-    )
+    if isinstance(sink, Dataset):
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_DATASETS
+            if grouped
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_QUADS
+        )
+    else:
+        logical_type = (
+            jelly.LOGICAL_STREAM_TYPE_GRAPHS
+            if grouped
+            else jelly.LOGICAL_STREAM_TYPE_FLAT_TRIPLES
+        )
     # RDFLib doesn't support RDF-star and generalized statements by default
     # as it requires specific handling for quoted triples and non-standard RDF terms
     params = StreamParameters(generalized_statements=False, rdf_star=False)
@@ -210,9 +226,22 @@ class RDFLibJellySerializer(RDFLibSerializer):
             options = guess_options(self.store)
         if stream is None:
             stream = guess_stream(options, self.store)
-        write = write_delimited if stream.options.params.delimited else write_single
-        for stream_frame in stream_frames(stream, self.store):
-            write(stream_frame, out)
+        frames = stream_frames(stream, self.store)
+        if stream.options.params.delimited:
+            for stream_frame in frames:
+                write_delimited(stream_frame, out)
+            return
+        written = False
+        for stream_frame in frames:
+            if written:
+                msg = (
+                    "the data does not fit in one frame. A non-delimited stream can "
+                    "only have one frame. Write a delimited stream, or use larger "
+                    "lookups."
+                )
+                raise JellyConformanceError(msg)
+            write_single(stream_frame, out)
+            written = True
 
 
 def grouped_stream_to_frames(
@@ -238,7 +267,7 @@ def grouped_stream_to_frames(
     for sink in sink_generator:
         if not stream:
             if options is None:
-                options = guess_options(sink)
+                options = guess_options(sink, grouped=True)
             stream = guess_stream(options, sink)
         yield from stream_frames(stream, sink)
 
