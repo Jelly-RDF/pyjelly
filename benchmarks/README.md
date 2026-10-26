@@ -135,12 +135,15 @@ Everything else (processes, iterations, sweeps, cores, the round-trip check) is 
 | `rdflib-srj` | rdflib's SPARQL JSON results: `Result.serialize(format="json")` | `Result.parse(format="json")` |
 | `rdflib-srx` | rdflib's SPARQL XML results | `Result.parse(format="xml")` |
 | `rdflib-csv` | rdflib's SPARQL CSV results | `Result.parse(format="csv")` |
+| `rdflib-tsv` | - (rdflib can't write TSV results) | `Result.parse(format="tsv")` |
 | `rdflib-jelly` | Jelly-SPARQL through rdflib's plugin API: `Result.serialize(format="jelly")` | `Result.parse(format="jelly")` |
 | `generic-jelly` | Jelly-SPARQL with pyjelly's generic API, from a list of rows | `parse_jelly_sparql` of the generic API |
 
 The rdflib methods write a `Result` whose bindings are a list of dicts, made before measuring. Reading makes a whole `Result`, with its bindings. Jelly uses pyjelly's default options: lookups of 8192 names, 1024 prefixes and 64 datatypes, and frames of 4096 values. rdflib can't hold RDF 1.2 terms, so its methods skip the presets that have them.
 
 CSV has no term types: every value that is not an IRI or a blank node is read back as a simple literal. The round-trip check then prints a warning, as in Jelly-JVM.
+
+rdflib reads SPARQL TSV results but can't write them, so `rdflib-tsv` is only measured reading. The TSV it reads is written by a helper in `sparql_methods.py`.
 
 ### Throughput
 

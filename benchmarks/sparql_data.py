@@ -22,7 +22,7 @@ from rdflib.query import Result
 from benchmarks import data as rdf_data
 from pyjelly.integrations.generic import generic_sink as generic
 
-# --- The generator, ported from Jelly-JVM's SparqlDataGen ---
+# --- Result set generator, ported from Jelly-JVM's SparqlDataGen ---
 
 IRI = "iri"
 BNODE = "bnode"
@@ -32,8 +32,8 @@ DT_LITERAL = "typed"
 DIR_LANG_LITERAL = "dirlang"
 TRIPLE_TERM = "triple"
 
-# How the unbound cells of a column are spread: each cell on its own, every
-# second cell, or blocks of `block_size` cells
+# Placement of the unbound cells in a column: random cells, every second cell, or
+# blocks of `block_size` cells
 RANDOM = "random"
 ALTERNATING = "alternating"
 BLOCKS = "blocks"
@@ -45,28 +45,28 @@ _LANGS = ("en", "fr", "de", "es", "pl", "nl", "en-GB", "pt-BR")
 
 @dataclass(frozen=True)
 class ColumnSpec:
-    """One variable of a generated result set. The defaults: dense IRIs."""
+    """Settings of one variable of a generated result set. Defaults: IRIs, all bound."""
 
     kind: str = IRI
-    #: How many distinct values the column draws from
+    #: Number of distinct values in the column
     distinct_values: int = 1024
-    #: How many IRI namespaces, datatypes, or language tags
+    #: Number of IRI namespaces, datatypes, or language tags
     namespaces: int = 1
     #: Length of the local name of IRIs, or of the lexical form of literals
     value_length: int = 12
-    #: How many of the cells are bound
+    #: Fraction of the cells that are bound
     bound_fraction: float = 1.0
     sparsity: str = RANDOM
     block_size: int = 1
-    #: Mean length of a run of one value in consecutive rows
+    #: Mean number of consecutive rows with the same value
     run_length: float = 1.0
-    #: Whether runs have random lengths, or exactly `run_length`
+    #: Whether run lengths are random, rather than exactly `run_length`
     jitter_runs: bool = True
-    #: Whether values are drawn in order (as with ORDER BY) or at random
+    #: Whether values are taken in order (as with ORDER BY), rather than at random
     sorted: bool = False
-    #: How many of the bound cells are of another term type
+    #: Fraction of the bound cells that have another term type
     mix_fraction: float = 0.0
-    #: The first row with a value of the other term type
+    #: First row that may have a value of the other term type
     mix_start_row: int = 0
 
 
@@ -94,7 +94,7 @@ def _iri(column: ColumnSpec, j: int, name: str) -> generic.IRI:
 
 
 def _pool(column: ColumnSpec, kind: str) -> list[Any]:
-    """Return the distinct values a column draws from, as generic terms."""
+    """Build the distinct values of a column, as generic terms."""
     n = max(1, column.distinct_values)
     length = max(1, column.value_length)
     if kind == IRI:
@@ -124,7 +124,7 @@ def _literal_pool(column: ColumnSpec, kind: str) -> list[Any]:
             for j in range(n)
         ]
     assert kind == DIR_LANG_LITERAL
-    # Each "namespace" is one combination of a language tag and a direction
+    # Here each "namespace" is one pair of a language tag and a direction
     return [
         generic.Literal(
             _pad(f"value {j} ", length),
@@ -137,7 +137,7 @@ def _literal_pool(column: ColumnSpec, kind: str) -> list[Any]:
 
 
 def _triple_term(column: ColumnSpec, j: int) -> generic.Triple:
-    """Return a triple term with fresh IRIs, some nested."""
+    """Build a triple term with fresh IRIs, sometimes nested."""
     o: Any
     if j % 3 == 0:
         o = _iri(column, j, f"o{j}")
@@ -178,7 +178,7 @@ def _generate_column(column: ColumnSpec, rows: int, rnd: random.Random) -> list[
             return 1
         if not column.jitter_runs:
             return max(1, round(column.run_length))
-        # Geometric, with the mean run_length
+        # Geometric distribution with mean run_length
         p = 1 / column.run_length
         n = 1
         while rnd.random() > p and n < 4096:  # noqa: PLR2004
@@ -200,7 +200,7 @@ def _generate_column(column: ColumnSpec, rows: int, rnd: random.Random) -> list[
 
 
 def generate(spec: ResultSetSpec) -> list[tuple[Any, ...]]:
-    """Return the rows of a result set, with generic terms and None if unbound."""
+    """Generate the rows of a result set: generic terms, None if unbound."""
     if not spec.columns:
         return [()] * spec.rows
     columns = [
@@ -215,14 +215,14 @@ _N = 20_000
 PRESETS: dict[str, ResultSetSpec] = {
     spec.name: spec
     for spec in (
-        # IRIs: the lookups, and the prefix and name inference
+        # IRIs: lookups, and prefix and name inference
         ResultSetSpec("iri-sorted", (ColumnSpec(distinct_values=_N, sorted=True),), _N),
         ResultSetSpec("iri-shuffled", (ColumnSpec(distinct_values=_N),), _N),
         ResultSetSpec("iri-small-pool", (ColumnSpec(distinct_values=2048),), _N),
         ResultSetSpec(
             "iri-many-ns", (ColumnSpec(distinct_values=2048, namespaces=32),), _N
         ),
-        # Repeated values: the runs of the layouts
+        # Repeated values: runs in the layouts
         ResultSetSpec(
             "runs-2",
             (ColumnSpec(distinct_values=2048, run_length=2, sorted=True),),
@@ -321,7 +321,7 @@ PRESETS: dict[str, ResultSetSpec] = {
             ),
             _N,
         ),
-        # The shape of the result set
+        # Shape of the result set
         ResultSetSpec("wide-5", (ColumnSpec(distinct_values=2048),) * 5, _N),
         ResultSetSpec("wide-20", (ColumnSpec(distinct_values=2048),) * 20, _N // 2),
         ResultSetSpec("single-row", (ColumnSpec(distinct_values=8),) * 3, 1),
@@ -345,8 +345,8 @@ PRESETS: dict[str, ResultSetSpec] = {
     )
 }
 
-#: The datasets of a run, unless chosen: all RiverBench datasets, and the presets
-#: that look most like the results of real queries
+#: Datasets used when none are given: all RiverBench datasets, and the presets
+#: closest to the results of real queries
 DEFAULT_DATASETS = (
     *rdf_data.DATASETS,
     "realistic-mixed",
@@ -360,7 +360,7 @@ DATASETS = (*rdf_data.DATASETS, *PRESETS)
 
 
 def _resized(spec: ResultSetSpec, rows: int) -> ResultSetSpec:
-    """Change the row count of a preset, but not its shape."""
+    """Resize a preset to `rows` rows, keeping its shape."""
     factor = rows / spec.rows
     return replace(
         spec,
@@ -372,7 +372,7 @@ def _resized(spec: ResultSetSpec, rows: int) -> ResultSetSpec:
     )
 
 
-# --- The results, in the terms of each library ---
+# --- Results in the terms of each library ---
 
 
 def _rdflib_term(term: Any) -> Any:
@@ -386,7 +386,7 @@ def _rdflib_term(term: Any) -> Any:
         if term._direction:
             msg = "rdflib has no literals with a base direction"
             raise TypeError(msg)
-        # As pyjelly reads them: the lexical form stays as it is
+        # Keep the lexical form unchanged, as pyjelly's reader does
         return Literal(
             term._lex, lang=term._langtag, datatype=term._datatype, normalize=False
         )
@@ -397,19 +397,19 @@ def _rdflib_term(term: Any) -> Any:
 @dataclass
 class SparqlBenchData:
     """
-    A result set: its variables and rows, with generic terms and rdflib terms.
+    A result set: its variables, and its rows as generic terms and rdflib terms.
 
-    `cells` counts what the throughput is measured in: rows times variables, and
-    rows for a result set without variables.
+    Throughput is measured in `cells`: rows times variables, or just rows for a
+    result set without variables.
     """
 
-    #: As in the data of RDF, which the benchmark code also reads
+    #: Always False. The shared benchmark code reads this attribute of RDF data.
     quads: ClassVar[bool] = False
 
     name: str
     variables: list[str]
     generic: list[tuple[Any, ...]] = field(repr=False)
-    #: The rows with rdflib terms, if not made from the generic ones
+    #: Rows as rdflib terms, if not converted from the generic ones
     rdflib_rows: list[tuple[Any, ...]] | None = field(default=None, repr=False)
 
     @property
@@ -418,7 +418,7 @@ class SparqlBenchData:
 
     @cached_property
     def rdf_12(self) -> bool:
-        """Whether the results have terms of RDF 1.2, which rdflib has not."""
+        """Whether the results have RDF 1.2 terms, which rdflib doesn't support."""
         return any(
             isinstance(term, generic.Triple)
             or (isinstance(term, generic.Literal) and term._direction)
@@ -428,7 +428,7 @@ class SparqlBenchData:
 
     @cached_property
     def rdflib(self) -> Result:
-        """The results as an rdflib Result, with the bindings in a list."""
+        """The results as an rdflib Result, with a list of bindings."""
         result = Result("SELECT")
         variables = [Variable(name) for name in self.variables]
         result.vars = variables
@@ -447,7 +447,7 @@ class SparqlBenchData:
 
 
 def load(dataset: str, rows: int = rdf_data.DEFAULT_ROWS) -> SparqlBenchData:
-    """Return the first `rows` rows of a dataset."""
+    """Load the first `rows` rows of a dataset."""
     if dataset in PRESETS:
         spec = _resized(PRESETS[dataset], rows)
         return SparqlBenchData(dataset, spec.variables, generate(spec))

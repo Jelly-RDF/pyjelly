@@ -118,7 +118,7 @@ def size_tables(
     datasets: Sequence[str], methods: Sequence[str], rows: int, suite: str = "rdf"
 ) -> str:
     """
-    Return tables of serialized sizes in bytes per statement (or cell).
+    Build tables of serialized sizes in bytes per statement (or cell).
 
     Always divided by the number of statements given to the writer, also when the
     writer dropped duplicates.
@@ -129,11 +129,11 @@ def size_tables(
     sizes: dict[str, dict[tuple[str, str], float]] = defaultdict(dict)
     for dataset in datasets:
         data = benchmarks.load(dataset, rows)
-        # As many as the writer is given: statements, or cells
+        # Number of statements (or cells) given to the writer
         count = data.cells if suite == "sparql" else rows
         for name in methods:
             method = benchmarks.methods[name]
-            if not method.supports(data):
+            if not method.supports(data) or not getattr(method, "can_write", True):
                 continue
             written = method.write_bytes(data)
             for compression, compress in compressors.items():
