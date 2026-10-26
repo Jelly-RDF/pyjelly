@@ -362,10 +362,10 @@ def test_parse_serialize() -> None:
 
 
 def test_literal_with_base_direction() -> None:
-    literal = Literal("שלום", "he", direction="rtl")
-    assert str(literal) == '"שלום"@he--rtl'
+    literal = Literal("مرحبا", "ar", direction="rtl")
+    assert str(literal) == '"مرحبا"@ar--rtl'
     assert repr(literal) == (
-        "Literal('שלום', langtag='he', datatype=None, direction='rtl')"
+        "Literal('مرحبا', langtag='ar', datatype=None, direction='rtl')"
     )
-    assert literal != Literal("שלום", "he")
-    assert hash(literal) != hash(Literal("שלום", "he"))
+    assert literal != Literal("مرحبا", "ar")
+    assert hash(literal) != hash(Literal("مرحبا", "ar"))
