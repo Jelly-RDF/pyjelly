@@ -7,13 +7,21 @@ together into result sets.
 
 from __future__ import annotations
 
+import io
+import warnings
 from collections.abc import Callable, Iterator
+from itertools import chain
 from typing import IO, Any, Final
 
+from google.protobuf.message import DecodeError
 from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
+from pyjelly.errors import (
+    JellyConformanceError,
+    JellyIncompleteResultsError,
+    JellyTruncatedResultsWarning,
+)
 from pyjelly.options import (
     MAX_DATATYPE_LOOKUP_SIZE,
     MAX_NAME_LOOKUP_SIZE,
@@ -367,28 +375,52 @@ class SparqlDecoder:
         self.header_in_effect = True
 
 
-def sparql_frames(inp: IO[bytes]) -> Iterator[jelly.SparqlResultsFrame]:
+def sparql_frames(inp: IO[bytes] | bytes) -> Iterator[jelly.SparqlResultsFrame]:
     """
     Return the frames of a Jelly-SPARQL stream, delimited or not.
 
     Raises:
-        JellyConformanceError: if the stream is empty.
+        JellyConformanceError: if the stream is empty, or isn't Jelly-SPARQL.
 
     """
+    if isinstance(inp, (bytes, bytearray, memoryview)):
+        inp = io.BytesIO(inp)
     inp, delimited = detect_delimited(inp, SPARQL_FRAME_TAGS)
     if not delimited:
         data = inp.read()
         if not data:
             msg = "the stream is empty, but it must have at least one frame"
             raise JellyConformanceError(msg)
-        return iter((parse(jelly.SparqlResultsFrame, data),))
+        try:
+            return iter((parse(jelly.SparqlResultsFrame, data),))
+        except DecodeError as error:
+            raise _not_sparql(error) from None
     return _delimited_frames(inp)
+
+
+def _not_sparql(error: Exception) -> JellyConformanceError:
+    msg = (
+        f"the stream is not valid Jelly-SPARQL ({error}). Is it cut short, or is it "
+        "Jelly-RDF?"
+    )
+    return JellyConformanceError(msg)
 
 
 def _delimited_frames(inp: IO[bytes]) -> Iterator[jelly.SparqlResultsFrame]:
     while True:
-        # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
-        frame = parse_length_prefixed(jelly.SparqlResultsFrame, inp)  # type: ignore[arg-type]
+        try:
+            # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
+            frame = parse_length_prefixed(jelly.SparqlResultsFrame, inp)  # type: ignore[arg-type]
+        except DecodeError as error:
+            raise _not_sparql(error) from None
+        except ValueError as error:
+            if getattr(inp, "closed", False):
+                msg = (
+                    "the input was closed before all results were read. Read the "
+                    "rows before closing it."
+                )
+                raise ValueError(msg) from error
+            raise
         if frame is None:
             return
         yield frame
@@ -417,17 +449,25 @@ class ResultSetReader:
         return self.decoder.decode(message)
 
 
+def _incomplete(error: str, result: object) -> JellyIncompleteResultsError:
+    msg = f"the results are incomplete: {error}"
+    return JellyIncompleteResultsError(msg, error, result)
+
+
 class SparqlResultSet:
     """
     One result set of a Jelly-SPARQL stream: a solution sequence or a boolean result.
 
-    The rows of a solution sequence are read as they are iterated, so they can be
-    iterated only once. Each row is a tuple, with one value per variable, or None
-    if the variable is unbound. Rows not yet iterated when the next result set is
+    The rows of a solution sequence are read as they are iterated. Each row is a
+    tuple, with one value per variable, or None if the variable is unbound. An
+    iteration that stops early can be picked up again, but once all rows were read,
+    they can't be iterated again. Rows not yet read when the next result set is
     read are kept in memory.
 
     If the producer ended the result set with an error, iterating it raises
-    JellyIncompleteResultsError after the last row.
+    JellyIncompleteResultsError after the last row, and so does `boolean`. If the
+    stream ended without saying that the result set is complete, `truncated` is
+    set, and JellyTruncatedResultsWarning is issued.
     """
 
     def __init__(self, reader: ResultSetReader, first: DecodedFrame) -> None:
@@ -435,8 +475,7 @@ class SparqlResultSet:
         self.first: DecodedFrame | None = first
         #: The variables, in projection order. Empty for a boolean result.
         self.variables: list[str] = first.variables
-        #: The boolean result (of an ASK query), None for a solution sequence
-        self.boolean: bool | None = first.boolean
+        self._boolean = first.boolean
         #: IRIs of links that describe the result set (head.link in SPARQL JSON)
         self.links: list[str] = first.links or []
         #: Why the result set is incomplete, if the producer said so
@@ -446,23 +485,59 @@ class SparqlResultSet:
         self.truncated = False
         self._rows = self._read()
         # The rows kept when the next result set was read before they were
-        self._kept: list[tuple[Any, ...]] | None = None
+        self._kept: Iterator[tuple[Any, ...]] = iter(())
+        # Whether all rows were read by an iteration
+        self._done = False
+        if first.boolean is not None:
+            # A boolean result is one frame: whether it is complete is known now
+            if first.trailer:
+                self.error = first.trailer
+            elif first.trailer is None:
+                self._truncated()
+
+    @property
+    def boolean(self) -> bool | None:
+        """
+        The boolean result (of an ASK query), None for a solution sequence.
+
+        Raises:
+            JellyIncompleteResultsError: if the producer could not complete it.
+
+        """
+        if self.error and self._boolean is not None:
+            raise _incomplete(self.error, self)
+        return self._boolean
 
     @property
     def is_boolean(self) -> bool:
         """Whether this is a boolean result (of an ASK query)."""
-        return self.boolean is not None
+        return self._boolean is not None
 
     def __iter__(self) -> Iterator[tuple[Any, ...]]:
-        kept = self._kept
-        if kept is not None:
-            self._kept = None
-            yield from kept
-        else:
-            yield from self._rows
+        if self._done:
+            msg = (
+                "the rows of the result set were already read: they can be "
+                "iterated only once"
+            )
+            raise RuntimeError(msg)
+        # Not `yield from`, which would close them if this iteration is stopped
+        for row in self._kept:
+            yield row
+        for row in self._rows:
+            yield row
+        self._done = True
         if self.error:
-            msg = f"the result set is incomplete: {self.error}"
-            raise JellyIncompleteResultsError(msg, self.error)
+            raise _incomplete(self.error, self)
+
+    def _truncated(self) -> None:
+        if not self.truncated:
+            self.truncated = True
+            warnings.warn(
+                "the stream ended without saying that the results are complete, so "
+                "some may be missing",
+                JellyTruncatedResultsWarning,
+                stacklevel=3,
+            )
 
     def _read(self) -> Iterator[tuple[Any, ...]]:
         """Yield the rows, and note the trailers, until the result set ends."""
@@ -491,19 +566,17 @@ class SparqlResultSet:
                 # The next result set of a PUNCTUATED stream
                 reader.pending = frame
                 return
-        self.truncated = not ended
+        if not ended:
+            self._truncated()
 
     def keep(self) -> None:
         """Read the rest of the result set, and keep its rows for later."""
-        rows = list(self._rows)
-        if self._kept is None:
-            self._kept = rows
-        else:
-            self._kept += rows
+        if not self._done:
+            self._kept = chain(self._kept, list(self._rows))
 
 
 def read_result_sets(
-    inp: IO[bytes],
+    inp: IO[bytes] | bytes,
     adapter_factory: AdapterFactory,
     *,
     max_rows: int = MAX_SPARQL_FRAME_ROWS,
@@ -518,7 +591,7 @@ def read_result_sets(
     rows, and keeps them in memory.
 
     Args:
-        inp (IO[bytes]): the stream, delimited or not.
+        inp (IO[bytes] | bytes): the stream, delimited or not.
         adapter_factory (AdapterFactory): makes the adapter that makes the terms,
             given the options of the stream.
         max_rows (int): the most rows a frame can have.
@@ -537,7 +610,7 @@ def read_result_sets(
 
 
 def read_result_set(
-    inp: IO[bytes],
+    inp: IO[bytes] | bytes,
     adapter_factory: AdapterFactory,
     *,
     max_rows: int = MAX_SPARQL_FRAME_ROWS,
@@ -551,6 +624,8 @@ def read_result_set(
 
     Raises:
         JellyConformanceError: if the stream is of the PUNCTUATED type.
+        JellyIncompleteResultsError: if it is a boolean result, which the producer
+            could not complete.
 
     """
     result_sets = read_result_sets(
@@ -559,8 +634,11 @@ def read_result_set(
     result_set = next(result_sets)
     if result_set.reader.decoder.punctuated:
         msg = (
-            "the stream is a sequence of result sets (PUNCTUATED). Read all of them "
-            "with parse_jelly_sparql_results(), or read_result_sets()"
+            "the stream is a sequence of result sets (PUNCTUATED). Read it with "
+            "parse_jelly_sparql_sequence() of pyjelly.integrations.rdflib.sparql "
+            "or pyjelly.integrations.generic.sparql"
         )
         raise JellyConformanceError(msg)
+    if result_set.is_boolean and result_set.error:
+        raise _incomplete(result_set.error, result_set)
     return result_set

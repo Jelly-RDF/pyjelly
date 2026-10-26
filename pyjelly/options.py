@@ -257,10 +257,11 @@ class SparqlOptions:
             does not allow triple terms.
         punctuated: whether the stream is a sequence of result sets (the
             PUNCTUATED stream type), rather than one result set.
-        frame_size: how many values (rows times variables) a frame has, at most.
-            A frame may end earlier, when the lookups are full.
-        delimited: whether the frames are delimited. A non-delimited stream has
-            one frame.
+        frame_values: how many values (rows times variables) a frame has, at
+            most. A frame may end earlier, when the lookups are full.
+        delimited: whether the frames are delimited, as files and HTTP need. A
+            non-delimited stream is one frame, e.g. to be one message of a
+            message broker. Then all results must fit in the lookups.
         stream_name: name of the stream.
 
     """
@@ -268,7 +269,7 @@ class SparqlOptions:
     lookup_preset: LookupPreset = SPARQL_LOOKUP_PRESET
     rdf_version: jelly.RdfVersion = jelly.RDF_VERSION_UNSPECIFIED
     punctuated: bool = False
-    frame_size: int = DEFAULT_SPARQL_FRAME_VALUES
+    frame_values: int = DEFAULT_SPARQL_FRAME_VALUES
     delimited: bool = True
     stream_name: str = ""
 
@@ -280,12 +281,12 @@ class SparqlOptions:
                 f"be at least {MIN_COLUMN_NAME_LOOKUP_SIZE}"
             )
             raise JellyConformanceError(msg)
-        if self.frame_size < 1:
-            msg = f"the frame size must be at least 1, not {self.frame_size}"
-            raise JellyConformanceError(msg)
+        if self.frame_values < 1:
+            msg = f"frame_values must be at least 1, not {self.frame_values}"
+            raise ValueError(msg)
         if self.punctuated and not self.delimited:
             msg = "a PUNCTUATED stream must be delimited"
-            raise JellyConformanceError(msg)
+            raise ValueError(msg)
 
     def rows_per_frame(self, variables: int) -> int:
         """
@@ -293,7 +294,7 @@ class SparqlOptions:
 
         >>> SparqlOptions().rows_per_frame(4)
         1024
-        >>> SparqlOptions(frame_size=10).rows_per_frame(0)
+        >>> SparqlOptions(frame_values=10).rows_per_frame(0)
         10
         """
-        return max(1, self.frame_size // max(1, variables))
+        return max(1, self.frame_values // max(1, variables))

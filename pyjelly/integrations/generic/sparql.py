@@ -18,34 +18,40 @@ from pyjelly.parse.sparql import SparqlResultSet, read_result_set, read_result_s
 from pyjelly.serialize.sparql import FrameWriter, SparqlStream, write_solutions
 
 
-def parse_jelly_sparql(inp: IO[bytes]) -> SparqlResultSet:
+def parse_jelly_sparql(inp: IO[bytes] | bytes) -> SparqlResultSet:
     """
     Read SPARQL query results from Jelly-SPARQL.
 
-    The rows are read as they are iterated, so the input must stay open until then.
+    The rows are read as they are iterated (once), so the input must stay open
+    until then.
 
     Args:
-        inp (IO[bytes]): the stream, delimited or not. It must have one result set
-            (the FLAT stream type, the default).
+        inp (IO[bytes] | bytes): the stream, delimited or not. It must have one
+            result set (the FLAT stream type, the default).
 
     Returns:
         SparqlResultSet: the results. Iterating it gives the rows, as tuples with
             one value per variable, None if the variable is unbound.
 
+    Raises:
+        JellyIncompleteResultsError: if the writer said that the results are
+            incomplete: when the rows were iterated, or now for a boolean result.
+
     """
     return read_result_set(inp, GenericStatementSinkAdapter)
 
 
-def parse_jelly_sparql_results(inp: IO[bytes]) -> Iterator[SparqlResultSet]:
+def parse_jelly_sparql_sequence(inp: IO[bytes] | bytes) -> Iterator[SparqlResultSet]:
     """
-    Read a sequence of SPARQL query results from Jelly-SPARQL.
+    Read a sequence of SPARQL query results from one Jelly-SPARQL stream.
 
-    A stream of the PUNCTUATED type has any number of result sets, one of the FLAT
-    type has one. The rows are read as they are iterated. Rows not yet iterated when
-    the next result set is read are kept in memory.
+    The stream has the PUNCTUATED type, which holds any number of results (a
+    stream of the FLAT type, the default, has one). The rows are read as they are
+    iterated. Rows not yet iterated when the next result set is read are kept in
+    memory.
 
     Args:
-        inp (IO[bytes]): the stream, delimited.
+        inp (IO[bytes] | bytes): the stream, delimited.
 
     Yields:
         SparqlResultSet: the results, one per result set.
@@ -88,7 +94,7 @@ def serialize_jelly_sparql(
     """
     stream = sparql_stream(options)
     writer = FrameWriter(out, delimited=stream.options.delimited)
-    write_solutions(stream, variables, rows, writer, links)
+    write_solutions(stream, variables, rows, writer, links=links)
 
 
 def serialize_jelly_sparql_ask(
@@ -112,3 +118,41 @@ def serialize_jelly_sparql_ask(
     FrameWriter(out, delimited=stream.options.delimited).write(
         stream.ask(value, links=links)
     )
+
+
+#: A result in a sequence of results: the variables and the rows of a solution
+#: sequence, or a boolean result
+SequenceItem = tuple[Iterable[str], Iterable[Sequence[Node | None]]] | bool
+
+
+def serialize_jelly_sparql_sequence(
+    results: Iterable[SequenceItem],
+    out: IO[bytes],
+    options: SparqlOptions | None = None,
+) -> None:
+    """
+    Write a sequence of SPARQL query results in one Jelly-SPARQL stream.
+
+    The stream has the PUNCTUATED type: each result is a result set of its own.
+
+    Args:
+        results (Iterable[SequenceItem]): the results: for a SELECT query, a pair
+            of the variables and the rows, and for an ASK query, its boolean result.
+        out (IO[bytes]): where to write them.
+        options (SparqlOptions | None): options of the stream, which must be
+            punctuated. Defaults to SparqlOptions(punctuated=True).
+
+    """
+    if options is None:
+        options = SparqlOptions(punctuated=True)
+    if not options.punctuated:
+        msg = "a sequence of results needs SparqlOptions(punctuated=True)"
+        raise ValueError(msg)
+    stream = sparql_stream(options)
+    writer = FrameWriter(out, delimited=True)
+    for result in results:
+        if isinstance(result, bool):
+            writer.write(stream.ask(result))
+        else:
+            variables, rows = result
+            write_solutions(stream, variables, rows, writer)

@@ -125,15 +125,15 @@ def test_punctuated() -> None:
 
 
 def test_punctuated_must_be_delimited() -> None:
-    with pytest.raises(JellyConformanceError, match="delimited"):
+    with pytest.raises(ValueError, match="delimited"):
         SparqlOptions(punctuated=True, delimited=False)
 
 
 def test_options_checks() -> None:
     with pytest.raises(JellyConformanceError, match="at least 128"):
         SparqlOptions(lookup_preset=LookupPreset(max_names=64))
-    with pytest.raises(JellyConformanceError, match="frame size"):
-        SparqlOptions(frame_size=0)
+    with pytest.raises(ValueError, match="frame_values"):
+        SparqlOptions(frame_values=0)
 
 
 def test_encoder_lookups_must_match() -> None:

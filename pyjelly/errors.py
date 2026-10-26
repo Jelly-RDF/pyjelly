@@ -23,3 +23,12 @@ class JellyIncompleteResultsError(Exception):
         self.error = error
         #: The results that were read, if the reader keeps them
         self.result = result
+
+
+class JellyTruncatedResultsWarning(UserWarning):
+    """
+    Issued when a stream of SPARQL results ends without saying they are complete.
+
+    The writer may have stopped before writing all results, e.g., because the
+    connection was lost.
+    """

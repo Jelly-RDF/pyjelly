@@ -12,7 +12,7 @@ from contextlib import suppress
 from typing import IO, Final
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError
+from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
 from pyjelly.options import SPARQL_VERSION_1_0, SparqlOptions
 from pyjelly.serialize.columns import MAX_ROWS, Column
 from pyjelly.serialize.encode import EncodedTerm, TermEncoder
@@ -354,13 +354,19 @@ class SparqlStream:
         self.variables = None
         return frame
 
-    def ask(self, value: bool, links: Sequence[str] = ()) -> jelly.SparqlResultsFrame:  # noqa: FBT001
+    def ask(
+        self,
+        value: bool,  # noqa: FBT001
+        links: Sequence[str] = (),
+        error: str = "",
+    ) -> jelly.SparqlResultsFrame:
         """
         Write a boolean result (of an ASK query), and return its frame.
 
         Args:
             value (bool): the result.
             links (Sequence[str]): IRIs of links describing the result.
+            error (str): why the result is incomplete, if it is.
 
         Returns:
             jelly.SparqlResultsFrame: the only frame of the result set.
@@ -371,6 +377,7 @@ class SparqlStream:
         self.write_start(frame)
         frame.ask_result.value = value
         frame.trailer.SetInParent()
+        frame.trailer.error = error
         if links:
             frame.metadata[LINK_KEY] = links_value(links)
         if not self.options.punctuated:
@@ -395,8 +402,30 @@ class SparqlStream:
         )
 
 
+def error_message(error: BaseException) -> str:
+    """
+    Return what a trailer says about an error that left the results incomplete.
+
+    >>> error_message(KeyError("x"))
+    "KeyError: 'x'"
+    >>> error_message(JellyIncompleteResultsError("...", "timeout"))
+    'timeout'
+    """
+    if isinstance(error, JellyIncompleteResultsError):
+        # Results passed on from a stream that was incomplete itself
+        return error.error
+    message = str(error)
+    name = type(error).__name__
+    return f"{name}: {message}" if message else name
+
+
 class FrameWriter:
-    """Writes the frames of a stream to a file: delimited, or as its only frame."""
+    """
+    Writes the frames of a stream to a file: delimited, or as its only frame.
+
+    The file is flushed after each frame, so that a reader at the other end of a
+    connection gets the rows as they are written.
+    """
 
     def __init__(self, out: IO[bytes], *, delimited: bool) -> None:
         self.out = out
@@ -406,6 +435,7 @@ class FrameWriter:
     def write(self, frame: jelly.SparqlResultsFrame) -> None:
         if self.delimited:
             write_delimited(frame, self.out)
+            self.out.flush()
             return
         if self.written:
             msg = (
@@ -414,22 +444,25 @@ class FrameWriter:
             )
             raise JellyConformanceError(msg)
         write_single(frame, self.out)
+        self.out.flush()
         self.written = True
 
 
-def write_solutions(
+def write_solutions(  # noqa: PLR0913 keyword-only options
     stream: SparqlStream,
     variables: Iterable[str],
     rows: Iterable[Sequence[object | None]],
     writer: FrameWriter,
+    *,
     links: Sequence[str] = (),
+    error: str = "",
 ) -> None:
     """
     Write a solution sequence (the result of a SELECT query) as a result set.
 
     If getting the rows fails midway (e.g., the query fails), the result set ends
     with the error, so that readers know it is incomplete, and the error is
-    raised.
+    raised. `error` says why the rows are incomplete, if they are known to be.
     """
     stream.start(variables, links)
     try:
@@ -437,9 +470,9 @@ def write_solutions(
             frame = stream.row(values)
             if frame is not None:
                 writer.write(frame)
-    except Exception as error:
+    except Exception as failure:
         # If the frame that says so can still be written
         with suppress(Exception):
-            writer.write(stream.end(str(error) or type(error).__name__))
+            writer.write(stream.end(error_message(failure)))
         raise
-    writer.write(stream.end())
+    writer.write(stream.end(error))
