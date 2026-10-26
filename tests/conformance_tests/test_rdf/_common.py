@@ -67,7 +67,9 @@ class ConformanceCase:
 
 
 def load_cases(manifest_path: Path) -> list[ConformanceCase]:
-    """Read the test cases of a manifest."""
+    """Read the test cases of a manifest, or none if the manifest is missing."""
+    if not manifest_path.exists():
+        return []
     graph = Graph()
     graph.parse(manifest_path, format="turtle")
     manifest = next(iter(graph.subjects(RDF.type, MF.Manifest)))

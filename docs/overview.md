@@ -41,7 +41,7 @@ The generic API supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): tripl
 
 ### Conformance to the Jelly specification
 
-pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests]({{ proto_link("conformance/") }}) of Jelly-RDF 1.2, and the tests of Jelly-RDF 1.1, except for writing the `GRAPHS` physical stream type.
+pyjelly is continuously tested for conformance to [the Jelly specification]({{ proto_link("specification/") }}). It passes the [conformance tests of Jelly-RDF 1.2]({{ proto_link("conformance/rdf-test-cases/") }}), and the [tests of Jelly-RDF 1.1]({{ proto_link("conformance/rdf-1-1-test-cases/") }}), except for writing the `GRAPHS` physical stream type.
 
 See the [conformance tests]({{ git_link("tests/conformance_tests") }}) in the pyjelly repository.
 
