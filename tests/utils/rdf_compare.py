@@ -1,9 +1,8 @@
 """
-Compare lists of statements, as the Jelly conformance tests do.
+Comparing lists of statements, for use in Jelly conformance tests.
 
 Two lists are equivalent if they have the same statements in the same order, with
-a one-to-one mapping between their blank nodes. A simple literal and an
-xsd:string literal with the same lexical form are the same term.
+a one-to-one mapping between their blank nodes.
 """
 
 from __future__ import annotations

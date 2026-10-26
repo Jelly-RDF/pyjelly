@@ -1,12 +1,4 @@
-"""
-The "to Jelly" conformance tests of Jelly-RDF 1.1 and 1.2.
-
-The output is checked with jelly-cli: it must be valid, have the expected stream
-options, and the same statements as the expected output, in the same order. In a
-stream of RDF Messages, each message must have the statements of its input file:
-jelly-cli can't check that, as it reads all messages as one graph or dataset, with
-one scope of blank node labels.
-"""
+"""The "to Jelly" conformance tests of Jelly-RDF 1.1 and 1.2."""
 
 from __future__ import annotations
 

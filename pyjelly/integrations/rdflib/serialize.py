@@ -132,7 +132,7 @@ def guess_options(sink: Graph | Dataset, *, grouped: bool = False) -> Serializer
     """
     Guess the serializer options based on the store type.
 
-    For a stream of graphs or datasets (`grouped`), each one is one RDF Message in
+    For a stream of graphs or datasets (`grouped`), each is an RDF Message in
     Jelly-RDF 1.2, and one frame in Jelly-RDF 1.1.
 
     >>> guess_options(Graph()).logical_type
@@ -235,8 +235,9 @@ class RDFLibJellySerializer(RDFLibSerializer):
         for stream_frame in frames:
             if written:
                 msg = (
-                    "the data does not fit in one frame, which is all a non-delimited "
-                    "stream can have. Write a delimited stream, or use larger lookups."
+                    "the data does not fit in one frame. A non-delimited stream can "
+                    "only have one frame. Write a delimited stream, or use larger "
+                    "lookups."
                 )
                 raise JellyConformanceError(msg)
             write_single(stream_frame, out)

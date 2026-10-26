@@ -17,9 +17,9 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 
 ### Jelly-RDF versions
 
-pyjelly reads all versions of Jelly-RDF: 1.0, 1.1 and 1.2. It writes [Jelly-RDF 1.2]({{ proto_link("specification/serialization/") }}) by default, which is smaller, and faster to write and read, than Jelly-RDF 1.1.
+pyjelly reads all versions of Jelly-RDF: 1.0, 1.1 and 1.2. It writes [Jelly-RDF 1.2]({{ proto_link("specification/serialization/") }}) by default, which is smaller and faster than Jelly-RDF 1.1.
 
-Parsers that only know Jelly-RDF 1.0 or 1.1 can't read Jelly-RDF 1.2. To write Jelly-RDF 1.1 for them, set the protocol version to 2:
+Older Jelly parsers can't read Jelly-RDF 1.2. To write Jelly-RDF 1.1 for them, set the protocol version to 2:
 
 ```python
 from pyjelly.options import StreamParameters
@@ -31,15 +31,13 @@ graph.serialize("out.jelly", format="jelly", options=options)
 
 ### Supported stream types
 
-pyjelly writes the `TRIPLES` and `QUADS` [physical stream types]({{ proto_link("specification/serialization/#physical-stream-types") }}). It also reads `GRAPHS`, which only exists in Jelly-RDF 1.0 and 1.1.
+pyjelly writes the `TRIPLES` and `QUADS` [physical stream types]({{ proto_link("specification/serialization/#physical-stream-types") }}). It can also read `GRAPHS`, which only exists in Jelly-RDF 1.0 and 1.1.
 
-A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Messages]({{ proto_link("specification/serialization/#stream-types") }}). When you write a stream of graphs or datasets (e.g., with `grouped_stream_to_file`), each one is one RDF Message. When you read such a stream with `parse_jelly_grouped`, you get one graph or dataset for each message. Other streams give one graph or dataset for each frame.
+A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Messages]({{ proto_link("specification/serialization/#stream-types") }}). When you write a stream of graphs or datasets (e.g., with `grouped_stream_to_file`), each is an RDF Message. When you read such a stream with `parse_jelly_grouped`, you get one graph or dataset per message.
 
 ### RDF 1.2
 
-The generic API supports the terms of [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and language-tagged strings with a base direction, as `Literal("text", "en", direction="ltr")`. To declare which of them a stream may have, set `rdf_version` in `StreamParameters`. RDFLib doesn't support these terms yet, so the RDFLib integration can't read or write them.
-
-Jelly-RDF 1.2 can't store generalized statements (e.g., a literal as a subject), or RDF-star quoted triples anywhere but in the object. To write them, use Jelly-RDF 1.1.
+The generic API supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and directional language-tagged strings, as `Literal("text", "en", direction="ltr")`. To declare the RDF version for a stream, set `rdf_version` in `StreamParameters`. RDFLib 7 doesn't support RDF 1.2 yet.
 
 ### Conformance to the Jelly specification
 

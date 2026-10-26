@@ -90,8 +90,8 @@ def check_stream_options(options: jelly.RdfStreamOptions) -> None:
     """
     Check that the parser can read a stream with these options.
 
-    As in Jelly-JVM, the fields of one layout must not be set in a stream of the
-    other, and the lookups must not be larger than the parser allows (see the
+    The fields of one layout must not be set in a stream of the
+    other. The lookups must not be larger than the parser allows (see the
     MAX_*_LOOKUP_SIZE constants).
 
     Raises:
@@ -201,9 +201,8 @@ def _logical_type(options: jelly.RdfStreamOptions) -> jelly.LogicalStreamType:
     """
     Return the logical type of a stream.
 
-    Jelly-RDF 1.2 streams have none, but the specification says which they
-    correspond to: a FLAT stream to a flat one, a stream of RDF Messages to a
-    stream of graphs or datasets.
+    Jelly-RDF 1.2 streams don't have logical types, but we can map the 1.2
+    stream types to logical ones.
     """
     if is_row_layout(options.version):
         return options.logical_type
@@ -438,7 +437,7 @@ class Decoder:
         self.names = LookupDecoder(lookup_size=lookup_preset.max_names)
         self.prefixes = LookupDecoder(lookup_size=lookup_preset.max_prefixes)
         self.datatypes = LookupDecoder(lookup_size=lookup_preset.max_datatypes)
-        # One IRI term per name table entry, as in Jelly-JVM: an IRI is mostly
+        # One IRI term per name table entry: an IRI is often
         # used with the same prefix again, so its term can be reused. Index 0 is
         # unused, as table indices start from 1
         self.iri_cache: list[_CachedIri | None] = [None] * (lookup_preset.max_names + 1)
@@ -448,7 +447,7 @@ class Decoder:
         return self.adapter.options
 
     def restate_options(self, options: jelly.RdfStreamOptions) -> None:
-        """Use restated options of a Jelly-RDF 1.2 stream, which empty the lookups."""
+        """Use restated options of a Jelly-RDF 1.2 stream. This empties the lookups."""
         self.adapter.options = parser_options(
             options, delimited=self.options.params.delimited
         )

@@ -1,4 +1,4 @@
-"""Writing Jelly-RDF 1.2: the column batches of frames, and what can't be written."""
+"""Tests for writing Jelly-RDF 1.2."""
 
 from __future__ import annotations
 
@@ -168,7 +168,7 @@ def test_graphs() -> None:
     graphs: list[GraphName] = [DefaultGraph, g, DefaultGraph, DefaultGraph]
     statements = [Quad(S, P, Literal(str(i)), graph) for i, graph in enumerate(graphs)]
     (frame,) = frames(statements)
-    # One unbound cell, then g, and the unbound cells at the end are left out
+    # One unbound cell, then g, and the unbound cells at the end are skipped
     assert list(frame.columns.graphs.layouts) == [16]
     assert read([frame]) == statements
     # A batch with all statements in the default graph has no graphs column

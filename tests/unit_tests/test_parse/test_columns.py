@@ -1,4 +1,4 @@
-"""Reading Jelly-RDF 1.2: what the conformance tests don't cover."""
+"""Reading Jelly-RDF 1.2: additional tests for edge cases."""
 
 from __future__ import annotations
 

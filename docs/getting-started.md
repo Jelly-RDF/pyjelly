@@ -73,7 +73,7 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 ### Checking IRIs
 
-By default, the IRIs in a Jelly file are not checked when it is read into RDFLib, which makes reading faster. RDFLib's check would only log a warning for an invalid IRI anyway. To turn it on, pass `validate_iris=True`, e.g., `graph.parse("data.jelly", format="jelly", validate_iris=True)`. The parsing functions in `pyjelly.integrations.rdflib.parse` take the same argument.
+By default, the IRIs in a Jelly file are not checked when it is read into RDFLib, which makes reading faster. To turn it on, set `validate_iris=True`, e.g., `graph.parse("data.jelly", format="jelly", validate_iris=True)`. The parsing functions in `pyjelly.integrations.rdflib.parse` take the same argument.
 
 ### Serializing a stream of graphs
 

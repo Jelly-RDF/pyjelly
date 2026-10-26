@@ -20,7 +20,7 @@ class FrameFlow:
     parsing it again.
 
     In Jelly-RDF 1.2 streams, the frame's statements are in its column batch (see
-    `batch`), and the rows only hold the stream options. A frame may then also
+    `batch`), and the rows only store the stream options. A frame may then also
     end because the lookups are full.
 
     Allows for passing LogicalStreamType, required for

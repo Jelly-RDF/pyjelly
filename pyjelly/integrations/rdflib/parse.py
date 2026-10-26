@@ -44,7 +44,7 @@ def parse_triples_stream(
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     Yields:
         Generator[Iterable[Triple | Prefix]]:
@@ -80,7 +80,7 @@ def parse_quads_stream(
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     Yields:
         Generator[Iterable[Quad | Prefix]]:
@@ -133,7 +133,7 @@ def parse_jelly_grouped(  # noqa: PLR0913 keyword-only options
         frame_metadata: (ContextVar[ScalarMap[str, bytes]]): context variable
             used for extracting frame metadata
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     Raises:
         NotImplementedError: is raised if a physical type is not implemented
@@ -237,7 +237,7 @@ def parse_jelly_to_graph(
             By default creates an empty in-memory Dataset,
             but you can pass something else here.
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     Returns:
         Dataset | Graph: Dataset or Graph with statements.
@@ -342,7 +342,7 @@ def parse_jelly_flat(
             stream options and require FLAT_(TRIPLES|QUADS). Otherwise, only the
             physical type is used to route parsing.
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     Raises:
         NotImplementedError: if physical type is not supported

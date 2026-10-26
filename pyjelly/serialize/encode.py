@@ -263,7 +263,7 @@ class TermEncoder:
 
     def encode_iri_indices(self, iri_string: str) -> tuple[int, int]:
         """
-        Encode lookup indices for IRI, as the row layout writes them.
+        Encode lookup indices for IRI, as written in the row layout.
 
         The indices are relative to the IRI before (see RdfIri), so IRIs must be
         encoded in the order they are written.

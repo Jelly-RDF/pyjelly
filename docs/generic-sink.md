@@ -53,21 +53,6 @@ We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 We get a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
 
-### RDF 1.2 terms
-
-The generic API can also hold the terms of RDF 1.2. A triple term is a `Triple` in the object of a statement, and a language-tagged string can have a base direction:
-
-```python
-from pyjelly.integrations.generic.generic_sink import IRI, Literal, Triple
-
-ex = "http://example.org/"
-statement = Triple(
-    IRI(ex + "claim"),
-    IRI("http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies"),
-    Triple(IRI(ex + "alice"), IRI(ex + "says"), Literal("שלום", "he", direction="rtl")),
-)
-```
-
 ## Streaming data
 
 If you need to process a certain quantity of statements both efficiently and iteratively, you can provide a simple generator:

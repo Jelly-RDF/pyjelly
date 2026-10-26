@@ -1,11 +1,4 @@
-"""
-The column layout of Jelly-RDF 1.2: the statements of a frame, stored column by column.
-
-Each statement position (subject, predicate, object, graph) is one column. A run of
-equal terms in consecutive statements is stored once. The terms are split by type
-into lists, and the layout tokens tell where a term takes more than one cell, and
-where cells are unbound (the default graph).
-"""
+"""The column layout of Jelly-RDF 1.2: a frame's statements, column by column."""
 
 from __future__ import annotations
 
@@ -160,9 +153,8 @@ class Column:
         if not self.allowed & (1 << kind):
             msg = (
                 f"the {self.position} of a statement cannot be {_KIND_NAMES[kind]} "
-                "in Jelly-RDF 1.2. Generalized statements, and quoted triples "
-                "anywhere but in the object, can only be written in Jelly-RDF 1.1 "
-                "(protocol version 2)"
+                "in Jelly-RDF 1.2. Generalized statements can only be written in "
+                "Jelly-RDF 1.1 (protocol version 2)"
             )
             raise JellyConformanceError(msg)
         if used and self.kinds is None:
@@ -208,7 +200,7 @@ class Column:
     def write(self, column: jelly.RdfColumn) -> None:
         """Write the column into its message, and empty it for the next frame."""
         if self.run_unbound:
-            # Unbound cells at the end are left out: the parser pads the column
+            # Unbound cells at the end are skipped: the parser pads the column
             self.run_length = 0
             self.run_unbound = False
         else:
@@ -273,7 +265,7 @@ class Column:
 
 class ColumnBatch:
     """
-    The column batch of the frame being built, in a stream of Jelly-RDF 1.2.
+    The column batch of the frame being built.
 
     The terms are encoded by the stream's TermEncoder. The frame flow decides when
     the frame ends (see FrameFlow.to_stream_frame()).

@@ -1,11 +1,9 @@
 """
 Decoding of the column layout of Jelly-RDF 1.2.
 
-The statements of a frame are stored column by column: each run of equal terms in
-consecutive statements is stored once, and the layout tokens of a column tell how
-many cells each term takes, and where the cells are unbound. The terms are decoded
+The terms are decoded
 once per run, and the runs are only expanded into statements at the end, so the
-memory needed does not depend on the row count that the frame declares.
+memory needed does not depend on the row count declared by the frame.
 """
 
 from __future__ import annotations
@@ -33,7 +31,6 @@ class MessageEnd:
         return "MESSAGE_END"
 
 
-#: Among the rows of Decoder.iter_rows(), at the end of each RDF Message
 MESSAGE_END: Final = MessageEnd()
 
 #: The most statements a frame can have

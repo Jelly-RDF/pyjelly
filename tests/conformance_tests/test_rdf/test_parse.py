@@ -1,10 +1,4 @@
-"""
-The "from Jelly" conformance tests of Jelly-RDF 1.1 and 1.2.
-
-The statements that pyjelly reads are compared with the expected ones: those of
-each frame in Jelly-RDF 1.1, those of the whole stream in Jelly-RDF 1.2, and those
-of each message in a stream of RDF Messages.
-"""
+"""The "from Jelly" conformance tests of Jelly-RDF 1.1 and 1.2."""
 
 from __future__ import annotations
 

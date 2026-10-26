@@ -187,7 +187,7 @@ def guess_options(
     """
     Guess the serializer options based on the store type.
 
-    For a stream of graphs or datasets (`grouped`), each one is one RDF Message in
+    For a stream of graphs or datasets (`grouped`), each is an RDF Message in
     Jelly-RDF 1.2, and one frame in Jelly-RDF 1.1.
     """
     if sink.is_triples_sink:

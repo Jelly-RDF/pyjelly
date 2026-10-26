@@ -33,7 +33,7 @@ class RDFLibAdapter(Adapter):
     Args:
         options (ParserOptions): options of the stream
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
-            still read, rdflib only logs a warning. Checking takes time.
+            still read, rdflib only logs a warning. Checking slows down parsing.
 
     """
 
