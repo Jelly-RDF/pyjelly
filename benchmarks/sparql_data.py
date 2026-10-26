@@ -1,12 +1,4 @@
-"""
-SPARQL query results for the Jelly-SPARQL benchmarks, as in Jelly-JVM.
-
-A dataset is either a RiverBench dataset, read as the results of
-`SELECT * WHERE { ?s ?p ?o }` (triples) or `SELECT * WHERE { GRAPH ?g { ?s ?p ?o } }`
-(quads, with ?g unbound in the default graph), or a synthetic result set made from
-one of the presets of Jelly-JVM's generator (SparqlDataGen). Each preset brings
-out one property of the format.
-"""
+"""Benchmark datasets for Jelly-SPARQL."""
 
 from __future__ import annotations
 

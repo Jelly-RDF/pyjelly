@@ -33,8 +33,8 @@ from pyjelly.serialize.sparql import FrameWriter, SparqlStream, write_bindings
 
 #: Trailer error written for results that were read from a truncated stream
 TRUNCATED_ERROR = (
-    "the results were read from a stream that ended without saying that they are "
-    "complete, so some may be missing"
+    "the results were read from a stream that ended without indicating that they are "
+    "complete, so some rows may be missing"
 )
 
 
