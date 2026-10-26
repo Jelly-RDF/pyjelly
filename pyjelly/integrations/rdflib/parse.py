@@ -5,7 +5,7 @@ from contextvars import ContextVar
 from typing import IO, Final, cast
 
 from rdflib import Node
-from rdflib.graph import ConjunctiveGraph, Dataset, Graph
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, ConjunctiveGraph, Dataset, Graph
 from rdflib.parser import InputSource
 from rdflib.parser import Parser as RDFLibParser
 
@@ -224,6 +224,7 @@ def parse_jelly_to_graph(
     dataset_factory: Callable[[], Dataset] = Dataset,
     *,
     validate_iris: bool = False,
+    default_graph: Graph | None = None,
 ) -> Graph | Dataset:
     """
     Add statements from Generator to provided Graph/Dataset.
@@ -238,6 +239,9 @@ def parse_jelly_to_graph(
             but you can pass something else here.
         validate_iris (bool): whether rdflib checks the IRIs. An invalid IRI is
             still read, rdflib only logs a warning. Checking slows down parsing.
+        default_graph (Graph | None): graph for the quads in the default graph,
+            in the same store as the Dataset. By default, the Dataset's default
+            graph.
 
     Returns:
         Dataset | Graph: Dataset or Graph with statements.
@@ -260,7 +264,7 @@ def parse_jelly_to_graph(
         inp=inp, frames=frames, options=options, validate_iris=validate_iris
     )
     if to_store:
-        _add_to_store(sink, items)
+        _add_to_store(sink, items, default_graph)
         return sink
 
     # The Graph or Dataset class changes add(), so it gets every statement
@@ -271,7 +275,10 @@ def parse_jelly_to_graph(
             sink.add(item)
         if isinstance(item, Quad):
             s, p, o, graph_name = item
-            context = cast(Dataset, sink).get_context(graph_name)
+            if default_graph is not None and graph_name == DATASET_DEFAULT_GRAPH_ID:
+                context = default_graph
+            else:
+                context = cast(Dataset, sink).get_context(graph_name)
             sink.add((s, p, o, context))  # type: ignore[arg-type]
     return sink
 
@@ -289,8 +296,16 @@ def _context(
     return context
 
 
-def _add_to_store(sink: Graph, items: Iterable[Statement | Prefix]) -> None:
-    """Add statements to the Graph's or Dataset's store directly, in batches."""
+def _add_to_store(
+    sink: Graph,
+    items: Iterable[Statement | Prefix],
+    default_graph: Graph | None = None,
+) -> None:
+    """
+    Add statements to the Graph's or Dataset's store directly, in batches.
+
+    Quads in the default graph go to `default_graph`, if given.
+    """
     store = sink.store
     batch: list[tuple[Node, Node, Node, Graph]] = []
     contexts: dict[GraphName, Graph] = {}
@@ -302,7 +317,10 @@ def _add_to_store(sink: Graph, items: Iterable[Statement | Prefix]) -> None:
         if isinstance(item, Quad):
             s, p, o, graph_name = item
             if graph_name is not last_graph_name:
-                context = _context(cast(Dataset, sink), contexts, graph_name)
+                if default_graph is not None and graph_name == DATASET_DEFAULT_GRAPH_ID:
+                    context = default_graph
+                else:
+                    context = _context(cast(Dataset, sink), contexts, graph_name)
                 last_graph_name = graph_name
             batch.append((s, p, o, context))
         elif isinstance(item, Triple):
@@ -421,9 +439,14 @@ class RDFLibJellyParser(RDFLibParser):
         if inp is None:
             msg = "expected source to be a stream of bytes"
             raise TypeError(msg)
+        # The default graph of a stream of quads goes into the Graph that rdflib
+        # parses into, as with TriG and N-Quads: for Dataset.parse(), that is the
+        # Dataset's default graph
+        target = Graph(store=sink.store, identifier=sink.identifier)
         parse_jelly_to_graph(
             inp,
-            graph_factory=lambda: Graph(store=sink.store, identifier=sink.identifier),
+            graph_factory=lambda: target,
             dataset_factory=lambda: Dataset(store=sink.store),
             validate_iris=validate_iris,
+            default_graph=target,
         )

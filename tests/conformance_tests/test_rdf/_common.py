@@ -10,8 +10,7 @@ JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 
 # Requirements of the tests that the rdflib integration can't pass: rdflib has no
-# generalized statements, quoted triples, triple terms, or base directions. The same
-# for Jelly-SPARQL.
+# generalized statements, quoted triples, triple terms, or base directions.
 NOT_RDFLIB = {
     JELLYT.requirementRdfStar,
     JELLYT.requirementGeneralizedRdf,
