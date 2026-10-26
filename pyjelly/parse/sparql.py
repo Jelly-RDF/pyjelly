@@ -599,13 +599,25 @@ class SparqlResultSet:
                 yield frame.rows
             if ended and reader.decoder.punctuated:
                 return
-            frame = reader.next()
+            frame = self._next_frame(ended=ended)
             if frame is not None and frame.starts:
                 # This frame starts the next result set of a PUNCTUATED stream
                 reader.pending = frame
                 return
         if not ended:
             self._truncated()
+
+    def _next_frame(self, *, ended: bool) -> DecodedFrame | None:
+        """Read the next frame, or None at the end of the stream."""
+        try:
+            return self.reader.next()
+        except JellyConformanceError:
+            if ended and self.error:
+                # The trailer already said that the results are incomplete, so what
+                # follows doesn't matter. E.g., Fuseki appends a text message to the
+                # response of a query it cancels.
+                return None
+            raise
 
     def keep(self) -> None:
         """Read the remaining rows into memory, for iteration later."""
