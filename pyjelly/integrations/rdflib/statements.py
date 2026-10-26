@@ -1,7 +1,9 @@
 """
 The statements and prefixes that the rdflib parser yields.
 
-Not compiled with mypyc, which can't compile subclasses of tuple.
+Not compiled with mypyc, which can't compile subclasses of tuple. The classes have
+empty `__slots__`, so their instances have no `__dict__` and are as small as
+plain tuples.
 """
 
 from __future__ import annotations

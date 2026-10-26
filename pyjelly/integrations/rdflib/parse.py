@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Generator, Iterable, MutableMapping
 from contextvars import ContextVar
-from typing import IO, cast
+from typing import IO, Final, cast
 
 from rdflib import Node
 from rdflib.graph import ConjunctiveGraph, Dataset, Graph
@@ -192,9 +192,9 @@ def parse_jelly_grouped(
     raise NotImplementedError(msg)
 
 
-ADD_BATCH_SIZE = 1000
+ADD_BATCH_SIZE: Final = 1000
 # How many context graphs to keep for reuse, by graph name
-MAX_CACHED_CONTEXTS = 1024
+MAX_CACHED_CONTEXTS: Final = 1024
 
 
 def parse_jelly_to_graph(

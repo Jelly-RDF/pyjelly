@@ -51,9 +51,10 @@ class _MemoryIndexes(NamedTuple):
     context_key: Callable[[Graph], str]
 
 
-#: Whether to read the in-memory store's private indexes. Only for tests: the
-#: slower public API gives the same statements.
-memory_fast_path = True
+#: Whether to read the in-memory store's private indexes. Tests turn it off to
+#: check that the slower public API gives the same statements. Not Final, as
+#: mypyc would then build the value into the compiled code.
+_memory_fast_path = True
 
 
 def _memory_indexes(store: Store) -> _MemoryIndexes | None:
@@ -65,7 +66,7 @@ def _memory_indexes(store: Store) -> _MemoryIndexes | None:
     so that the slower public API is used instead. Tests check that this
     works for the installed rdflib version.
     """
-    if type(store) is not Memory or not memory_fast_path:
+    if type(store) is not Memory or not _memory_fast_path:
         return None
     try:
         return _MemoryIndexes(

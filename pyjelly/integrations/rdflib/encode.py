@@ -24,7 +24,7 @@ class RDFLibTermEncoder(TermEncoder):
         Return whether two terms are equal, for repeated terms.
 
         rdflib's __eq__ is slow Python code, so the common cases are answered here
-        with plain string comparisons (typed as str, so mypyc compiles them to C):
+        by comparing the terms as strings:
 
         - Two URIRefs or two BNodes are equal if their strings are.
         - Two Literals are never equal if their lexical forms differ. If they are

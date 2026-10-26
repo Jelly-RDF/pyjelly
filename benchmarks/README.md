@@ -104,8 +104,8 @@ Before measuring, each case writes the data, reads it back and compares the stat
 
 ### Measurement
 
-- Each case (task, dataset, method) runs in its own Python process, like a JMH fork.
-- In the process: 1 warmup iteration, then 5 measured iterations. An iteration repeats the operation until 1 second has passed, and always finishes the last operation. The case's result is the mean throughput of the measured iterations. One warmup iteration is often enough here: unlike the JVM, CPython has no JIT to warm up.
+- Each case (task, dataset, method) runs in its own Python process.
+- In the process: 1 warmup iteration, then 5 measured iterations. An iteration repeats the operation until 1 second has passed, and always finishes the last operation. The case's result is the mean throughput of the measured iterations.
 - Before each iteration, the garbage collector runs, outside the timing. The data prepared before measuring is frozen with `gc.freeze()`, so the collector doesn't go through it again and again during the measurement.
 - A sweep runs every case once. There are 3 sweeps. The result is the median of the sweeps. Values whose sweeps differ by more than 10% are marked with `*`.
 - Averages over datasets are geometric means. A method that couldn't run on all datasets has the number of datasets it ran on next to its mean.
