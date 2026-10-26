@@ -188,20 +188,8 @@ class SparqlStream:
 
         """
         columns = self.columns
-        if self.variables is None or self.failed:
-            if self.failed:
-                raise _failed()
-            msg = "start a result set with start() before adding rows"
-            raise JellyConformanceError(msg)
         count = len(values)
-        if count != len(columns):
-            msg = f"expected {len(columns)} values in the row, got {count}"
-            raise JellyConformanceError(msg)
-        frame = None
-        if self.row_count and (
-            self.row_count >= MAX_ROWS or not self.encoder.has_room()
-        ):
-            frame = self.full_frame()
+        frame = self._start_row(count)
         try:
             for i in range(count):
                 self.add(columns[i], values[i])
@@ -213,6 +201,22 @@ class SparqlStream:
         if self.row_count >= self.rows_per_frame and self.options.delimited:
             return self.end_frame()
         return frame
+
+    def _start_row(self, count: int) -> jelly.SparqlResultsFrame | None:
+        """Check that a row of `count` values can be added, and end a full frame."""
+        if self.variables is None or self.failed:
+            if self.failed:
+                raise _failed()
+            msg = "start a result set with start() before adding rows"
+            raise JellyConformanceError(msg)
+        if count != len(self.columns):
+            msg = f"expected {len(self.columns)} values in the row, got {count}"
+            raise JellyConformanceError(msg)
+        if self.row_count and (
+            self.row_count >= MAX_ROWS or not self.encoder.has_room()
+        ):
+            return self.full_frame()
+        return None
 
     def binding(
         self, binding: Mapping[Any, object | None], variables: Sequence[object]
@@ -235,11 +239,20 @@ class SparqlStream:
             msg = f"expected {len(values)} variables, got {len(variables)}"
             raise JellyConformanceError(msg)
         bound = 0
-        for i in range(len(values)):
-            value = binding.get(variables[i])
-            values[i] = value
-            if value is not None:
-                bound += 1
+        if type(binding) is dict:
+            # The same, with dict methods that are not looked up for each call
+            mapping: dict[Any, object | None] = binding
+            for i in range(len(values)):
+                value = mapping.get(variables[i])
+                values[i] = value
+                if value is not None:
+                    bound += 1
+        else:
+            for i in range(len(values)):
+                value = binding.get(variables[i])
+                values[i] = value
+                if value is not None:
+                    bound += 1
         if bound != len(binding):
             # Not all keys are variables: e.g., rdflib's Variable("x") is not equal
             # to "x". The values are looked up by name instead.
