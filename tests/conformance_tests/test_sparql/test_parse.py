@@ -66,7 +66,7 @@ def _read_all_rdflib(file: IO[bytes], *, punctuated: bool) -> None:
     if not punctuated:
         Result.parse(file, format="jelly")
         return
-    # Results that are incomplete don't end a sequence, they say so
+    # An incomplete result doesn't stop a sequence, it sets `error` instead
     for result in parse_jelly_sparql_sequence(file):
         if result.error:
             raise JellyIncompleteResultsError(result.error, result.error)

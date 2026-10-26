@@ -90,7 +90,7 @@ def test_rdf_version() -> None:
 
 
 def test_triple_terms_in_several_columns() -> None:
-    # Each column has an IRI sequence of its own in its triple terms
+    # Each column keeps its own IRI state for its triple terms
     t1 = Triple(IRI(EX + "s1"), P, IRI(EX + "o1"))
     t2 = Triple(IRI(EX + "s2"), IRI(EX + "q"), Triple(A, P, IRI(EX + "o2")))
     rows: list[tuple[Node | None, ...]] = [
@@ -167,7 +167,7 @@ def test_incomplete() -> None:
     rows: list[tuple[Node | None, ...]] = []
     with pytest.raises(JellyIncompleteResultsError, match="timeout"):
         rows.extend(results)
-    # The rows before the error are read
+    # The rows before the error were read
     assert rows == ROWS[:2]
     assert results.error == "TimeoutError: timeout"
 
@@ -187,7 +187,7 @@ def test_sequence_of_result_sets() -> None:
     assert third.variables == ["x"]
     assert third.links == [EX + "l"]
     (row,) = list(third)
-    # Blank node labels are scoped to a result set
+    # Each result set has its own blank node labels
     assert row[0] != ROWS[2][0]
 
 
@@ -271,8 +271,8 @@ def test_sequence_writer() -> None:
 
 
 def test_row_failing_after_a_full_frame() -> None:
-    # 128 names, so the 128th row with a new IRI fills the frame: the frame must
-    # still be written when the row after it fails
+    # With 128 names, the 128th row with a new IRI fills the frame. The frame must
+    # still be written when the next row fails.
     options = SparqlOptions(
         lookup_preset=LookupPreset(max_names=128, max_prefixes=0, max_datatypes=0)
     )

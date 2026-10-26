@@ -8,7 +8,7 @@ _VARINT_CONTINUATION = 0x80
 
 def varint(value: int) -> bytes:
     r"""
-    Return a non-negative integer as a protobuf varint.
+    Encode a non-negative integer as a protobuf varint.
 
     >>> varint(300)
     b'\xac\x02'
@@ -22,9 +22,9 @@ def varint(value: int) -> bytes:
 
 
 def write_delimited(frame: Message, output_stream: IO[bytes]) -> None:
-    """Write a frame, after its size (the delimited variant of Jelly)."""
-    # Not protobuf's serialize_length_prefixed(), which needs write() to return the
-    # number of bytes written. Not every stream does, e.g., rdflib's for results.
+    """Write a frame prefixed with its size (the delimited variant of Jelly)."""
+    # protobuf's serialize_length_prefixed() needs write() to return the number of
+    # bytes written, which not every stream does (e.g., rdflib's result streams)
     data = frame.SerializeToString()
     output_stream.write(varint(len(data)))
     output_stream.write(data)

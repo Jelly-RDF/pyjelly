@@ -1,8 +1,8 @@
 """
-Writing of Jelly-SPARQL: SPARQL query results in frames, one column per variable.
+Jelly-SPARQL writer: SPARQL query results in frames, with one column per variable.
 
-The columns are those of Jelly-RDF 1.2 (see pyjelly.serialize.columns), in which
-any cell may be unbound.
+The columns use the Jelly-RDF 1.2 column encoding (pyjelly.serialize.columns),
+except that any cell may be unbound.
 """
 
 from __future__ import annotations
@@ -18,16 +18,16 @@ from pyjelly.serialize.columns import MAX_ROWS, Column
 from pyjelly.serialize.encode import EncodedTerm, TermEncoder
 from pyjelly.serialize.ioutils import write_delimited, write_single
 
-#: The metadata key of the links of a result set (head.link in SPARQL JSON results)
+#: Metadata key for the links of a result set (head.link in SPARQL JSON results)
 LINK_KEY: Final = "link"
 
-# A column of results can have terms of any type
+# A result column accepts every term type
 _ANY: Final = 0b1111
 
 
 def links_value(links: Sequence[str]) -> bytes:
     r"""
-    Return the value of the link metadata key: the IRIs, separated by LF.
+    Join link IRIs with LF, for the "link" metadata key.
 
     >>> links_value(["http://example.org/a", "http://example.org/b"])
     b'http://example.org/a\nhttp://example.org/b'
@@ -41,7 +41,7 @@ def links_value(links: Sequence[str]) -> bytes:
 
 def variable_names(variables: Iterable[str]) -> list[str]:
     """
-    Return the names of variables as written: without a leading "?" or "$".
+    Strip a leading "?" or "$" from each variable name.
 
     >>> variable_names(["?s", "$p", "o"])
     ['s', 'p', 'o']
@@ -67,32 +67,32 @@ def _failed() -> JellyConformanceError:
 
 
 class VariableColumn(Column):
-    """The cells of one variable in the frame being built."""
+    """Cells of one variable in the frame being built."""
 
     def __init__(self) -> None:
         super().__init__(_ANY, "variable")
-        # The IRI sequence of the column's triple terms: the indices of the last IRI,
-        # while another column's triple terms are encoded (see TermEncoder)
+        # Prefix and name indices of the last IRI in this column's triple terms.
+        # The encoder holds them while it encodes this column (see TermEncoder).
         self.triple_prefix_index = -1
         self.triple_name_index = 0
-        # The most IRIs a triple term of the column had, so far in the result set
+        # Largest number of IRIs in one triple term of this column so far
         self.max_triple_iris = 1
 
 
 class SparqlStream:
     """
-    Writes SPARQL query results as the frames of a Jelly-SPARQL stream.
+    Writer of SPARQL query results as Jelly-SPARQL frames.
 
-    A result set is a solution sequence (the result of a SELECT query) or a boolean
-    result (ASK). Start a solution sequence with start(), add its rows with row(),
-    and end it with end(). row() returns a frame when one is full, end() returns the
-    last frame of the result set. A boolean result is one frame, made by ask().
+    A result set is either a solution sequence (SELECT) or a boolean result (ASK).
+    For a solution sequence, call start(), then row() for each row, then end().
+    row() returns a frame when one is full, and end() returns the last frame. ask()
+    returns the single frame of a boolean result.
 
-    A stream has one result set, or with SparqlOptions(punctuated=True), any number
-    of them.
+    A stream holds one result set, or any number of them with
+    SparqlOptions(punctuated=True).
 
     Args:
-        encoder (TermEncoder): encoder of the terms, with the lookup sizes of the
+        encoder (TermEncoder): term encoder, with the same lookup sizes as the
             options.
         options (SparqlOptions | None): options of the stream.
 
@@ -111,24 +111,24 @@ class SparqlStream:
         encoder.column_layout = True
         encoder.rdf_version = options.rdf_version
         self.encoded = EncodedTerm()
-        #: The variables of the result set being written, None between result sets
+        #: Variables of the current result set, None between result sets
         self.variables: list[str] | None = None
         self.columns: list[VariableColumn] = []
-        # The values of a row given as a binding, see binding()
+        # Reused buffer for the values of a binding, see binding()
         self.values: list[object | None] = []
         self.row_count = 0
         self.rows_per_frame = 1
-        # Whether the frame of a non-delimited stream has no room for another row
+        # Set when the single frame of a non-delimited stream is full
         self.full = False
         self.links: list[str] = []
-        # Whether the stream options and the header are yet to be written
+        # Whether the stream options and the header still have to be written
         self.options_pending = True
         self.header_pending = False
-        # Whether nothing more can be written: the result set of a FLAT stream ended,
-        # or a row failed to encode
+        # `ended`: the single result set of a FLAT stream is done. `failed`: a row
+        # failed to encode. Either way, nothing more can be written.
         self.ended = False
         self.failed = False
-        # The column whose IRI sequence of triple terms the encoder has, if any
+        # Column whose triple-term IRI state the encoder currently holds
         self.triple_owner: VariableColumn | None = None
 
     def start(self, variables: Iterable[str], links: Sequence[str] = ()) -> None:
@@ -136,10 +136,10 @@ class SparqlStream:
         Start a solution sequence.
 
         Args:
-            variables (Iterable[str]): names of the variables, in projection order. A
-                leading "?" or "$" is left out.
-            links (Sequence[str]): IRIs of links describing the result set, like
-                head.link of SPARQL JSON results.
+            variables (Iterable[str]): variable names, in projection order. A
+                leading "?" or "$" is removed.
+            links (Sequence[str]): link IRIs for the result set, as in head.link of
+                SPARQL JSON results.
 
         """
         self._check_can_start()
@@ -173,7 +173,7 @@ class SparqlStream:
         columns = self.columns
         iris = len(columns)
         for column in columns:
-            # A cell of a triple term can need that many IRIs
+            # A triple term can take more than one IRI per cell
             iris += column.max_triple_iris - 1
             column.triple_prefix_index = -1
             column.triple_name_index = 0
@@ -187,19 +187,19 @@ class SparqlStream:
         Add a row (solution) to the result set.
 
         Args:
-            values (Sequence[object | None]): the values of the variables, None for
-                an unbound variable.
+            values (Sequence[object | None]): one value per variable, None if the
+                variable is unbound.
 
         Returns:
-            jelly.SparqlResultsFrame | None: a frame, if one is full.
+            jelly.SparqlResultsFrame | None: the frame, if this row filled it.
 
         """
         columns = self.columns
         count = len(values)
         self._check_row(count)
         try:
-            # Indexing a tuple or list typed as such is much cheaper than indexing
-            # any sequence, which goes through a general lookup with an int object
+            # mypyc indexes a typed tuple or list directly. Any other sequence goes
+            # through the generic item lookup with a boxed int, which is slow.
             if type(values) is tuple:
                 row_tuple: tuple[object | None, ...] = values
                 for i in range(count):
@@ -212,12 +212,12 @@ class SparqlStream:
                 for i in range(count):
                     self.add(columns[i], values[i])
         except BaseException:
-            # The frame is half-written: it can't be completed
+            # The frame is half-written and can't be finished
             self.failed = True
             raise
         self.row_count += 1
-        # The frame ends after the row that leaves no room for another one, not
-        # before the next row: if that row fails, the frame is not lost
+        # End the frame as soon as it's full, rather than at the start of the next
+        # row, so that a failing next row can't lose it
         if self.row_count >= self.rows_per_frame or not self.encoder.has_room():
             if self.options.delimited:
                 return self.end_frame()
@@ -246,27 +246,26 @@ class SparqlStream:
         self, binding: Mapping[Any, object | None], variables: Sequence[object]
     ) -> jelly.SparqlResultsFrame | None:
         """
-        Add a row (solution) given as a binding, which maps variables to values.
+        Add a row (solution) given as a mapping from variables to values.
 
         Args:
-            binding (Mapping[Any, object | None]): the values of the bound
-                variables. The keys are the variables, or their names.
-            variables (Sequence[object]): the variables of the result set, in its
-                order.
+            binding (Mapping[Any, object | None]): values of the bound variables,
+                keyed by variable or by variable name.
+            variables (Sequence[object]): variables of the result set, in order.
 
         Returns:
-            jelly.SparqlResultsFrame | None: a frame, if one is full.
+            jelly.SparqlResultsFrame | None: the frame, if this row filled it.
 
         """
         values = self.values
         if len(variables) != len(values):
             msg = f"expected {len(values)} variables, got {len(variables)}"
             raise JellyConformanceError(msg)
-        # A list typed as such is cheaper to index (see row())
+        # A typed list is cheaper to index, see row()
         keys: list[object] = variables if type(variables) is list else list(variables)
         bound = 0
         if type(binding) is dict:
-            # The same, with dict methods that are not looked up for each call
+            # Same loop, but with direct dict calls instead of method lookups
             mapping: dict[Any, object | None] = binding
             for i in range(len(values)):
                 value = mapping.get(keys[i])
@@ -280,8 +279,8 @@ class SparqlStream:
                 if value is not None:
                     bound += 1
         if bound != len(binding):
-            # Not all keys are variables: e.g., rdflib's Variable("x") is not equal
-            # to "x". The values are looked up by name instead.
+            # Some keys are not the variable objects themselves (rdflib's
+            # Variable("x") does not equal "x"), so look the values up by name
             by_name = {str(key): value for key, value in binding.items()}
             for i in range(len(values)):
                 values[i] = by_name.get(str(variables[i]))
@@ -291,10 +290,10 @@ class SparqlStream:
         self, rows: Iterable[Sequence[object | None]]
     ) -> Iterator[jelly.SparqlResultsFrame]:
         """
-        Add rows to the result set, see row().
+        Add many rows, see row().
 
         Yields:
-            jelly.SparqlResultsFrame: full frames.
+            jelly.SparqlResultsFrame: each frame as it fills up.
 
         """
         for values in rows:
@@ -303,7 +302,7 @@ class SparqlStream:
                 yield frame
 
     def add(self, column: VariableColumn, term: object | None) -> None:
-        """Add a value to its column, None for an unbound one."""
+        """Add a value to a column. None is an unbound cell."""
         if term is None:
             if not column.run_unbound:
                 column.end_run()
@@ -329,7 +328,7 @@ class SparqlStream:
             self._triple_term_added(column)
 
     def _switch_triple_iris(self, column: VariableColumn) -> None:
-        """Give the encoder the IRI sequence of a column's triple terms."""
+        """Swap the encoder's triple-term IRI state over to another column."""
         owner = self.triple_owner
         assert owner is not None
         encoder = self.encoder
@@ -345,23 +344,23 @@ class SparqlStream:
             self.triple_owner = column
         iris = self.encoder.triple_iris
         if iris > column.max_triple_iris:
-            # From now on, each row may need this many IRIs for the column
+            # Every following row may need this many IRIs for the column
             self.encoder.reserve_iris(iris - column.max_triple_iris)
             column.max_triple_iris = iris
 
     def end_frame(self) -> jelly.SparqlResultsFrame:
-        """End the current frame of the result set, and return it."""
+        """End the current frame and return it."""
         if self.variables is None or self.failed:
             if self.failed:
                 raise _failed()
-            msg = "there is no result set to end a frame of"
+            msg = "there is no result set in progress"
             raise JellyConformanceError(msg)
         frame = jelly.SparqlResultsFrame()
         self.write_frame(frame)
         return frame
 
     def write_frame(self, frame: jelly.SparqlResultsFrame) -> None:
-        """Write the frame's options, header, lookup entries and rows."""
+        """Fill in the frame: options, header, lookup entries and rows."""
         self.write_start(frame)
         encoder = self.encoder
         row_count = self.row_count
@@ -369,14 +368,14 @@ class SparqlStream:
         encoder.names.packed.write(frame.names)
         encoder.prefixes.packed.write(frame.prefixes)
         encoder.datatypes.packed.write(frame.datatypes)
-        # A frame with no rows needs no columns
+        # Columns are left out of a frame with no rows
         if row_count:
             for column in self.columns:
                 column.write(frame.columns.add())
         self.new_frame()
 
     def write_start(self, frame: jelly.SparqlResultsFrame) -> None:
-        """Write the stream options and the header, if the frame needs them."""
+        """Add the stream options and the header, if they are still due."""
         if self.options_pending:
             frame.options.CopyFrom(self.stream_options())
             self.options_pending = False
@@ -389,22 +388,22 @@ class SparqlStream:
 
     def end(self, error: str = "") -> jelly.SparqlResultsFrame:
         """
-        End the result set, and return its last frame.
+        End the result set and return its last frame, which has the trailer.
 
         Args:
-            error (str): why the result set is incomplete, if it is. Readers then
-                know that some results are missing.
+            error (str): reason the result set is incomplete, if it is. It tells
+                readers that some results are missing.
 
         Returns:
-            jelly.SparqlResultsFrame: the last frame, with the trailer.
+            jelly.SparqlResultsFrame: the last frame.
 
         """
         frame = jelly.SparqlResultsFrame()
         if self.failed:
             if not error or self.variables is None:
                 raise _failed()
-            # The rows of the frame are dropped, with the lookup entries they added,
-            # so nothing can follow
+            # Drop the frame's rows and their lookup entries. The lookups are then
+            # out of sync with the reader, so the stream must end here.
             self.write_start(frame)
             self.ended = True
         elif self.variables is None:
@@ -426,15 +425,15 @@ class SparqlStream:
         error: str = "",
     ) -> jelly.SparqlResultsFrame:
         """
-        Write a boolean result (of an ASK query), and return its frame.
+        Return the frame of a boolean result (of an ASK query).
 
         Args:
             value (bool): the result.
-            links (Sequence[str]): IRIs of links describing the result.
-            error (str): why the result is incomplete, if it is.
+            links (Sequence[str]): link IRIs for the result.
+            error (str): reason the result is incomplete, if it is.
 
         Returns:
-            jelly.SparqlResultsFrame: the only frame of the result set.
+            jelly.SparqlResultsFrame: the result's only frame.
 
         """
         self._check_can_start()
@@ -469,7 +468,7 @@ class SparqlStream:
 
 def error_message(error: BaseException) -> str:
     """
-    Return what a trailer says about an error that left the results incomplete.
+    Format an exception as the error message of a trailer.
 
     >>> error_message(KeyError("x"))
     "KeyError: 'x'"
@@ -477,7 +476,7 @@ def error_message(error: BaseException) -> str:
     'timeout'
     """
     if isinstance(error, JellyIncompleteResultsError):
-        # Results passed on from a stream that was incomplete itself
+        # Passing on the error of a stream that was itself incomplete
         return error.error
     message = str(error)
     name = type(error).__name__
@@ -486,10 +485,10 @@ def error_message(error: BaseException) -> str:
 
 class FrameWriter:
     """
-    Writes the frames of a stream to a file: delimited, or as its only frame.
+    Writer of frames to a file, either delimited or as a single frame.
 
-    The file is flushed after each frame, so that a reader at the other end of a
-    connection gets the rows as they are written.
+    Each frame is flushed, so a reader on the other end of a connection gets the
+    rows right away.
     """
 
     def __init__(self, out: IO[bytes], *, delimited: bool) -> None:
@@ -523,11 +522,11 @@ def write_solutions(  # noqa: PLR0913 keyword-only options
     error: str = "",
 ) -> None:
     """
-    Write a solution sequence (the result of a SELECT query) as a result set.
+    Write a solution sequence (the result of a SELECT query) as one result set.
 
-    If getting the rows fails midway (e.g., the query fails), the result set ends
-    with the error, so that readers know it is incomplete, and the error is
-    raised. `error` says why the rows are incomplete, if they are known to be.
+    If iterating the rows raises (e.g., the query fails midway), the result set is
+    ended with that error so readers know it is incomplete, and the exception is
+    re-raised. Pass `error` if the rows are already known to be incomplete.
     """
     stream.start(variables, links)
     try:
@@ -551,17 +550,17 @@ def write_bindings(  # noqa: PLR0913 keyword-only options
     error: str = "",
 ) -> None:
     """
-    Write a solution sequence whose rows are bindings, see write_solutions().
+    Like write_solutions(), with rows given as bindings.
 
     Args:
         stream (SparqlStream): the stream.
-        variables (Sequence[object]): the variables, each a str (e.g., rdflib's
-            Variable), whose names are written.
+        variables (Sequence[object]): the variables, as str objects (e.g., rdflib's
+            Variable). Their names are written.
         bindings (Iterable[Mapping[Any, object | None]]): the rows, see
             SparqlStream.binding().
-        writer (FrameWriter): where the frames go.
-        links (Sequence[str]): IRIs of links that describe the results.
-        error (str): why the rows are incomplete, if they are known to be.
+        writer (FrameWriter): writer of the frames.
+        links (Sequence[str]): link IRIs for the results.
+        error (str): reason the rows are incomplete, if known.
 
     """
     stream.start([str(variable) for variable in variables], links)
@@ -577,6 +576,6 @@ def write_bindings(  # noqa: PLR0913 keyword-only options
 
 
 def _end_with(stream: SparqlStream, writer: FrameWriter, failure: Exception) -> None:
-    """End the result set with an error, if the frame that says so can be written."""
+    """End the result set with an error, if writing the frame still works."""
     with suppress(Exception):
         writer.write(stream.end(error_message(failure)))

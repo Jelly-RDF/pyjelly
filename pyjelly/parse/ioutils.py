@@ -72,7 +72,7 @@ FRAME_TAGS: Final = single_byte_tags(
 SPARQL_FRAME_TAGS: Final = single_byte_tags(
     cast("Descriptor", jelly.SparqlResultsFrame.DESCRIPTOR)
 )
-"""Tag bytes a non-delimited frame of Jelly-SPARQL can start with."""
+"""Tag bytes that a non-delimited Jelly-SPARQL frame can start with."""
 
 
 def hint_bytes_needed(first_byte: int, tags: frozenset[int] = FRAME_TAGS) -> int:
@@ -288,26 +288,25 @@ def detect_delimited(
     inp: IO[bytes], tags: frozenset[int] = FRAME_TAGS
 ) -> tuple[IO[bytes], bool]:
     """
-    Detect whether a stream is delimited, from its first bytes.
+    Detect from the first bytes whether a stream is delimited.
 
     Args:
         inp (IO[bytes]): the stream
         tags (frozenset[int]): tag bytes a frame can start with
 
     Returns:
-        tuple[IO[bytes], bool]: the stream to read from its start, and whether it
-            is delimited
+        tuple[IO[bytes], bool]: a stream positioned at the start again, and
+            whether it is delimited
 
     """
     if inp.seekable():
         header = read_hint_header(inp, tags)
         inp.seek(-len(header), os.SEEK_CUR)
     else:
-        # Input may not be seekable (e.g. a network stream) -- then we put the bytes
-        # we looked at back in front of it. An unbuffered stream gets a buffer, but
-        # not a buffered one (e.g. from socket.makefile()): the outer buffer would
-        # wait for the inner one to fill up, so a stream that is still being
-        # written would not be read as it comes.
+        # Input may not be seekable (e.g. a network stream). Then the bytes we read
+        # are put back in front of it. Only an unbuffered stream gets a buffer: a
+        # second buffer around a buffered stream (e.g. from socket.makefile())
+        # waits for the inner one to fill up, which blocks streaming.
         # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
         buffered = inp
         if not isinstance(inp, io.BufferedIOBase):

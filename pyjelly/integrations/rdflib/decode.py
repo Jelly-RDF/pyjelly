@@ -173,10 +173,10 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
 
 class BindingRows:
     """
-    Makes the rows of Jelly-SPARQL frames as rdflib bindings.
+    Row factory that turns the cells of Jelly-SPARQL frames into rdflib bindings.
 
-    A binding is a dict that maps each bound Variable to its value, as in rdflib's
-    query results. The same names get the same Variable objects (see variables()).
+    A binding is a dict from each bound Variable to its value, as in rdflib's query
+    results. Equal names share one Variable object (see variables()).
     """
 
     def __init__(self) -> None:
@@ -184,7 +184,7 @@ class BindingRows:
         self.vars: list[Variable] = []
 
     def variables(self, names: list[str]) -> list[Variable]:
-        """Return the Variables with these names."""
+        """Get the Variable objects for these names."""
         if names != self.names:
             self.names = names
             self.vars = [Variable(name) for name in names]

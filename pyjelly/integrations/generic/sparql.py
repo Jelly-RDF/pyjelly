@@ -1,8 +1,8 @@
 """
-Jelly-SPARQL with the generic API: SPARQL query results, without rdflib.
+Jelly-SPARQL support for the generic API (SPARQL query results without rdflib).
 
-The values of the results are the terms of the generic API (IRI, Literal,
-BlankNode, and Triple for triple terms), and None for unbound variables.
+Values are generic API terms (IRI, Literal, BlankNode, and Triple for triple
+terms). Unbound variables are None.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ def parse_jelly_sparql(inp: IO[bytes] | bytes) -> SparqlResultSet:
     """
     Read SPARQL query results from Jelly-SPARQL.
 
-    The rows are read as they are iterated (once), so the input must stay open
+    Rows are read during iteration (only once), so the input must stay open
     until then.
 
     Args:
@@ -34,8 +34,9 @@ def parse_jelly_sparql(inp: IO[bytes] | bytes) -> SparqlResultSet:
             one value per variable, None if the variable is unbound.
 
     Raises:
-        JellyIncompleteResultsError: if the writer said that the results are
-            incomplete: when the rows were iterated, or now for a boolean result.
+        JellyIncompleteResultsError: if the writer reported that the results are
+            incomplete. Raised at the end of the iteration, or right away for a
+            boolean result.
 
     """
     return read_result_set(inp, GenericStatementSinkAdapter)
@@ -45,10 +46,9 @@ def parse_jelly_sparql_sequence(inp: IO[bytes] | bytes) -> Iterator[SparqlResult
     """
     Read a sequence of SPARQL query results from one Jelly-SPARQL stream.
 
-    The stream has the PUNCTUATED type, which holds any number of results (a
-    stream of the FLAT type, the default, has one). The rows are read as they are
-    iterated. Rows not yet iterated when the next result set is read are kept in
-    memory.
+    This reads PUNCTUATED streams, which hold any number of results. A FLAT
+    stream (the default) holds one. Rows are read during iteration. If the next
+    result set is read first, the unread rows are kept in memory.
 
     Args:
         inp (IO[bytes] | bytes): the stream, delimited.
@@ -61,7 +61,7 @@ def parse_jelly_sparql_sequence(inp: IO[bytes] | bytes) -> Iterator[SparqlResult
 
 
 def sparql_stream(options: SparqlOptions | None = None) -> SparqlStream:
-    """Return a stream that writes Jelly-SPARQL with terms of the generic API."""
+    """Create a Jelly-SPARQL writer for generic API terms."""
     if options is None:
         options = SparqlOptions()
     encoder = GenericSinkTermEncoder(lookup_preset=options.lookup_preset)
@@ -79,17 +79,17 @@ def serialize_jelly_sparql(
     """
     Write a solution sequence (the result of a SELECT query) in Jelly-SPARQL.
 
-    If getting the rows fails midway (e.g., the query fails), the stream ends with
-    the error, so that readers know the results are incomplete, and the error is
-    raised.
+    If the rows fail midway (e.g., the query fails), the stream is ended with the
+    error so readers know the results are incomplete, and the exception is
+    re-raised.
 
     Args:
-        variables (Iterable[str]): names of the variables, in projection order.
+        variables (Iterable[str]): variable names, in projection order.
         rows (Iterable[Sequence[Node | None]]): the rows, with one value per
             variable, None if the variable is unbound.
-        out (IO[bytes]): where to write the results.
+        out (IO[bytes]): output stream.
         options (SparqlOptions | None): options of the stream.
-        links (Sequence[str]): IRIs of links that describe the results.
+        links (Sequence[str]): link IRIs for the results.
 
     """
     stream = sparql_stream(options)
@@ -109,9 +109,9 @@ def serialize_jelly_sparql_ask(
 
     Args:
         value (bool): the result.
-        out (IO[bytes]): where to write it.
+        out (IO[bytes]): output stream.
         options (SparqlOptions | None): options of the stream.
-        links (Sequence[str]): IRIs of links that describe the result.
+        links (Sequence[str]): link IRIs for the result.
 
     """
     stream = sparql_stream(options)
@@ -120,8 +120,8 @@ def serialize_jelly_sparql_ask(
     )
 
 
-#: A result in a sequence of results: the variables and the rows of a solution
-#: sequence, or a boolean result
+#: One result in a sequence: (variables, rows) for a SELECT query, or a bool for an
+#: ASK query
 SequenceItem = tuple[Iterable[str], Iterable[Sequence[Node | None]]] | bool
 
 
@@ -133,12 +133,12 @@ def serialize_jelly_sparql_sequence(
     """
     Write a sequence of SPARQL query results in one Jelly-SPARQL stream.
 
-    The stream has the PUNCTUATED type: each result is a result set of its own.
+    The stream is PUNCTUATED, with one result set per result.
 
     Args:
-        results (Iterable[SequenceItem]): the results: for a SELECT query, a pair
-            of the variables and the rows, and for an ASK query, its boolean result.
-        out (IO[bytes]): where to write them.
+        results (Iterable[SequenceItem]): the results, each a (variables, rows)
+            pair for a SELECT query, or a bool for an ASK query.
+        out (IO[bytes]): output stream.
         options (SparqlOptions | None): options of the stream, which must be
             punctuated. Defaults to SparqlOptions(punctuated=True).
 

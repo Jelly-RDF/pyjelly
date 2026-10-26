@@ -167,7 +167,7 @@ class TermEncoder:
 
         Args:
             iris (int): the most IRIs that one statement can have.
-            literals (int): the most literals that one statement can have. In a
+            literals (int): maximum number of literals in one statement or row. In a
                 statement, only the object can be a literal.
 
         """

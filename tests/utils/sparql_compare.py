@@ -1,5 +1,5 @@
 """
-Reading SPARQL JSON results and comparing results, for Jelly-SPARQL tests.
+Helpers for Jelly-SPARQL tests: reading SPARQL JSON results and comparing results.
 
 Two results are equivalent if both are boolean results with the same value, or if
 they have the same variables and the same rows in the same order, with a
@@ -37,7 +37,7 @@ Row = tuple[Term | None, ...]
 
 @dataclass
 class Results:
-    """Results, with their terms as in rdf_compare."""
+    """Query results, with terms in the form used by rdf_compare."""
 
     variables: list[str] = field(default_factory=list)
     rows: list[Row] = field(default_factory=list)
@@ -83,7 +83,7 @@ def read_srj(path: Path) -> Results:
 
 
 def generic_node(term: Term) -> Node:
-    """Return the term of the generic API for a term."""
+    """Convert a term to a generic API term."""
     kind = term[0]
     if kind == "iri":
         return IRI(term[1])
@@ -98,7 +98,7 @@ def generic_node(term: Term) -> Node:
 
 
 def generic_rows(results: Results) -> list[tuple[Node | None, ...]]:
-    """Return the rows with terms of the generic API."""
+    """Convert the rows to generic API terms."""
     return [
         tuple(None if term is None else generic_node(term) for term in row)
         for row in results.rows
@@ -106,7 +106,7 @@ def generic_rows(results: Results) -> list[tuple[Node | None, ...]]:
 
 
 def generic_results(result_set: SparqlResultSet) -> Results:
-    """Read a result set of the generic API whole."""
+    """Read all rows of a generic API result set."""
     rows = [
         tuple(None if value is None else generic_term(value) for value in row)
         for row in result_set
