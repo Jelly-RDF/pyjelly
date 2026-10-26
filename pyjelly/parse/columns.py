@@ -642,10 +642,11 @@ class ColumnDecoder:
         name_index = 0
         terms: list[Any] = []
         try:
-            for i in range(count):
+            # Iterating a list is cheaper than indexing it
+            for i, name_id in enumerate(name_ids):
                 if prefix_count > 1 and prefix_ids[i]:
                     prefix_index = prefix_ids[i]
-                name_index = name_ids[i] or name_index + 1
+                name_index = name_id or name_index + 1
                 name = names[name_index - 1]
                 prefix = prefixes[prefix_index - 1] if prefix_index else ""
                 if name is None or prefix is None:
