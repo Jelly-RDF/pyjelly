@@ -196,8 +196,19 @@ class SparqlStream:
         count = len(values)
         frame = self._start_row(count)
         try:
-            for i in range(count):
-                self.add(columns[i], values[i])
+            # Indexing a tuple or list typed as such is much cheaper than indexing
+            # any sequence, which goes through a general lookup with an int object
+            if type(values) is tuple:
+                row_tuple: tuple[object | None, ...] = values
+                for i in range(count):
+                    self.add(columns[i], row_tuple[i])
+            elif type(values) is list:
+                row_list: list[object | None] = values
+                for i in range(count):
+                    self.add(columns[i], row_list[i])
+            else:
+                for i in range(count):
+                    self.add(columns[i], values[i])
         except BaseException:
             # The frame is half-written: it can't be completed
             self.failed = True
@@ -243,18 +254,20 @@ class SparqlStream:
         if len(variables) != len(values):
             msg = f"expected {len(values)} variables, got {len(variables)}"
             raise JellyConformanceError(msg)
+        # A list typed as such is cheaper to index (see row())
+        keys: list[object] = variables if type(variables) is list else list(variables)
         bound = 0
         if type(binding) is dict:
             # The same, with dict methods that are not looked up for each call
             mapping: dict[Any, object | None] = binding
             for i in range(len(values)):
-                value = mapping.get(variables[i])
+                value = mapping.get(keys[i])
                 values[i] = value
                 if value is not None:
                     bound += 1
         else:
             for i in range(len(values)):
-                value = binding.get(variables[i])
+                value = binding.get(keys[i])
                 values[i] = value
                 if value is not None:
                     bound += 1
