@@ -88,6 +88,14 @@ def test_ask_round_trip(graph: Graph, query: str) -> None:
     assert bool(parsed) is bool(result)
 
 
+@pytest.mark.parametrize("name", ["application/x-jelly-sparql", "jellys"])
+def test_other_format_names(graph: Graph, name: str) -> None:
+    result = graph.query(SELECT)
+    data = result.serialize(format=name)
+    assert data is not None
+    assert Result.parse(io.BytesIO(data), format=name) == result
+
+
 def test_media_type(graph: Graph) -> None:
     result = graph.query(SELECT)
     data = result.serialize(format="application/x-jelly-sparql")

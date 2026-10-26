@@ -128,10 +128,12 @@ jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 
 [project.entry-points."rdf.plugins.resultparser"]
 jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+jellys = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
 "application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
 
 [project.entry-points."rdf.plugins.resultserializer"]
 jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
+jellys = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
 "application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
 
 [dependency-groups]
