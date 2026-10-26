@@ -309,6 +309,25 @@ def _adapter_missing(feature: str, *, stream_types: StreamTypes) -> Never:
     raise NotImplementedError(msg)
 
 
+def _row_missing(
+    rows: str,
+    *,
+    allowed_in: tuple[jelly.PhysicalStreamType, ...],
+    stream_types: StreamTypes,
+) -> Never:
+    """
+    Raise the error for statement rows that the adapter does not decode.
+
+    The adapter is chosen for the physical type of the stream, so the rows are
+    either not allowed in the stream, or the adapter is incomplete.
+    """
+    if stream_types.physical_type not in allowed_in:
+        physical_type_name = jelly.PhysicalStreamType.Name(stream_types.physical_type)
+        msg = f"a stream of type {physical_type_name} cannot have {rows}"
+        raise JellyConformanceError(msg)
+    _adapter_missing(f"decoding {rows}", stream_types=stream_types)
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class Adapter(metaclass=ABCMeta):
     def __init__(
@@ -350,19 +369,34 @@ class Adapter(metaclass=ABCMeta):
 
     # Optional abstract methods--not required to be implemented by all adapters
     def triple(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding triples", stream_types=self.options.stream_types)
+        _row_missing(
+            "triples",
+            allowed_in=(
+                jelly.PHYSICAL_STREAM_TYPE_TRIPLES,
+                jelly.PHYSICAL_STREAM_TYPE_GRAPHS,
+            ),
+            stream_types=self.options.stream_types,
+        )
 
     def quad(self, terms: Iterable[Any]) -> Any:  # noqa: ARG002
-        _adapter_missing("decoding quads", stream_types=self.options.stream_types)
+        _row_missing(
+            "quads",
+            allowed_in=(jelly.PHYSICAL_STREAM_TYPE_QUADS,),
+            stream_types=self.options.stream_types,
+        )
 
     def graph_start(self, graph_id: Any) -> Any:  # noqa: ARG002
-        _adapter_missing(
-            "decoding graph start markers", stream_types=self.options.stream_types
+        _row_missing(
+            "graph start markers",
+            allowed_in=(jelly.PHYSICAL_STREAM_TYPE_GRAPHS,),
+            stream_types=self.options.stream_types,
         )
 
     def graph_end(self) -> Any:
-        _adapter_missing(
-            "decoding graph end markers", stream_types=self.options.stream_types
+        _row_missing(
+            "graph end markers",
+            allowed_in=(jelly.PHYSICAL_STREAM_TYPE_GRAPHS,),
+            stream_types=self.options.stream_types,
         )
 
     def namespace_declaration(self, name: str, iri: Any) -> Any:  # noqa: ARG002
@@ -504,19 +538,27 @@ class Decoder:
             self.decode_graph_end(row_owner.graph_end)
         elif kind == "options":
             self.validate_stream_options(row_owner.options)
+        elif kind is None:
+            msg = "a row of the stream is empty"
+            raise JellyConformanceError(msg)
         else:
             msg = f"decoder not implemented for row {kind}"
             raise TypeError(msg)
 
     def validate_stream_options(self, options: jelly.RdfStreamOptions) -> None:
+        """Check that repeated stream options are the same as the first ones."""
         stream_types, lookup_preset, params = self.options
-        assert stream_types.physical_type == options.physical_type
-        assert stream_types.logical_type == options.logical_type
-        assert params.stream_name == options.stream_name
-        assert params.version >= options.version
-        assert lookup_preset.max_prefixes == options.max_prefix_table_size
-        assert lookup_preset.max_datatypes == options.max_datatype_table_size
-        assert lookup_preset.max_names == options.max_name_table_size
+        if (
+            stream_types.physical_type != options.physical_type
+            or stream_types.logical_type != options.logical_type
+            or params.stream_name != options.stream_name
+            or params.version < options.version
+            or lookup_preset.max_prefixes != options.max_prefix_table_size
+            or lookup_preset.max_datatypes != options.max_datatype_table_size
+            or lookup_preset.max_names != options.max_name_table_size
+        ):
+            msg = "the repeated stream options are not the same as the first ones"
+            raise JellyConformanceError(msg)
 
     def ingest_prefix_entry(self, entry: jelly.RdfPrefixEntry) -> None:
         """
@@ -644,7 +686,7 @@ class Decoder:
         kind = _LITERAL_WHICH_ONEOF(literal, "literalKind")
         if kind == "langtag":
             language = literal.langtag or None
-        elif kind == "datatype" and self.datatypes.lookup_size:
+        elif kind == "datatype":
             datatype = self.datatypes.decode_datatype_term_index(literal.datatype)
         lex = literal.lex
         cache = self.literal_cache(language, datatype)
@@ -705,7 +747,11 @@ class Decoder:
         return self.adapter.namespace_declaration(declaration.name, iri)
 
     def decode_graph_start(self, graph_start: jelly.RdfGraphStart) -> Any:
-        term = getattr(graph_start, graph_start.WhichOneof("graph"))
+        kind = graph_start.WhichOneof("graph")
+        if kind is None:
+            msg = "a graph start marker has no graph"
+            raise JellyConformanceError(msg)
+        term = getattr(graph_start, kind)
         return self.adapter.graph_start(self.decode_term(term))
 
     def decode_graph_end(self, _: jelly.RdfGraphEnd) -> Any:
@@ -722,7 +768,7 @@ class Decoder:
             size (int): 3 for a triple, 4 for a quad
 
         Raises:
-            ValueError: if a missing repeated term is encountered
+            JellyConformanceError: if a missing repeated term is encountered
 
         Returns:
             Any: a list of decoded terms
@@ -756,7 +802,7 @@ class Decoder:
         for i in range(size):
             if terms[i] is _MISSING:
                 msg = f"missing repeated term {_POSITIONS[i]}"
-                raise ValueError(msg)
+                raise JellyConformanceError(msg)
         return terms
 
     def decode_triple(self, triple: jelly.RdfTriple) -> Any:
@@ -773,7 +819,7 @@ class Decoder:
                 decoded_term = self.decode_term(jelly_term)
             else:
                 msg = "repeated terms are not allowed in quoted triples"
-                raise ValueError(msg)
+                raise JellyConformanceError(msg)
             terms.append(decoded_term)
         return self.adapter.quoted_triple(terms)
 

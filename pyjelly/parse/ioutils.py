@@ -2,12 +2,14 @@ import io
 import os
 from collections.abc import Generator, Iterator
 from itertools import chain
-from typing import IO, Final, cast
+from typing import IO, Final, TypeVar, cast
 
 from google.protobuf.descriptor import Descriptor, FieldDescriptor
+from google.protobuf.message import DecodeError, Message
 from google.protobuf.proto import parse, parse_length_prefixed
 
 from pyjelly import jelly
+from pyjelly.errors import JellyConformanceError
 from pyjelly.options import MIN_COLUMN_NAME_LOOKUP_SIZE, VERSION_1_2
 from pyjelly.parse.decode import ParserOptions, options_from_frame, parser_options
 
@@ -316,9 +318,49 @@ def detect_delimited(
     return inp, delimited_jelly_hint(header, tags)
 
 
+# What protobuf raises for bytes it can't decode. The pure-Python implementation
+# raises UnicodeDecodeError for a string that isn't UTF-8, the others DecodeError.
+DECODE_ERRORS: Final = (DecodeError, UnicodeDecodeError)
+
+MessageT = TypeVar("MessageT", bound=Message)
+
+
+def parse_delimited(message_class: type[MessageT], inp: IO[bytes]) -> MessageT | None:
+    """
+    Read the next length-prefixed message, or None at the end of the input.
+
+    Raises:
+        DecodeError: if the bytes are not a message of the class, or the input
+            ends in the middle of one. Or UnicodeDecodeError, see DECODE_ERRORS.
+        ValueError: if the input is closed.
+
+    """
+    try:
+        # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
+        return parse_length_prefixed(message_class, inp)  # type: ignore[arg-type]
+    except DECODE_ERRORS:
+        raise
+    except (ValueError, OverflowError) as error:
+        if getattr(inp, "closed", False):
+            raise
+        # The length prefix is cut short, or too large to read
+        msg = f"invalid length prefix ({error})"
+        raise DecodeError(msg) from None
+
+
+def _not_jelly(error: Exception) -> JellyConformanceError:
+    msg = f"the stream is not valid Jelly-RDF ({error}). Is it cut short?"
+    return JellyConformanceError(msg)
+
+
 def frame_iterator(inp: IO[bytes]) -> Generator[jelly.RdfStreamFrame]:
-    # protobuf annotates `input_bytes` as io.BytesIO, but any IO[bytes] works.
-    while frame := parse_length_prefixed(jelly.RdfStreamFrame, inp):  # type: ignore[arg-type]
+    while True:
+        try:
+            frame = parse_delimited(jelly.RdfStreamFrame, inp)
+        except DECODE_ERRORS as error:
+            raise _not_jelly(error) from None
+        if frame is None:
+            return
         yield frame
 
 
@@ -371,7 +413,10 @@ def get_options_and_frames(
         options = options_from_frame(first_frame, delimited=True)
         return options, chain(skipped_frames, (first_frame,), frames)
 
-    frame = parse(jelly.RdfStreamFrame, inp.read())
+    try:
+        frame = parse(jelly.RdfStreamFrame, inp.read())
+    except DECODE_ERRORS as error:
+        raise _not_jelly(error) from None
 
     if not frame.rows:
         return _empty_stream_options(delimited=False), iter((frame,))
