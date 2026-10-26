@@ -197,9 +197,8 @@ class BindingRows:
         variables = self.variables(names)
         for j in range(len(cells)):
             variable = variables[j]
-            column = cells[j]
-            for r in range(rows):
-                value = column[r]
+            # Iterating a list is cheaper than indexing it
+            for r, value in enumerate(cells[j]):
                 if value is not None:
                     bindings[r][variable] = value
         return bindings
