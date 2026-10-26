@@ -96,12 +96,65 @@ def _check_kinds(kinds: bytes, value_count: int, position: str) -> None:
         raise JellyConformanceError(msg)
 
 
+def _too_many_cells(position: str) -> JellyConformanceError:
+    msg = f"the {position} column has more cells than the frame has rows"
+    return JellyConformanceError(msg)
+
+
 def _kinds_mismatch(position: str, kind: int) -> JellyConformanceError:
     msg = (
         f"the kinds of the {position} column refer to more {_KIND_NAMES[kind]} "
         "than it has"
     )
     return JellyConformanceError(msg)
+
+
+def _layout_cells(
+    values: list[Any], layouts: list[int], rows: int, position: str
+) -> list[Any]:
+    """Return the cells that the layouts of a column give, in order."""
+    cells: list[Any] = []
+    index = 0
+    k = 0
+    while k < len(layouts):
+        token = layouts[k]
+        k += 1
+        length = token & _LENGTH_MASK
+        if length == _LENGTH_MASK:
+            if k == len(layouts):
+                msg = f"corrupt layout of the {position} column: a length is cut off"
+                raise JellyConformanceError(msg)
+            length += layouts[k]
+            k += 1
+        skip = token >> _SKIP_SHIFT
+        if skip:
+            if index + skip > len(values):
+                msg = (
+                    f"corrupt layout of the {position} column: it skips past its values"
+                )
+                raise JellyConformanceError(msg)
+            cells += values[index : index + skip]
+            index += skip
+        if token & _UNBOUND:
+            term = None
+            count = length + 1
+        elif index < len(values):
+            term = values[index]
+            index += 1
+            count = length + 2
+        else:
+            msg = (
+                f"corrupt layout of the {position} column: a repeated value is past "
+                "its values"
+            )
+            raise JellyConformanceError(msg)
+        # Checked before the cells are made, as a run can claim any length
+        if len(cells) + count > rows:
+            raise _too_many_cells(position)
+        cells += [term] * count
+    if index < len(values):
+        cells += values[index:]
+    return cells
 
 
 class _Runs:
@@ -238,6 +291,9 @@ class ColumnDecoder:
         self.options_read = False
         # Statements of the current RDF Message so far, in this and earlier frames
         self.rows_in_message = 0
+        #: Put before the labels of blank nodes, to tell apart the blank nodes of
+        #: result sets that use the same labels (see pyjelly.parse.sparql)
+        self.bnode_scope = ""
 
     def iter_frame(self, frame: jelly.RdfStreamFrame) -> Iterator[Any]:
         """
@@ -353,15 +409,19 @@ class ColumnDecoder:
         return lengths
 
     def ingest_entries(self, batch: jelly.RdfColumnBatch) -> None:
+        self.apply_entries(batch.names, batch.prefixes, batch.datatypes)
+
+    def apply_entries(self, names: Any, prefixes: Any, datatypes: Any) -> None:
+        """Apply the packed lookup entries of a frame."""
         decoder = self.decoder
-        _apply_entries(batch.names, decoder.names)
-        _apply_entries(batch.prefixes, decoder.prefixes)
-        for entry in batch.datatypes:
+        _apply_entries(names, decoder.names)
+        _apply_entries(prefixes, decoder.prefixes)
+        for entry in datatypes:
             for value in entry.values:
                 if value in (LANG_STRING_DATATYPE_IRI, DIR_LANG_STRING_DATATYPE_IRI):
                     msg = f"the datatype lookup cannot have {value}"
                     raise JellyConformanceError(msg)
-        _apply_entries(batch.datatypes, decoder.datatypes)
+        _apply_entries(datatypes, decoder.datatypes)
 
     def namespaces(self, batch: jelly.RdfColumnBatch) -> list[Any]:
         adapter = self.decoder.adapter
@@ -459,6 +519,23 @@ class ColumnDecoder:
             runs.add(None, rows - runs.cells)
         return runs
 
+    def cells(self, column: jelly.RdfColumn, rows: int, position: str) -> list[Any]:
+        """
+        Decode a column of Jelly-SPARQL into its cells, in order.
+
+        The column can have terms of any type, and unbound cells, which are None.
+        """
+        values = self.run_values(column, _ANY, position)
+        layouts: list[int] = column.layouts[:]
+        # Without layouts, each value takes one cell
+        cells = _layout_cells(values, layouts, rows, position) if layouts else values
+        if len(cells) > rows:
+            raise _too_many_cells(position)
+        if len(cells) < rows:
+            # The rest are unbound
+            cells += [None] * (rows - len(cells))
+        return cells
+
     def run_values(
         self, column: jelly.RdfColumn, allowed: int, position: str
     ) -> list[Any]:
@@ -541,27 +618,41 @@ class ColumnDecoder:
         prefix_index = prefix_ids[0] if prefix_count == 1 else 0
         name_index = 0
         terms: list[Any] = []
-        for i in range(count):
-            if prefix_count > 1 and prefix_ids[i]:
-                prefix_index = prefix_ids[i]
-            name_index = name_ids[i] or name_index + 1
-            name = names[name_index - 1]
-            prefix = prefixes[prefix_index - 1] if prefix_index else ""
-            if name is None or prefix is None:
-                msg = (
-                    f"an IRI refers to name {name_index} or prefix {prefix_index}, "
-                    "which is not set"
-                )
-                raise JellyConformanceError(msg)
-            cached = cache[name_index]
-            if cached is not None and cached.name is name and cached.prefix is prefix:
-                terms.append(cached.term)
-            else:
-                terms.append(decoder.new_iri(name_index, name, prefix))
+        try:
+            for i in range(count):
+                if prefix_count > 1 and prefix_ids[i]:
+                    prefix_index = prefix_ids[i]
+                name_index = name_ids[i] or name_index + 1
+                name = names[name_index - 1]
+                prefix = prefixes[prefix_index - 1] if prefix_index else ""
+                if name is None or prefix is None:
+                    msg = (
+                        f"an IRI refers to name {name_index} or prefix "
+                        f"{prefix_index}, which is not set"
+                    )
+                    raise JellyConformanceError(msg)
+                cached = cache[name_index]
+                if (
+                    cached is not None
+                    and cached.name is name
+                    and cached.prefix is prefix
+                ):
+                    terms.append(cached.term)
+                else:
+                    terms.append(decoder.new_iri(name_index, name, prefix))
+        except IndexError:
+            msg = (
+                f"an IRI refers to name {name_index} or prefix {prefix_index}, "
+                "which is outside the lookups"
+            )
+            raise JellyConformanceError(msg) from None
         return terms
 
     def bnodes(self, column: jelly.RdfColumn) -> list[Any]:
         adapter = self.decoder.adapter
+        scope = self.bnode_scope
+        if scope:
+            return [adapter.bnode(scope + label) for label in column.bnodes]
         return [adapter.bnode(label) for label in column.bnodes]
 
     def literals(self, column: jelly.RdfColumn) -> list[Any]:
@@ -605,7 +696,14 @@ class ColumnDecoder:
         if not kind:
             return _LiteralKind(decoder, None, None, None)
         if kind & 1:
-            datatype = decoder.datatypes.at((kind + 1) >> 1)
+            index = (kind + 1) >> 1
+            if index > decoder.datatypes.lookup_size:
+                msg = (
+                    f"a literal kind refers to datatype {index}, which is outside the "
+                    "datatype lookup"
+                )
+                raise JellyConformanceError(msg)
+            datatype = decoder.datatypes.at(index)
             return _LiteralKind(decoder, None, datatype, None)
         index = (kind >> 1) - 1
         if index >= len(langtags):
@@ -646,7 +744,7 @@ class ColumnDecoder:
         if kind == "s_iri":
             s = iris.term(triple.s_iri)
         elif kind == "s_bnode":
-            s = adapter.bnode(triple.s_bnode)
+            s = adapter.bnode(self.bnode_scope + triple.s_bnode)
         else:
             msg = "a triple term has no subject"
             raise JellyConformanceError(msg)
@@ -658,7 +756,7 @@ class ColumnDecoder:
         if kind == "o_iri":
             o = iris.term(triple.o_iri)
         elif kind == "o_bnode":
-            o = adapter.bnode(triple.o_bnode)
+            o = adapter.bnode(self.bnode_scope + triple.o_bnode)
         elif kind == "o_literal":
             o = self.triple_term_literal(triple.o_literal)
         elif kind == "o_triple_term":

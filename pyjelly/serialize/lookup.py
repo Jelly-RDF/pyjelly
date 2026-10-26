@@ -139,8 +139,8 @@ class Lookup:
                 return index
             index = 1 if index == size else index + 1
         msg = (
-            f"a lookup of size {size} is too small to encode a single statement: "
-            "the statement uses every one of its entries"
+            f"a lookup of size {size} is too small to encode a single statement or "
+            "row of results: it uses every one of its entries"
         )
         raise JellyConformanceError(msg)
 

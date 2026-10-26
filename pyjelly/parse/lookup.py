@@ -33,7 +33,12 @@ class LookupDecoder:
         previous_index = self.last_assigned_index
         if index == 0:
             index = previous_index + 1
-        assert index > 0
+        if index > self.lookup_size:
+            msg = (
+                f"a lookup entry has the index {index}, "
+                f"but the lookup has {self.lookup_size} entries"
+            )
+            raise JellyConformanceError(msg)
         self.data[index - 1] = value
         self.last_assigned_index = index
 
