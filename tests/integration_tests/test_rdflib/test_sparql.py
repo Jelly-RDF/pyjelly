@@ -307,3 +307,42 @@ def test_stream_options_are_written_once(graph: Graph) -> None:
     assert frames[0].options.stream_type == jelly.SPARQL_STREAM_TYPE_FLAT
     assert list(frames[0].variables) == ["person", "name", "age"]
     assert all(not frame.variables for frame in frames[1:])
+
+
+def test_lazy(graph: Graph) -> None:
+    result = graph.query(SELECT)
+    data = result.serialize(format="jelly", options=SparqlOptions(frame_size=3))
+    assert data is not None
+    inp = io.BytesIO(data)
+    parsed = Result.parse(inp, format="jelly", lazy=True)
+    # Only the first frame was read
+    assert inp.tell() < len(data)
+    assert parsed.vars == result.vars
+    assert len(list(parsed)) == len(result)
+    assert inp.tell() == len(data)
+    assert parsed == result
+    assert isinstance(parsed, JellySparqlResult)
+    assert not parsed.truncated
+
+
+def test_lazy_incomplete() -> None:
+    result = Result("SELECT")
+    result.vars = [Variable("x")]
+    result.bindings = _failing_bindings()
+    out = io.BytesIO()
+    with pytest.raises(RuntimeError):
+        serialize_jelly_sparql(result, out)
+    out.seek(0)
+    parsed = parse_jelly_sparql(out, lazy=True)
+    rows: list[object] = []
+    with pytest.raises(JellyIncompleteResultsError):  # noqa: PT012
+        # Not rows.extend(parsed): it would call len(parsed), which reads all rows
+        for row in parsed:
+            rows.append(row)  # noqa: PERF402
+    assert len(rows) == 1
+
+
+def test_lazy_needs_a_stream(tmp_path: Path) -> None:
+    path = tmp_path / "results.jellys"
+    with pytest.raises(ValueError, match="stream"):
+        Result.parse(path, format="jelly", lazy=True)  # type: ignore[arg-type]
