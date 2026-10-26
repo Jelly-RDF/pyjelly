@@ -8,14 +8,19 @@ from pyjelly import jelly
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.generic.decode import GenericStatementSinkAdapter
 from pyjelly.integrations.generic.generic_sink import IRI
+from pyjelly.options import MAX_SPARQL_FRAME_ROWS, MAX_SPARQL_FRAME_VALUES
 from pyjelly.parse.sparql import SparqlDecoder, read_result_set
 from pyjelly.serialize.ioutils import write_delimited, write_single
 
 OPTIONS = jelly.SparqlResultsOptions(max_name_table_size=128, version=1)
 
 
-def _decoder(**kwargs: int) -> SparqlDecoder:
-    return SparqlDecoder(GenericStatementSinkAdapter, **kwargs)
+def _decoder(
+    *, max_rows: int = MAX_SPARQL_FRAME_ROWS, max_values: int = MAX_SPARQL_FRAME_VALUES
+) -> SparqlDecoder:
+    return SparqlDecoder(
+        GenericStatementSinkAdapter, max_rows=max_rows, max_values=max_values
+    )
 
 
 def _frame(**fields: object) -> jelly.SparqlResultsFrame:
