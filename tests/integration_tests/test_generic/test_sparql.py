@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
+from pyjelly.errors import (
+    JellyConformanceError,
+    JellyIncompleteResultsError,
+    JellyTruncatedResultsWarning,
+)
 from pyjelly.integrations.generic.generic_sink import (
     IRI,
     BlankNode,
@@ -18,9 +23,10 @@ from pyjelly.integrations.generic.generic_sink import (
 )
 from pyjelly.integrations.generic.sparql import (
     parse_jelly_sparql,
-    parse_jelly_sparql_results,
+    parse_jelly_sparql_sequence,
     serialize_jelly_sparql,
     serialize_jelly_sparql_ask,
+    serialize_jelly_sparql_sequence,
     sparql_stream,
 )
 from pyjelly.options import LookupPreset, SparqlOptions
@@ -66,7 +72,7 @@ def test_round_trip() -> None:
 
 @pytest.mark.parametrize("frame_size", [1, 3, 7, 1000])
 def test_frames(frame_size: int) -> None:
-    out = _write(ROWS * 20, SparqlOptions(frame_size=frame_size))
+    out = _write(ROWS * 20, SparqlOptions(frame_values=frame_size))
     frames = list(sparql_frames(out))
     rows_per_frame = max(1, frame_size // 3)
     assert all(frame.row_count <= rows_per_frame for frame in frames)
@@ -94,7 +100,7 @@ def test_triple_terms_in_several_columns() -> None:
     ] * 50
     options = SparqlOptions(
         lookup_preset=LookupPreset(max_names=128, max_prefixes=4, max_datatypes=4),
-        frame_size=9,
+        frame_values=9,
     )
     assert list(parse_jelly_sparql(_write(rows, options))) == rows
 
@@ -163,7 +169,7 @@ def test_incomplete() -> None:
         rows.extend(results)
     # The rows before the error are read
     assert rows == ROWS[:2]
-    assert results.error == "timeout"
+    assert results.error == "TimeoutError: timeout"
 
 
 def test_sequence_of_result_sets() -> None:
@@ -175,7 +181,7 @@ def test_sequence_of_result_sets() -> None:
     writer.write(stream.ask(False))  # noqa: FBT003
     write_solutions(stream, ["x"], [(BlankNode("b"),)], writer, links=[EX + "l"])
     out.seek(0)
-    first, second, third = parse_jelly_sparql_results(out)
+    first, second, third = parse_jelly_sparql_sequence(out)
     assert list(first) == ROWS
     assert second.boolean is False
     assert third.variables == ["x"]
@@ -186,13 +192,13 @@ def test_sequence_of_result_sets() -> None:
 
 
 def test_rows_are_kept_for_later() -> None:
-    stream = sparql_stream(SparqlOptions(punctuated=True, frame_size=3))
+    stream = sparql_stream(SparqlOptions(punctuated=True, frame_values=3))
     out = io.BytesIO()
     writer = FrameWriter(out, delimited=True)
     write_solutions(stream, ["s", "o", "t"], ROWS, writer)
     write_solutions(stream, ["s", "o", "t"], ROWS[:1], writer)
     out.seek(0)
-    first, second = parse_jelly_sparql_results(out)
+    first, second = parse_jelly_sparql_sequence(out)
     assert list(second) == ROWS[:1]
     assert list(first) == ROWS
 
@@ -205,5 +211,60 @@ def test_flat_reader_rejects_punctuated() -> None:
         SparqlOptions(punctuated=True),
     )
     out.seek(0)
-    with pytest.raises(JellyConformanceError, match="parse_jelly_sparql_results"):
+    with pytest.raises(JellyConformanceError, match="parse_jelly_sparql_sequence"):
         parse_jelly_sparql(out)
+
+
+def test_incomplete_boolean_result() -> None:
+    data = io.BytesIO()
+    FrameWriter(data, delimited=True).write(
+        sparql_stream().ask(True, error="no answer")  # noqa: FBT003
+    )
+    with pytest.raises(JellyIncompleteResultsError, match="no answer"):
+        parse_jelly_sparql(data.getvalue())
+
+
+def test_rows_are_iterated_once() -> None:
+    results = parse_jelly_sparql(_write(ROWS))
+    assert list(results) == ROWS
+    with pytest.raises(RuntimeError, match="only once"):
+        list(results)
+
+
+def test_iteration_can_be_picked_up_again() -> None:
+    results = parse_jelly_sparql(_write(ROWS, SparqlOptions(frame_values=3)))
+    for _ in results:
+        break
+    assert list(results) == ROWS[1:]
+
+
+def test_closed_input(tmp_path: Path) -> None:
+    path = tmp_path / "results.jellys"
+    path.write_bytes(_write(ROWS, SparqlOptions(frame_values=3)).getvalue())
+    with path.open("rb") as file:
+        results = parse_jelly_sparql(file)
+    with pytest.raises(ValueError, match="closed before all results were read"):
+        list(results)
+
+
+def test_truncated() -> None:
+    data = _write(ROWS, SparqlOptions(frame_values=3)).getvalue()
+    frames = list(sparql_frames(data))
+    cut = data[: -(frames[-1].ByteSize() + 1)]
+    results = parse_jelly_sparql(cut)
+    with pytest.warns(JellyTruncatedResultsWarning):
+        rows = list(results)
+    assert results.truncated
+    assert len(rows) == len(ROWS)
+
+
+def test_sequence_writer() -> None:
+    out = io.BytesIO()
+    serialize_jelly_sparql_sequence(
+        [(["s", "o", "t"], ROWS), False, (["x"], [(A,)])],
+        out,
+    )
+    first, second, third = parse_jelly_sparql_sequence(out.getvalue())
+    assert list(first) == ROWS
+    assert second.boolean is False
+    assert list(third) == [(A,)]

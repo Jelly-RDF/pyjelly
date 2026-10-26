@@ -303,10 +303,15 @@ def detect_delimited(
         header = read_hint_header(inp, tags)
         inp.seek(-len(header), os.SEEK_CUR)
     else:
-        # Input may not be seekable (e.g. a network stream) -- then we need to buffer
-        # it and put the bytes we looked at back in front of it.
+        # Input may not be seekable (e.g. a network stream) -- then we put the bytes
+        # we looked at back in front of it. An unbuffered stream gets a buffer, but
+        # not a buffered one (e.g. from socket.makefile()): the outer buffer would
+        # wait for the inner one to fill up, so a stream that is still being
+        # written would not be read as it comes.
         # See also: https://github.com/Jelly-RDF/pyjelly/issues/298
-        buffered = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
+        buffered = inp
+        if not isinstance(inp, io.BufferedIOBase):
+            buffered = io.BufferedReader(inp)  # type: ignore[arg-type, type-var, unused-ignore]
         header = read_hint_header(buffered, tags)
         inp = _StreamWithHeader(header, buffered)  # type: ignore[assignment]
     return inp, delimited_jelly_hint(header, tags)

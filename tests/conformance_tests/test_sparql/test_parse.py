@@ -7,13 +7,14 @@ from typing import IO, Any
 import pytest
 from rdflib.query import Result
 
+from pyjelly.errors import JellyIncompleteResultsError
 from pyjelly.integrations.generic.sparql import (
     parse_jelly_sparql as generic_parse_jelly_sparql,
 )
 from pyjelly.integrations.generic.sparql import (
-    parse_jelly_sparql_results as generic_parse_jelly_sparql_results,
+    parse_jelly_sparql_sequence as generic_parse_jelly_sparql_sequence,
 )
-from pyjelly.integrations.rdflib.sparql import parse_jelly_sparql_results
+from pyjelly.integrations.rdflib.sparql import parse_jelly_sparql_sequence
 from tests.conformance_tests.test_rdf._common import ConformanceCase, load_cases
 from tests.meta import SPARQL_FROM_JELLY_MANIFEST
 from tests.utils.sparql_compare import (
@@ -43,7 +44,7 @@ def _expected(case: ConformanceCase) -> list[Results]:
 def test_rdflib_parses_positive(case: ConformanceCase) -> None:
     with case.actions[0].open("rb") as file:
         if case.punctuated:
-            results = [rdflib_results(r) for r in parse_jelly_sparql_results(file)]
+            results = [rdflib_results(r) for r in parse_jelly_sparql_sequence(file)]
         else:
             results = [rdflib_results(Result.parse(file, format="jelly"))]
     assert_same_result_sets(_expected(case), results, hint=case.id)
@@ -54,11 +55,21 @@ def test_generic_parses_positive(case: ConformanceCase) -> None:
     with case.actions[0].open("rb") as file:
         if case.punctuated:
             results = [
-                generic_results(r) for r in generic_parse_jelly_sparql_results(file)
+                generic_results(r) for r in generic_parse_jelly_sparql_sequence(file)
             ]
         else:
             results = [generic_results(generic_parse_jelly_sparql(file))]
     assert_same_result_sets(_expected(case), results, hint=case.id)
+
+
+def _read_all_rdflib(file: IO[bytes], *, punctuated: bool) -> None:
+    if not punctuated:
+        Result.parse(file, format="jelly")
+        return
+    # Results that are incomplete don't end a sequence, they say so
+    for result in parse_jelly_sparql_sequence(file):
+        if result.error:
+            raise JellyIncompleteResultsError(result.error, result.error)
 
 
 @pytest.mark.parametrize("case", _params(positive=False, rdflib=True))
@@ -67,11 +78,11 @@ def test_rdflib_parsing_fails_negative(case: ConformanceCase) -> None:
         pytest.raises(Exception),  # noqa: B017,PT011 any error will do
         case.actions[0].open("rb") as file,
     ):
-        list(parse_jelly_sparql_results(file))
+        _read_all_rdflib(file, punctuated=case.punctuated)
 
 
 def _read_all(file: IO[bytes]) -> None:
-    for result_set in generic_parse_jelly_sparql_results(file):
+    for result_set in generic_parse_jelly_sparql_sequence(file):
         list(result_set)
 
 

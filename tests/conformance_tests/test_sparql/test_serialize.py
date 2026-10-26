@@ -10,12 +10,12 @@ from rdflib.query import Result
 
 from pyjelly import jelly
 from pyjelly.integrations.generic.sparql import (
-    parse_jelly_sparql_results,
+    parse_jelly_sparql_sequence,
     sparql_stream,
 )
 from pyjelly.integrations.rdflib.sparql import (
     serialize_jelly_sparql,
-    serialize_jelly_sparql_results,
+    serialize_jelly_sparql_sequence,
 )
 from pyjelly.options import LookupPreset, SparqlOptions
 from pyjelly.parse.sparql import sparql_frames
@@ -87,7 +87,7 @@ def _write_rdflib(case: ConformanceCase) -> None:
     options = _options(case)
     with _output(case).open("wb") as file:
         if options.punctuated:
-            serialize_jelly_sparql_results(results, file, options)
+            serialize_jelly_sparql_sequence(results, file, options)
         else:
             (result,) = results
             serialize_jelly_sparql(result, file, options)
@@ -101,7 +101,7 @@ def _check(case: ConformanceCase) -> None:
     assert frames[-1].HasField("trailer")
     assert not frames[-1].trailer.error
     with output.open("rb") as file:
-        actual = [generic_results(r) for r in parse_jelly_sparql_results(file)]
+        actual = [generic_results(r) for r in parse_jelly_sparql_sequence(file)]
     expected = [read_srj(path) for path in case.inputs]
     assert_same_result_sets(expected, actual, hint=case.id)
 

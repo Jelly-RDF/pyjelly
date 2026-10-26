@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import socket
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -15,16 +16,22 @@ from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from rdflib.query import Result, ResultRow
 
 from pyjelly import jelly
-from pyjelly.errors import JellyConformanceError, JellyIncompleteResultsError
+from pyjelly.errors import (
+    JellyConformanceError,
+    JellyIncompleteResultsError,
+    JellyTruncatedResultsWarning,
+)
 from pyjelly.integrations.rdflib.sparql import (
     JellySparqlResult,
     parse_jelly_sparql,
-    parse_jelly_sparql_results,
+    parse_jelly_sparql_sequence,
     serialize_jelly_sparql,
-    serialize_jelly_sparql_results,
+    serialize_jelly_sparql_sequence,
+    sparql_stream,
 )
 from pyjelly.options import LookupPreset, SparqlOptions
 from pyjelly.parse.sparql import sparql_frames
+from pyjelly.serialize.sparql import FrameWriter
 
 EX = "http://example.org/"
 
@@ -117,7 +124,7 @@ def test_empty_and_zero_variable_results(graph: Graph) -> None:
 def test_options(graph: Graph) -> None:
     options = SparqlOptions(
         lookup_preset=LookupPreset(max_names=128, max_prefixes=0, max_datatypes=8),
-        frame_size=2,
+        frame_values=2,
         stream_name="people",
     )
     result = graph.query(SELECT)
@@ -166,7 +173,7 @@ def test_error_midway_ends_the_stream_with_it() -> None:
     out.seek(0)
     with pytest.raises(JellyIncompleteResultsError, match="went away") as info:
         Result.parse(out, format="jelly")
-    assert info.value.error == "the endpoint went away"
+    assert info.value.error == "RuntimeError: the endpoint went away"
     partial = info.value.result
     assert isinstance(partial, JellySparqlResult)
     assert partial.bindings == [{Variable("x"): URIRef(EX + "a")}]
@@ -174,7 +181,7 @@ def test_error_midway_ends_the_stream_with_it() -> None:
 
 def test_truncated(graph: Graph) -> None:
     result = graph.query(SELECT)
-    data = result.serialize(format="jelly", options=SparqlOptions(frame_size=3))
+    data = result.serialize(format="jelly", options=SparqlOptions(frame_values=3))
     assert data is not None
     # The stream without its last frame, the one with the trailer
     frames = list(sparql_frames(io.BytesIO(data)))
@@ -187,9 +194,9 @@ def test_truncated(graph: Graph) -> None:
 def test_sequence_of_results(graph: Graph) -> None:
     results = [graph.query(SELECT), graph.query("ASK { ?s ?p ?o }")]
     out = io.BytesIO()
-    serialize_jelly_sparql_results(results, out)
+    serialize_jelly_sparql_sequence(results, out)
     out.seek(0)
-    parsed = list(parse_jelly_sparql_results(out))
+    parsed = list(parse_jelly_sparql_sequence(out))
     assert parsed == results
     out.seek(0)
     with pytest.raises(JellyConformanceError, match="PUNCTUATED"):
@@ -197,8 +204,8 @@ def test_sequence_of_results(graph: Graph) -> None:
 
 
 def test_sequence_needs_punctuated_options(graph: Graph) -> None:
-    with pytest.raises(JellyConformanceError, match="punctuated"):
-        serialize_jelly_sparql_results(
+    with pytest.raises(ValueError, match="punctuated"):
+        serialize_jelly_sparql_sequence(
             [graph.query(SELECT)], io.BytesIO(), SparqlOptions()
         )
 
@@ -297,7 +304,7 @@ def test_frames_of_many_terms() -> None:
 
 def test_stream_options_are_written_once(graph: Graph) -> None:
     data = graph.query(SELECT).serialize(
-        format="jelly", options=SparqlOptions(frame_size=3)
+        format="jelly", options=SparqlOptions(frame_values=3)
     )
     assert data is not None
     frames = list(sparql_frames(io.BytesIO(data)))
@@ -311,7 +318,7 @@ def test_stream_options_are_written_once(graph: Graph) -> None:
 
 def test_lazy(graph: Graph) -> None:
     result = graph.query(SELECT)
-    data = result.serialize(format="jelly", options=SparqlOptions(frame_size=3))
+    data = result.serialize(format="jelly", options=SparqlOptions(frame_values=3))
     assert data is not None
     inp = io.BytesIO(data)
     parsed = Result.parse(inp, format="jelly", lazy=True)
@@ -346,3 +353,134 @@ def test_lazy_needs_a_stream(tmp_path: Path) -> None:
     path = tmp_path / "results.jellys"
     with pytest.raises(ValueError, match="stream"):
         Result.parse(path, format="jelly", lazy=True)  # type: ignore[arg-type]
+
+
+def test_partly_iterated_result(graph: Graph) -> None:
+    result = graph.query(SELECT)
+    for _ in result:
+        break
+    parsed = _round_trip(result)
+    assert len(parsed) == len(graph.query(SELECT))
+
+
+def test_bindings_with_names_as_keys() -> None:
+    result = Result("SELECT")
+    result.vars = [Variable("x"), Variable("y")]
+    result.bindings = [{"x": URIRef(EX + "a")}, {Variable("y"): Literal(1)}]  # type: ignore[dict-item]
+    parsed = _round_trip(result)
+    assert parsed.bindings == [
+        {Variable("x"): URIRef(EX + "a")},
+        {Variable("y"): Literal(1)},
+    ]
+
+
+def test_results_without_variables_or_answer() -> None:
+    with pytest.raises(JellyConformanceError, match="no variables"):
+        serialize_jelly_sparql(Result("SELECT"), io.BytesIO())
+    with pytest.raises(JellyConformanceError, match="no answer"):
+        serialize_jelly_sparql(Result("ASK"), io.BytesIO())
+
+
+def test_sequence_goes_on_after_incomplete_results(graph: Graph) -> None:
+    failing = Result("SELECT")
+    failing.vars = [Variable("x")]
+    failing.bindings = _failing_bindings()
+    out = io.BytesIO()
+    with pytest.raises(RuntimeError):
+        serialize_jelly_sparql_sequence([graph.query("ASK { ?s ?p ?o }"), failing], out)
+    serialize_jelly_sparql_sequence([graph.query(SELECT)], out)
+    out.seek(0)
+    first, second, third = parse_jelly_sparql_sequence(out)
+    assert first.askAnswer is True
+    assert not first.error
+    assert second.error == "RuntimeError: the endpoint went away"
+    assert len(second) == 1
+    # Not equal: the blank nodes of a result set in a sequence are its own
+    assert len(third) == len(graph.query(SELECT))
+
+
+def test_lazy_links() -> None:
+    result = JellySparqlResult("SELECT")
+    result.vars = [Variable("x")]
+    result.bindings = [{Variable("x"): URIRef(EX + "a")}]
+    result.links = [EX + "about"]
+    data = result.serialize(format="jelly")
+    assert data is not None
+    parsed = Result.parse(io.BytesIO(data), format="jelly", lazy=True)
+    assert isinstance(parsed, JellySparqlResult)
+    assert parsed.links == [EX + "about"]
+
+
+def test_incomplete_and_truncated_results_are_passed_on(graph: Graph) -> None:
+    data = graph.query(SELECT).serialize(
+        format="jelly", options=SparqlOptions(frame_values=3)
+    )
+    assert data is not None
+    frames = list(sparql_frames(io.BytesIO(data)))
+    cut = data[: -(frames[-1].ByteSize() + 1)]
+    with pytest.warns(JellyTruncatedResultsWarning):
+        parsed = Result.parse(io.BytesIO(cut), format="jelly")
+    assert parsed.truncated
+    # Written again, the results say that they may be incomplete
+    again = parsed.serialize(format="jelly")
+    assert again is not None
+    with pytest.raises(JellyIncompleteResultsError, match="ended without"):
+        Result.parse(io.BytesIO(again), format="jelly")
+
+
+def test_cut_frame() -> None:
+    result = Result("SELECT")
+    result.vars = [Variable("x")]
+    result.bindings = [{Variable("x"): URIRef(EX + "a")}]
+    data = result.serialize(format="jelly")
+    assert data is not None
+    with pytest.raises(JellyConformanceError, match="cut short"):
+        Result.parse(io.BytesIO(data[:-3]), format="jelly")
+
+
+def test_jelly_rdf_is_not_jelly_sparql(graph: Graph) -> None:
+    data = graph.serialize(format="jelly", encoding="utf-8")
+    with pytest.raises(JellyConformanceError):
+        Result.parse(io.BytesIO(data), format="jelly")
+
+
+def test_bytes(graph: Graph) -> None:
+    data = graph.query(SELECT).serialize(format="jelly")
+    assert data is not None
+    assert parse_jelly_sparql(data) == graph.query(SELECT)
+
+
+def test_unknown_arguments(graph: Graph) -> None:
+    data = graph.query(SELECT).serialize(format="jelly")
+    assert data is not None
+    with pytest.raises(TypeError, match="lazzy"):
+        Result.parse(io.BytesIO(data), format="jelly", lazzy=True)
+    with pytest.raises(TypeError, match="option"):
+        graph.query(SELECT).serialize(format="jelly", option=SparqlOptions())
+
+
+def test_lazy_reading_from_a_socket() -> None:
+    reader_socket, writer_socket = socket.socketpair()
+    first_row_read = threading.Event()
+    waited: list[bool] = []
+
+    def produce() -> None:
+        with writer_socket, writer_socket.makefile("wb") as out:
+            stream = sparql_stream(SparqlOptions(frame_values=1))
+            writer = FrameWriter(out, delimited=True)
+            stream.start(["x"])
+            frame = stream.row([URIRef(EX + "a")])
+            assert frame is not None
+            writer.write(frame)
+            # The reader has the first row before the rest is written
+            waited.append(first_row_read.wait(timeout=10))
+            writer.write(stream.end())
+
+    producer = threading.Thread(target=produce)
+    producer.start()
+    with reader_socket, reader_socket.makefile("rb") as inp:
+        parsed = parse_jelly_sparql(inp, lazy=True)
+        for _ in parsed:
+            first_row_read.set()
+    producer.join()
+    assert waited == [True]
