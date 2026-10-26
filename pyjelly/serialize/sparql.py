@@ -145,7 +145,12 @@ class SparqlStream:
         self.variables = names
         self.columns = [VariableColumn() for _ in names]
         self.values = [None] * len(names)
-        self.rows_per_frame = self.options.rows_per_frame(len(names))
+        # A non-delimited stream is one frame, which no row count ends
+        self.rows_per_frame = (
+            self.options.rows_per_frame(len(names))
+            if self.options.delimited
+            else MAX_ROWS + 1
+        )
         self.header_pending = True
         self.links = list(links)
         self.new_frame()
@@ -198,7 +203,7 @@ class SparqlStream:
             self.failed = True
             raise
         self.row_count += 1
-        if self.row_count >= self.rows_per_frame and self.options.delimited:
+        if self.row_count >= self.rows_per_frame:
             return self.end_frame()
         return frame
 
