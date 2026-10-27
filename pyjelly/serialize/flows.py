@@ -8,7 +8,7 @@ from pyjelly import jelly
 if TYPE_CHECKING:
     from pyjelly.serialize.columns import ColumnBatch
 
-DEFAULT_FRAME_SIZE = 250
+DEFAULT_FRAME_SIZE = 1024
 
 
 class FrameFlow:
