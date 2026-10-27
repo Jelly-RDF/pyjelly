@@ -28,6 +28,8 @@ from pyjelly.integrations.generic import parse as generic_parse
 from pyjelly.integrations.generic import serialize as generic_serialize
 from pyjelly.integrations.rdflib import parse as rdflib_parse
 from pyjelly.integrations.rdflib import serialize as rdflib_serialize
+from pyjelly.options import StreamParameters
+from pyjelly.serialize.streams import SerializerOptions
 
 
 class NullOutput(io.BytesIO):
@@ -254,12 +256,14 @@ class PyjellyFlat(Method):
     Jelly with pyjelly's flat streaming API, using pyjelly's default options.
 
     `integration` is "rdflib" for statements made of rdflib terms, or "generic"
-    for pyjelly's own terms.
+    for pyjelly's own terms. With `version`, the stream is written in that protocol
+    version instead of the default one, e.g. 2 for Jelly-RDF 1.1.
     """
 
-    def __init__(self, integration: str) -> None:
-        self.name = f"{integration}-jelly-stream"
+    def __init__(self, integration: str, version: int | None = None) -> None:
+        self.name = f"{integration}-jelly{'11' if version == 2 else ''}-stream"  # noqa: PLR2004
         self.generic = integration == "generic"
+        self.version = version
 
     @override
     def statements(self, data: BenchData) -> list[Any]:
@@ -269,10 +273,13 @@ class PyjellyFlat(Method):
     def write(self, data: BenchData, out: IO[bytes]) -> None:
         # The API takes a generator, so the list is wrapped in one
         statements = (statement for statement in self.statements(data))
+        options = None
+        if self.version is not None:
+            options = SerializerOptions(params=StreamParameters(version=self.version))
         if self.generic:
-            generic_serialize.flat_stream_to_file(statements, out)
+            generic_serialize.flat_stream_to_file(statements, out, options)
         else:
-            rdflib_serialize.flat_stream_to_file(statements, out)
+            rdflib_serialize.flat_stream_to_file(statements, out, options)
 
     def _parse(self, data: bytes) -> Iterable[Any]:
         if self.generic:
@@ -305,6 +312,9 @@ METHODS: dict[str, Method] = {
         # Jelly through pyjelly's flat streaming API
         PyjellyFlat("rdflib"),
         PyjellyFlat("generic"),
+        # The same, writing Jelly-RDF 1.1, to compare it with 1.2
+        PyjellyFlat("rdflib", version=2),
+        PyjellyFlat("generic", version=2),
     )
 }
 
