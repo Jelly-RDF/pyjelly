@@ -172,10 +172,11 @@ def _measure(  # noqa: PLR0913
     profile: Path | None,
 ) -> None:
     """Run the warmup and measured iterations, and fill in the result."""
-    # Everything made so far lives until the end. Freezing it keeps the garbage
-    # collector from going through it again and again during the measurement.
-    # PyPy has no gc.freeze(), and doesn't need it: its collector doesn't go
-    # through old objects again unless they change.
+    # All objects allocated up to this point will be needed until the end
+    # of the benchmark. We freeze it to keep the GC from going through it
+    # again and again during the measurement. PyPy has no gc.freeze(),
+    # and doesn't need it: its collector doesn't go through old objects
+    # again unless they change.
     gc.collect()
     if hasattr(gc, "freeze"):
         gc.freeze()
