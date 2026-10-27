@@ -9,12 +9,12 @@ With Jelly, you can transmit both flat and structured streams of triples, quads,
 * Full support for reading and writing Jelly-encoded RDF data
 * Reading and writing SPARQL query results in [Jelly-SPARQL](sparql.md)
 * Seamless integration with [RDFLib](https://rdflib.readthedocs.io/) (*"works just like Turtle"*)
-* Standalone generic API with no third-party dependencies [Generic API](generic-sink.md)
+* Standalone [generic API](generic-sink.md) that doesn't need RDFLib or any other RDF library
 * Support for all Jelly stream types
 * Tools for working with delimited and non-delimited Jelly streams
-* Fine-grained control over serialization options, compression, and framing
+* Fine-grained control over serialization options and framing
 
-## Overview
+## Supported features
 
 ### Jelly-RDF versions
 
@@ -65,17 +65,12 @@ Use cases for pyjelly include:
     - We are working on support for pandas and other data science libraries – stay tuned for updates!
 - **Database dumps and bulk loads** – quickly read and write large RDF datasets with Jelly, reducing storage space and improving database maintenance tasks.
 
-## pyjelly integration with external libraries
+## Integrations with other libraries
 
-To learn how to use popular third-party libraries that connect with RDFLib, please see:
+pyjelly works with libraries that connect to RDFLib, see:
 
 - **[RDFLib-Neo4j integration](rdflib-neo4j-integration.md)**
 - **[NetworkX integration](networkx-integration.md)**
-
-## Generic API
-
-pyjelly includes its own [generic API](generic-sink.md) for working with RDF data (no RDFLib or other external RDF libraries required).  
-It provides simple, built-in types for triples and quads, allowing you to create, read, and write data directly in the Jelly format.
 
 ## Pre-compiled binaries
 

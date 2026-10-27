@@ -36,14 +36,17 @@ class Triple(tuple[Node, Node, Node]):
 
     @property
     def s(self) -> Node:
+        """The subject."""
         return self[0]
 
     @property
     def p(self) -> Node:
+        """The predicate."""
         return self[1]
 
     @property
     def o(self) -> Node:
+        """The object."""
         return self[2]
 
 
@@ -67,18 +70,22 @@ class Quad(tuple[Node, Node, Node, GraphName]):
 
     @property
     def s(self) -> Node:
+        """The subject."""
         return self[0]
 
     @property
     def p(self) -> Node:
+        """The predicate."""
         return self[1]
 
     @property
     def o(self) -> Node:
+        """The object."""
         return self[2]
 
     @property
     def g(self) -> GraphName:
+        """The graph name."""
         return self[3]
 
 
@@ -105,8 +112,10 @@ class Prefix(tuple[str, rdflib.URIRef]):
 
     @property
     def prefix(self) -> str:
+        """The prefix."""
         return self[0]
 
     @property
     def iri(self) -> rdflib.URIRef:
+        """The namespace IRI."""
         return self[1]

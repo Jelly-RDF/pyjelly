@@ -10,10 +10,7 @@ Install pyjelly from PyPI:
 pip install pyjelly
 ```
 
-### Requirements
-
-- Python 3.10 or newer  
-- Linux, macOS, or Windows
+The requirements are the same as [with RDFLib](getting-started.md#requirements).
 
 ## Usage without external libraries
 
@@ -31,11 +28,9 @@ The terms in the statements are `IRI`, `BlankNode` and `Literal`. You can read t
 
 ## Parsing statements from a Jelly file
 
-To load triples/quads into your python object from a `.jelly` file, see:
+To load triples/quads from a `.jelly` file into a `GenericStatementSink`, see:
 
 {{ code_example('generic/02_parse.py') }}
-
-Which retrieves data from your `.jelly` file.
 
 `GenericStatementSink` keeps all statements in memory. To read a large file statement by statement instead, use `parse_jelly_flat` in a generator:
 
@@ -49,17 +44,15 @@ Similarly, to process a Jelly stream as a stream of graphs through generic API, 
 
 {{ code_example('generic/06_parse_grouped.py') }}
 
-Where we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
+We use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
 
 ### Parsing a stream of statements
 
-You can also process a Jelly stream as a flat stream with only generic API:
-
-We look through a fragment of Denmark's OpenStreetMap to find all city names:
+You can also process a Jelly stream as a flat stream of statements. We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('generic/07_parse_flat.py') }}
 
-We get a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
+`parse_jelly_flat` returns a generator of statements, so the file is processed statement by statement.
 
 ## Serializing streams
 
@@ -69,15 +62,15 @@ If you have a generator object containing graphs, you can use a generic approach
 
 {{ code_example('generic/04_serialize_grouped.py')}}
 
-Grouped data is streamed in its original form, no need for additional RDF libraries like RDFLib. 
+Each sink is written as one [RDF Message]({{ proto_link("specification/serialization/#stream-types") }}), so the grouping is kept when the stream is read with `parse_jelly_grouped`.
 
 ### Serializing a stream of statements
 
-Serializing a generator object of statements to `.jelly` file through generic API:
+If you have a generator object containing statements, you can serialize it like this:
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
-Data is transmitted and kept ordered and simple.
+The statements are written in order, as one flat stream.
 
 ## Working with byte buffers and Kafka
 

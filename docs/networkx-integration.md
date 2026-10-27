@@ -8,8 +8,6 @@ Install the following libraries:
 pip install pyjelly[rdflib] networkx matplotlib
 ```
 
-Below there are few useful examples to follow.
-
 ## Parse graph, show it
 
 Let's investigate relationships between worldwide political figures (support and opposition relations)!

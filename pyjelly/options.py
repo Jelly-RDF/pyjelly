@@ -120,6 +120,7 @@ class LookupPreset:
 
     @classmethod
     def small(cls) -> Self:
+        """Return small lookups: 128 names, 32 prefixes and 32 datatypes."""
         return cls(max_names=128, max_prefixes=32, max_datatypes=32)
 
 
