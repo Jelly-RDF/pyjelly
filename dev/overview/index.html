@@ -322,6 +322,8 @@
       
         
       
+        
+      
     
     
     
@@ -509,6 +511,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sparql-query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPARQL query results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#conformance-to-the-jelly-specification" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -592,6 +605,34 @@
     
   
     Generic API (no RDFLib)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sparql/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SPARQL query results
   
 
     
@@ -956,6 +997,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#sparql-query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPARQL query results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#conformance-to-the-jelly-specification" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1048,6 +1100,7 @@
 <p><strong>pyjelly</strong> is a Python implementation of the Jelly protocol. It provides:</p>
 <ul>
 <li>Full support for reading and writing Jelly-encoded RDF data</li>
+<li>Reading and writing SPARQL query results in <a href="../sparql/">Jelly-SPARQL</a></li>
 <li>Seamless integration with <a href="https://rdflib.readthedocs.io/">RDFLib</a> (<em>"works just like Turtle"</em>)</li>
 <li>Standalone generic API with no third-party dependencies <a href="../generic-sink/">Generic API</a></li>
 <li>Support for all Jelly stream types</li>
@@ -1069,8 +1122,10 @@
 <p>A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of <a href="https://w3id.org/jelly/dev/specification/serialization/#stream-types">RDF Messages</a>. When you write a stream of graphs or datasets (e.g., with <code>grouped_stream_to_file</code>), each is an RDF Message. When you read such a stream with <code>parse_jelly_grouped</code>, you get one graph or dataset per message.</p>
 <h3 id="rdf-12">RDF 1.2</h3>
 <p>The generic API supports <a href="https://www.w3.org/TR/rdf12-concepts/">RDF 1.2</a>: triple terms, as a <code>Triple</code> in the object of a statement, and directional language-tagged strings, as <code>Literal("text", "en", direction="ltr")</code>. To declare the RDF version for a stream, set <code>rdf_version</code> in <code>StreamParameters</code>. RDFLib 7 doesn't support RDF 1.2 yet.</p>
+<h3 id="sparql-query-results">SPARQL query results</h3>
+<p>pyjelly reads and writes the results of <code>SELECT</code> and <code>ASK</code> queries in <a href="https://w3id.org/jelly/dev/specification/sparql/">Jelly-SPARQL</a>, with RDFLib's <code>Result.parse</code> and <code>Result.serialize</code>, or with the generic API. See <a href="../sparql/">SPARQL query results</a>.</p>
 <h3 id="conformance-to-the-jelly-specification">Conformance to the Jelly specification</h3>
-<p>pyjelly is continuously tested for conformance to <a href="https://w3id.org/jelly/dev/specification/">the Jelly specification</a>. It passes the <a href="https://w3id.org/jelly/dev/conformance/rdf-test-cases/">conformance tests of Jelly-RDF 1.2</a>, and the <a href="https://w3id.org/jelly/dev/conformance/rdf-1-1-test-cases/">tests of Jelly-RDF 1.1</a>, except for writing the <code>GRAPHS</code> physical stream type.</p>
+<p>pyjelly is continuously tested for conformance to <a href="https://w3id.org/jelly/dev/specification/">the Jelly specification</a>. It passes the <a href="https://w3id.org/jelly/dev/conformance/rdf-test-cases/">conformance tests of Jelly-RDF 1.2</a>, and the <a href="https://w3id.org/jelly/dev/conformance/rdf-1-1-test-cases/">tests of Jelly-RDF 1.1</a>, except for writing the <code>GRAPHS</code> physical stream type. It also passes the <a href="https://w3id.org/jelly/dev/conformance/sparql-test-cases/">conformance tests of Jelly-SPARQL</a>.</p>
 <p>See the <a href="https://github.com/Jelly-RDF/pyjelly/blob/main/tests/conformance_tests">conformance tests</a> in the pyjelly repository.</p>
 <h2 id="use-cases">Use cases</h2>
 <p>Use cases for pyjelly include:</p>
@@ -1118,7 +1173,7 @@ It provides simple, built-in types for triples and quads, allowing you to create
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 26, 2026 13:05:14 UTC">October 26, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 27, 2026 09:17:09 UTC">October 27, 2026</span>
   </span>
 
     
