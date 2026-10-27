@@ -10,7 +10,7 @@ JELLYT = Namespace("https://w3id.org/jelly/dev/tests/vocab#")
 MF = Namespace("http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#")
 
 # Requirements of the tests that the rdflib integration can't pass: rdflib has no
-# generalized statements, quoted triples, triple terms, or base directions
+# generalized statements, quoted triples, triple terms, or base directions.
 NOT_RDFLIB = {
     JELLYT.requirementRdfStar,
     JELLYT.requirementGeneralizedRdf,
@@ -24,7 +24,7 @@ class ConformanceCase:
     uri: str
     name: str
     positive: bool
-    #: The suite of the test: "v1_1" or "v1_2"
+    #: The suite of the test: "v1_1" or "v1_2", or "sparql"
     suite: str
     actions: list[Path]
     results: list[Path]
@@ -53,17 +53,21 @@ class ConformanceCase:
         return JELLYT.requirementMessages in self.requirements
 
     @property
+    def punctuated(self) -> bool:
+        return JELLYT.requirementPunctuated in self.requirements
+
+    @property
     def options(self) -> Path | None:
         """The stream options of a to_jelly test."""
         for path in self.actions:
-            if path.name == "stream_options.jelly":
+            if path.stem == "stream_options":
                 return path
         return None
 
     @property
     def inputs(self) -> list[Path]:
         """The input files, without the stream options."""
-        return [path for path in self.actions if path.name != "stream_options.jelly"]
+        return [path for path in self.actions if path.stem != "stream_options"]
 
 
 def load_cases(manifest_path: Path) -> list[ConformanceCase]:

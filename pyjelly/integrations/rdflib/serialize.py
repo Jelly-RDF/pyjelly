@@ -8,6 +8,7 @@ from itertools import chain
 
 from pyjelly.integrations.rdflib.statements import Quad, Triple
 from pyjelly.integrations.rdflib.walk import (
+    dataset_quads,
     gspo_trees,
     spo_tree,
     write_tree,
@@ -16,7 +17,7 @@ from pyjelly.integrations.rdflib.walk import (
 from pyjelly.options import StreamParameters
 
 from rdflib import Graph
-from rdflib.graph import Dataset, QuotedGraph
+from rdflib.graph import ConjunctiveGraph, Dataset, QuotedGraph
 from rdflib.serializer import Serializer as RDFLibSerializer
 
 
@@ -64,8 +65,8 @@ def triples_stream_frames(
             Graph/Dataset/Statements to serialize.
 
     Notes:
-        if Dataset is given, its graphs are unpacked and iterated over
-        if flow is GraphsFrameFlow, emits a frame per graph.
+        if Dataset (or ConjunctiveGraph) is given, its graphs are unpacked and
+        iterated over. If flow is GraphsFrameFlow, emits a frame per graph.
 
     Yields:
         Generator[jelly.RdfStreamFrame]: jelly frames.
@@ -75,7 +76,13 @@ def triples_stream_frames(
     if isinstance(data, Graph) and stream.options.params.namespace_declarations:
         yield from namespace_declarations(data, stream)
 
-    graphs = (data,) if not isinstance(data, Dataset) else data.graphs()
+    graphs: Iterable[Graph | Iterable[Triple]]
+    if isinstance(data, Dataset):
+        graphs = data.graphs()
+    elif isinstance(data, ConjunctiveGraph):
+        graphs = data.contexts()
+    else:
+        graphs = (data,)
     for graph in graphs:
         tree = spo_tree(graph) if isinstance(graph, Graph) else None
         if tree is not None:
@@ -100,6 +107,8 @@ def quads_stream_frames(
 
     Notes:
         Emits one frame per dataset if flow is of DatasetsFrameFlow.
+        A ConjunctiveGraph is written as a Dataset, with its default context
+        as the default graph.
 
     Args:
         stream (QuadStream): stream that specifies quads processing
@@ -112,15 +121,13 @@ def quads_stream_frames(
     stream.enroll()
     if stream.options.params.namespace_declarations:
         yield from namespace_declarations(data, stream)  # type: ignore[arg-type]
-    trees = gspo_trees(data) if isinstance(data, Dataset) else None
+    trees = gspo_trees(data) if isinstance(data, ConjunctiveGraph) else None
     if trees is not None:
         # An in-memory dataset, grouped by graph, subject and predicate
         yield from write_trees(stream, trees)
     else:
         # Any other store, or a generator of quads, in its own order
-        quads = (
-            data.quads((None, None, None, None)) if isinstance(data, Dataset) else data
-        )
+        quads = dataset_quads(data) if isinstance(data, ConjunctiveGraph) else data
         yield from stream.quads(quads)
     if frame := stream.flow.frame_from_dataset():
         yield frame
@@ -141,8 +148,13 @@ def guess_options(sink: Graph | Dataset, *, grouped: bool = False) -> Serializer
     2
     >>> guess_options(Dataset(), grouped=True).logical_type
     4
+
+    A ConjunctiveGraph (e.g., the one rdfpipe reads into) holds quads too:
+
+    >>> guess_options(ConjunctiveGraph()).logical_type
+    2
     """
-    if isinstance(sink, Dataset):
+    if isinstance(sink, ConjunctiveGraph):
         logical_type = (
             jelly.LOGICAL_STREAM_TYPE_DATASETS
             if grouped
@@ -164,8 +176,8 @@ def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
     """
     Return an appropriate stream implementation for the given options.
 
-    Notes: if base(!) logical type is GRAPHS and Dataset is given,
-        initializes TripleStream
+    Notes: if base(!) logical type is GRAPHS and Dataset (or ConjunctiveGraph)
+        is given, initializes TripleStream
 
     >>> graph_ser = RDFLibJellySerializer(Graph())
     >>> ds_ser = RDFLibJellySerializer(Dataset())
@@ -177,7 +189,7 @@ def guess_stream(options: SerializerOptions, sink: Graph | Dataset) -> Stream:
     """
     stream_cls: type[Stream]
     if (options.logical_type % 10) != jelly.LOGICAL_STREAM_TYPE_GRAPHS and isinstance(
-        sink, Dataset
+        sink, ConjunctiveGraph
     ):
         stream_cls = QuadStream
     else:

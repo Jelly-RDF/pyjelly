@@ -37,7 +37,9 @@ include = [
   "pyjelly/parse/lookup.py",
   "pyjelly/parse/ioutils.py",
   "pyjelly/parse/columns.py",
+  "pyjelly/parse/sparql.py",
   "pyjelly/serialize/columns.py",
+  "pyjelly/serialize/sparql.py",
   "pyjelly/serialize/streams.py",
   "pyjelly/serialize/flows.py",
   "pyjelly/parse/decode.py",
@@ -74,7 +76,7 @@ archs = ["x86_64", "aarch64"]
 name = "pyjelly"
 version = "0.0.0"
 readme = "README.md"
-description = "Jelly-RDF implementation for Python"
+description = "Jelly-RDF and Jelly-SPARQL implementation for Python"
 authors = [
     { name = "NeverBlink et al.", email = "contact@neverblink.eu" }
 ]
@@ -123,6 +125,16 @@ jelly = "pyjelly.integrations.rdflib.parse:RDFLibJellyParser"
 [project.entry-points."rdf.plugins.serializer"]
 jelly = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
 "application/x-jelly-rdf" = "pyjelly.integrations.rdflib.serialize:RDFLibJellySerializer"
+
+[project.entry-points."rdf.plugins.resultparser"]
+jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+jellys = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+"application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlParser"
+
+[project.entry-points."rdf.plugins.resultserializer"]
+jelly = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
+jellys = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
+"application/x-jelly-sparql" = "pyjelly.integrations.rdflib.sparql:RDFLibJellySparqlSerializer"
 
 [dependency-groups]
 dev = ["mypy>=2.4", "pre-commit>=4.2.0", "ruff>=0.11.8"]
@@ -177,7 +189,8 @@ exclude = [
     ".*_pb2(_grpc)?\\.pyi?", 
     "examples/",
     "submodules/",
-    "tests/conformance_tests/rdf/"
+    "tests/conformance_tests/rdf/",
+    "tests/conformance_tests/sparql/"
 ]
 
 [[tool.mypy.overrides]]
@@ -190,10 +203,10 @@ extra-standard-library = ["typing_extensions"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
-addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**", "--ignore-glob=submodules/**", "--ignore-glob=tests/conformance_tests/rdf/**"]
+addopts = ["--import-mode=importlib", "--doctest-modules", "--ignore-glob=docs/examples/**", "--ignore-glob=examples/**", "--ignore-glob=submodules/**", "--ignore-glob=tests/conformance_tests/rdf/**", "--ignore-glob=tests/conformance_tests/sparql/**"]
 
 [tool.ruff]
-extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}", "submodules", "tests/conformance_tests/rdf"]
+extend-exclude = ["*{_pb2,_pb2_grpc}.{py,pyi}", "submodules", "tests/conformance_tests/rdf", "tests/conformance_tests/sparql"]
 
 [tool.setuptools]
 packages = ["pyjelly"]

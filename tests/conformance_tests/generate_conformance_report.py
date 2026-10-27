@@ -78,6 +78,8 @@ class ConformanceReportPlugin:
         self,
         path_to_rdflib_report: str,
         path_to_generic_report: str,
+        path_to_rdflib_sparql_report: str,
+        path_to_generic_sparql_report: str,
     ) -> None:
         """
         Initialize ConformanceReportPlugin.
@@ -85,10 +87,16 @@ class ConformanceReportPlugin:
         Args:
             path_to_rdflib_report (str): report path for RDFLib integration
             path_to_generic_report (str): report path for pyjelly with Generic API
+            path_to_rdflib_sparql_report (str): report path of the Jelly-SPARQL tests
+                of the RDFLib integration
+            path_to_generic_sparql_report (str): report path of the Jelly-SPARQL
+                tests of pyjelly with Generic API
 
         """
         self.path_to_rdflib_report = path_to_rdflib_report
         self.path_to_generic_report = path_to_generic_report
+        self.path_to_rdflib_sparql_report = path_to_rdflib_sparql_report
+        self.path_to_generic_sparql_report = path_to_generic_sparql_report
         self._results: defaultdict[str, list[Result]] = defaultdict(list)
         self._case_by_id: dict[str, object | None] = defaultdict(list)
 
@@ -263,10 +271,19 @@ class ConformanceReportPlugin:
 
         Builds RDF Graph using RDFLib and serializes to Turtle.
         """
-        g_generic = self._initialize_graph(implementation="generic")
-        g_rdflib = self._initialize_graph(implementation="RDFLib")
+        rdf_graphs = (
+            self._initialize_graph(implementation="generic"),
+            self._initialize_graph(implementation="RDFLib"),
+        )
+        sparql_graphs = (
+            self._initialize_graph(implementation="generic"),
+            self._initialize_graph(implementation="RDFLib"),
+        )
 
         for k, v in self._results.items():
+            # The tests of Jelly-SPARQL have reports of their own
+            is_sparql = "/tests/sparql/" in str(k)
+            g_generic, g_rdflib = sparql_graphs if is_sparql else rdf_graphs
             if len(v) == 1:
                 r = v[0]
                 if (
@@ -311,8 +328,10 @@ class ConformanceReportPlugin:
                             g_rdflib, r.outcome, k, ASSERTOR, IMPL
                         )
 
-        g_rdflib.serialize(self.path_to_rdflib_report, format="turtle")
-        g_generic.serialize(self.path_to_generic_report, format="turtle")
+        rdf_graphs[1].serialize(self.path_to_rdflib_report, format="turtle")
+        rdf_graphs[0].serialize(self.path_to_generic_report, format="turtle")
+        sparql_graphs[1].serialize(self.path_to_rdflib_sparql_report, format="turtle")
+        sparql_graphs[0].serialize(self.path_to_generic_sparql_report, format="turtle")
 
 
 def main() -> int:
@@ -321,6 +340,8 @@ def main() -> int:
     conformance_report_plugin = ConformanceReportPlugin(
         path_to_rdflib_report="pyjelly RDFLib.ttl",
         path_to_generic_report="pyjelly Generic API.ttl",
+        path_to_rdflib_sparql_report="pyjelly RDFLib SPARQL.ttl",
+        path_to_generic_sparql_report="pyjelly Generic API SPARQL.ttl",
     )
 
     return pytest.main(args=[tests_dir], plugins=[conformance_report_plugin])

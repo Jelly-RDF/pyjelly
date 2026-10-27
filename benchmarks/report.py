@@ -9,9 +9,8 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from benchmarks.data import load
 from benchmarks.measure import CaseResult
-from benchmarks.methods import METHODS
+from benchmarks.suites import SUITES
 
 # A case is marked when its sweeps differ by more than this, relative to the median
 SPREAD_LIMIT = 0.10
@@ -53,16 +52,18 @@ def _geometric_means(
 
 def throughput_table(task: str, results: Sequence[CaseResult]) -> str:
     """
-    Median throughput of each case over its sweeps, in thousands of statements/s.
+    Median throughput of each case over its sweeps, in thousands per second.
 
     A value marked with `*` has sweeps that differ by more than 10%.
     """
+    unit = "statements"
     scores: dict[tuple[str, str], list[float]] = defaultdict(list)
     datasets: list[str] = []
     methods: list[str] = []
     for result in results:
         if result.task != task:
             continue
+        unit = SUITES[result.suite].unit
         if result.dataset not in datasets:
             datasets.append(result.dataset)
         if result.method not in methods:
@@ -87,7 +88,7 @@ def throughput_table(task: str, results: Sequence[CaseResult]) -> str:
     rows.append(
         ["**geometric mean**", *_geometric_means(medians, methods, datasets, 1)]
     )
-    title = f"### {task.capitalize()} throughput (thousands of statements per second)"
+    title = f"### {task.capitalize()} throughput (thousands of {unit} per second)"
     return f"{title}\n\n{_table(['dataset', *methods], rows)}"
 
 
@@ -113,24 +114,30 @@ def _compressors() -> dict[str, Callable[[bytes], bytes]]:
     }
 
 
-def size_tables(datasets: Sequence[str], methods: Sequence[str], rows: int) -> str:
+def size_tables(
+    datasets: Sequence[str], methods: Sequence[str], rows: int, suite: str = "rdf"
+) -> str:
     """
-    Return tables of serialized sizes in bytes per statement.
+    Build tables of serialized sizes in bytes per statement (or cell).
 
     Always divided by the number of statements given to the writer, also when the
     writer dropped duplicates.
     """
+    benchmarks = SUITES[suite]
+    unit = benchmarks.unit.removesuffix("s")
     compressors = _compressors()
     sizes: dict[str, dict[tuple[str, str], float]] = defaultdict(dict)
     for dataset in datasets:
-        data = load(dataset, rows)
+        data = benchmarks.load(dataset, rows)
+        # Number of statements (or cells) given to the writer
+        count = data.cells if suite == "sparql" else rows
         for name in methods:
-            method = METHODS[name]
-            if not method.supports(data):
+            method = benchmarks.methods[name]
+            if not method.supports(data) or not getattr(method, "can_write", True):
                 continue
             written = method.write_bytes(data)
             for compression, compress in compressors.items():
-                size = len(compress(written)) / rows
+                size = len(compress(written)) / count
                 sizes[compression][dataset, name] = size
         print(f"sizes: {dataset} done", file=sys.stderr)
 
@@ -147,7 +154,7 @@ def size_tables(datasets: Sequence[str], methods: Sequence[str], rows: int) -> s
         table_rows.append(
             ["**geometric mean**", *_geometric_means(values, methods, datasets, 2)]
         )
-        title = f"### Size, {compression} (bytes per statement)"
+        title = f"### Size, {compression} (bytes per {unit})"
         tables.append(f"{title}\n\n{_table(['dataset', *methods], table_rows)}")
     return "\n\n".join(tables)
 

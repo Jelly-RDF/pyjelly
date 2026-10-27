@@ -1,6 +1,6 @@
 # Benchmarks
 
-Throughput and size benchmarks of Jelly-RDF in pyjelly, compared with the RDF formats of rdflib.
+Throughput and size benchmarks of Jelly-RDF and Jelly-SPARQL in pyjelly, compared with the formats of rdflib.
 
 The method follows the [Jelly-JVM benchmarks](https://github.com/Jelly-RDF/jelly-jvm/tree/main/jmh) as closely as Python allows, so that the results can be read the same way.
 
@@ -109,3 +109,38 @@ Before measuring, each case writes the data, reads it back and compares the stat
 - Before each iteration, the garbage collector runs, outside the timing. The data prepared before measuring is frozen with `gc.freeze()`, so the collector doesn't go through it again and again during the measurement.
 - A sweep runs every case once. There are 3 sweeps. The result is the median of the sweeps. Values whose sweeps differ by more than 10% are marked with `*`.
 - Averages over datasets are geometric means. A method that couldn't run on all datasets has the number of datasets it ran on next to its mean.
+
+## Jelly-SPARQL
+
+The `sparql` suite measures SPARQL query results instead of RDF statements, as in the Jelly-SPARQL benchmarks of Jelly-JVM. Pass `--suite sparql` to `run`, `case` and `size`:
+
+```bash
+uv run python -m benchmarks run write --suite sparql
+uv run python -m benchmarks run read --suite sparql
+uv run python -m benchmarks size --suite sparql
+```
+
+Everything else (processes, iterations, sweeps, cores, the round-trip check) is the same as for RDF.
+
+### Data
+
+- The 13 RiverBench datasets, read as the results of `SELECT * WHERE { ?s ?p ?o }` for triples and `SELECT * WHERE { GRAPH ?g { ?s ?p ?o } }` for quads, with `?g` unbound in the default graph. The first 100,000 rows are used.
+- Synthetic result sets, from the presets of Jelly-JVM's generator, ported in `sparql_data.py`.
+- By default, `run` and `size` use all RiverBench datasets and `realistic-mixed`, `wide-20`, `sparse-random-50`, `lit-lang`, `iri-shuffled`. Pass any presets with `--datasets`. Their names are in `PRESETS` in `sparql_data.py`.
+
+### Methods
+
+| Method | Writes with | Reads with |
+|---|---|---|
+| `rdflib-srj` | rdflib's SPARQL JSON results: `Result.serialize(format="json")` | `Result.parse(format="json")` |
+| `rdflib-srx` | rdflib's SPARQL XML results | `Result.parse(format="xml")` |
+| `rdflib-csv` | rdflib's SPARQL CSV results | `Result.parse(format="csv")` |
+| `rdflib-tsv` | - (rdflib can't write TSV results) | `Result.parse(format="tsv")` |
+| `rdflib-jelly` | Jelly-SPARQL through rdflib's plugin API: `Result.serialize(format="jelly")` | `Result.parse(format="jelly")` |
+| `generic-jelly` | Jelly-SPARQL with pyjelly's generic API, from a list of rows | `parse_jelly_sparql` of the generic API |
+
+The rdflib methods write a `Result` whose bindings are a list of dicts, made before measuring. Reading makes a whole `Result`, with its bindings. Jelly uses pyjelly's default options.
+
+Note that CSV is a lossy result set format, so it should not be compared directly with others.
+
+rdflib reads SPARQL TSV results but can't write them, so `rdflib-tsv` is only measured reading. The TSV it reads is written by a helper in `sparql_methods.py`.

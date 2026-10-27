@@ -6,9 +6,10 @@ from typing import Any
 
 import pytest
 from rdflib import RDF, XSD, BNode, Dataset, Graph, Literal, URIRef
-from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, ConjunctiveGraph
 from rdflib.plugins.stores.memory import Memory, SimpleMemory
 
+from pyjelly import jelly
 from pyjelly.integrations.rdflib import walk
 from pyjelly.options import VERSION_1_1, VERSION_1_2, StreamParameters
 from pyjelly.serialize.streams import SerializerOptions
@@ -173,6 +174,46 @@ def test_serialize_round_trip(
     assert round_trip(graph, set, version) == set(graph)
     shared = dataset.graph(ex("g"))
     assert round_trip(shared, set, version) == set(shared)
+
+
+@pytest.mark.parametrize("version", [VERSION_1_1, VERSION_1_2])
+@pytest.mark.parametrize("path", ["fast", "public", "other store"])
+def test_serialize_conjunctive_graph(
+    path: str, version: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # rdfpipe reads into a ConjunctiveGraph. Its default context is named with a
+    # random blank node, and is written as the default graph, as with TriG
+    if path == "public":
+        public_path_only(monkeypatch)
+    store = OtherStore if path == "other store" else Memory
+    graph = ConjunctiveGraph(store=store())
+    add_statements(graph.default_context)
+    named = graph.get_context(ex("g"))
+    add_statements(named)
+    named.add((ex("s"), ex("p"), ex("only in g")))
+
+    out = io.BytesIO()
+    options = SerializerOptions(params=StreamParameters(version=version))
+    graph.serialize(destination=out, format="jelly", options=options)
+    read = Dataset()
+    read.parse(data=out.getvalue(), format="jelly")
+
+    assert {g.identifier for g in read.graphs()} == {DATASET_DEFAULT_GRAPH_ID, ex("g")}
+    assert set(read.default_graph) == set(graph.default_context)
+    assert set(read.graph(ex("g"))) == set(named)
+
+
+def test_serialize_conjunctive_graph_as_graphs() -> None:
+    # A stream of graphs has one frame per context of the ConjunctiveGraph
+    graph = ConjunctiveGraph()
+    add_statements(graph.default_context)
+    graph.get_context(ex("g")).add((ex("s"), ex("p"), ex("o")))
+    out = io.BytesIO()
+    options = SerializerOptions(logical_type=jelly.LOGICAL_STREAM_TYPE_GRAPHS)
+    graph.serialize(destination=out, format="jelly", options=options)
+    read = Graph()
+    read.parse(data=out.getvalue(), format="jelly")
+    assert set(read) == set(graph.default_context) | {(ex("s"), ex("p"), ex("o"))}
 
 
 def test_other_stores_are_not_grouped_in_memory() -> None:

@@ -16,6 +16,17 @@ from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
 from pyjelly.serialize.encode import EncodedTerm, TermEncoder
 
 
+def _same_str(a: object, b: object) -> bool:
+    """Compare two optional strings (e.g., URIRefs) as plain strings."""
+    if a is b:
+        return True
+    if a is None or b is None:
+        return False
+    a_str: str = cast("str", a)
+    b_str: str = cast("str", b)
+    return a_str == b_str
+
+
 @mypyc_attr(allow_interpreted_subclasses=True)
 class RDFLibTermEncoder(TermEncoder):
     def same_term(self, a: object, b: object) -> bool:
@@ -26,8 +37,9 @@ class RDFLibTermEncoder(TermEncoder):
         by comparing the terms as strings:
 
         - Two URIRefs or two BNodes are equal if their strings are.
-        - Two Literals are never equal if their lexical forms differ. If they are
-          the same, the language tag and datatype matter too: rdflib decides.
+        - Two Literals with different lexical forms are never equal. With the same
+          lexical form, language tag and datatype, they are equal. Otherwise rdflib
+          decides (e.g., for language tags that differ only in case).
         - Terms of different classes among these three are never equal.
         """
         if a is b:
@@ -44,6 +56,13 @@ class RDFLibTermEncoder(TermEncoder):
                 b_lex: str = cast("str", b)
                 if a_lex != b_lex:
                     return False
+                # Slots behind the language and datatype properties
+                a_node: Any = a
+                b_node: Any = b
+                if _same_str(a_node._language, b_node._language) and _same_str(
+                    a_node._datatype, b_node._datatype
+                ):
+                    return True
         elif (cls is URIRef or cls is BNode or cls is Literal) and (
             other_cls is URIRef or other_cls is BNode or other_cls is Literal
         ):

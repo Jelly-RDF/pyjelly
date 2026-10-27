@@ -10,11 +10,12 @@ from __future__ import annotations
 from collections.abc import Iterable
 from itertools import chain
 from typing import Any, Final
-from typing_extensions import override
+from typing_extensions import Never, override
 
 import rdflib
 from mypy_extensions import mypyc_attr
 from rdflib.graph import DATASET_DEFAULT_GRAPH_ID
+from rdflib.term import Variable
 
 from pyjelly.errors import JellyConformanceError
 from pyjelly.integrations.rdflib.statements import Prefix, Quad, Triple
@@ -72,6 +73,22 @@ class RDFLibAdapter(Adapter):
     @override
     def namespace_declaration(self, name: str, iri: rdflib.URIRef) -> Prefix:
         return Prefix(name, iri)
+
+    @override
+    def directional_literal(self, lex: str, language: str, direction: str) -> Never:
+        msg = (
+            "rdflib does not support literals with a base direction (RDF 1.2). "
+            "Read the data with the generic API instead."
+        )
+        raise NotImplementedError(msg)
+
+    @override
+    def quoted_triple(self, terms: Iterable[Any]) -> Never:
+        msg = (
+            "rdflib does not support triple terms (RDF 1.2) and quoted triples "
+            "(RDF-star). Read the data with the generic API instead."
+        )
+        raise NotImplementedError(msg)
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
@@ -152,3 +169,36 @@ class RDFLibGraphsAdapter(RDFLibQuadsBaseAdapter):
     @override
     def graph_end(self) -> None:
         self._graph_id = None
+
+
+class BindingRows:
+    """
+    Row factory that turns the cells of Jelly-SPARQL frames into rdflib bindings.
+
+    A binding is a dict from each bound Variable to its value, as in rdflib's query
+    results. Equal names share one Variable object (see variables()).
+    """
+
+    def __init__(self) -> None:
+        self.names: list[str] = []
+        self.vars: list[Variable] = []
+
+    def variables(self, names: list[str]) -> list[Variable]:
+        """Get the Variable objects for these names."""
+        if names != self.names:
+            self.names = names
+            self.vars = [Variable(name) for name in names]
+        return self.vars
+
+    def __call__(
+        self, names: list[str], cells: list[list[Any]], rows: int
+    ) -> list[Any]:
+        bindings: list[dict[Variable, Any]] = [{} for _ in range(rows)]
+        variables = self.variables(names)
+        for j in range(len(cells)):
+            variable = variables[j]
+            # Iterating a list is cheaper than indexing it
+            for r, value in enumerate(cells[j]):
+                if value is not None:
+                    bindings[r][variable] = value
+        return bindings

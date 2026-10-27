@@ -11,7 +11,8 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import Any, NamedTuple
 
-from rdflib import Dataset, Graph
+from rdflib import Graph
+from rdflib.graph import DATASET_DEFAULT_GRAPH_ID, ConjunctiveGraph, Dataset
 from rdflib.plugins.stores.memory import Memory
 from rdflib.store import Store
 
@@ -108,12 +109,13 @@ def spo_tree(graph: Graph) -> Tree | None:
     return _group(triples)
 
 
-def gspo_trees(dataset: Dataset) -> Iterator[tuple[Any, Tree]] | None:
+def gspo_trees(dataset: ConjunctiveGraph) -> Iterator[tuple[Any, Tree]] | None:
     """
     Return the dataset's graphs, each as its name and its triples as a tree.
 
     Only for rdflib's in-memory store, see spo_tree(). Each graph is grouped only
-    when it's its turn, so at most one graph's tree is in memory at a time.
+    when it's its turn, so at most one graph's tree is in memory at a time. The
+    default graph is named DATASET_DEFAULT_GRAPH_ID, see dataset_quads().
     """
     store = dataset.store
     if type(store) is not Memory:
@@ -121,17 +123,47 @@ def gspo_trees(dataset: Dataset) -> Iterator[tuple[Any, Tree]] | None:
     indexes = _memory_indexes(store)
     if indexes is None:
         # The private fields are not there: group with the public API
-        return _group_quads(dataset.quads((None, None, None, None)))
-    return _memory_gspo_trees(indexes)
+        return _group_quads(dataset_quads(dataset))
+    return _memory_gspo_trees(indexes, _default_graph_name(dataset))
 
 
-def _memory_gspo_trees(indexes: _MemoryIndexes) -> Iterator[tuple[Any, Tree]]:
+def dataset_quads(dataset: ConjunctiveGraph) -> Iterator[tuple[Any, Any, Any, Any]]:
+    """
+    Return the dataset's quads, with graph names rather than Graph objects.
+
+    The default graph is named DATASET_DEFAULT_GRAPH_ID. A Dataset already names
+    it so, but a ConjunctiveGraph (e.g., the one rdfpipe reads into) names it
+    with a random blank node. The quads of that graph go into the default graph,
+    as with rdflib's TriG serializer.
+    """
+    default = _default_graph_name(dataset)
+    for s, p, o, g in dataset.quads((None, None, None, None)):
+        name = getattr(g, "identifier", g)
+        if name is None or name == default:
+            name = DATASET_DEFAULT_GRAPH_ID
+        yield s, p, o, name
+
+
+def _default_graph_name(dataset: ConjunctiveGraph) -> Any:
+    """Return the name that rdflib gives the default graph of the dataset."""
+    if isinstance(dataset, Dataset):
+        # Dataset.default_context gives a deprecation warning
+        return DATASET_DEFAULT_GRAPH_ID
+    return dataset.default_context.identifier
+
+
+def _memory_gspo_trees(
+    indexes: _MemoryIndexes, default: Any
+) -> Iterator[tuple[Any, Tree]]:
     for context, triples in indexes.context_triples.items():
         # None is not a graph, but an index of all triples in the store
         if context is None or not triples:
             continue
         graph = indexes.context_objects[context]
-        yield getattr(graph, "identifier", graph), _group(triples)
+        name = getattr(graph, "identifier", graph)
+        if name == default:
+            name = DATASET_DEFAULT_GRAPH_ID
+        yield name, _group(triples)
 
 
 def _group_quads(

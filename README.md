@@ -9,6 +9,7 @@
 ## Features
 
 - **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly).
+- Reading and writing **[SPARQL query results](https://w3id.org/jelly/pyjelly/dev/sparql)** in [Jelly-SPARQL](https://w3id.org/jelly/dev/specification/sparql), with rdflib or the generic API.
 - **Standalone [generic API](https://w3id.org/jelly/pyjelly/dev/generic-sink)** with no third-party dependencies, allowing for:
     - Serialization and parsing of statements to and from Jelly files.
     - Parsing and serializing streams of graphs and statements.

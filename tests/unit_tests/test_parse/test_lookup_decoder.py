@@ -24,3 +24,10 @@ def test_at_invalid_index() -> None:
         decoder.at(2)
     assert "invalid resolved index 2" in str(excinfo.value)
     assert decoder.last_reused_index == 2
+
+
+def test_assign_entry_outside_lookup() -> None:
+    decoder = LookupDecoder(lookup_size=2)
+    decoder.assign_entry(2, "b")
+    with pytest.raises(JellyConformanceError, match="the lookup has 2 entries"):
+        decoder.assign_entry(0, "c")

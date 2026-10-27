@@ -51,6 +51,23 @@ for guessing the defaults for external integrations that work with Jelly.
 
 MIMETYPES = ("application/x-jelly-rdf",)
 
+#: Media type of Jelly-SPARQL
+SPARQL_MIMETYPE: Final = "application/x-jelly-sparql"
+#: File extension of Jelly-SPARQL
+SPARQL_EXTENSION: Final = ".jellys"
+
+# Jelly-SPARQL has its own version tags, separate from Jelly-RDF. 1 is 1.0.
+SPARQL_VERSION_1_0: Final[int] = 1
+SPARQL_MAX_VERSION: Final[int] = SPARQL_VERSION_1_0
+
+#: Default maximum values (rows times variables) per frame when writing
+DEFAULT_SPARQL_FRAME_VALUES: Final[int] = 4096
+#: Maximum rows per frame accepted when reading
+MAX_SPARQL_FRAME_ROWS: Final[int] = 1 << 20
+#: Maximum values per frame accepted when reading. A frame is decoded all at once,
+#: so this caps its memory use.
+MAX_SPARQL_FRAME_VALUES: Final[int] = 1 << 24
+
 
 def is_row_layout(version: int) -> bool:
     """
@@ -91,6 +108,14 @@ class LookupPreset:
     @classmethod
     def small(cls) -> Self:
         return cls(max_names=128, max_prefixes=32, max_datatypes=32)
+
+
+#: Default lookup sizes of Jelly-SPARQL streams. As in Jelly-JVM, they are larger
+#: than for Jelly-RDF, because a row of results usually has more distinct terms
+#: than a statement.
+SPARQL_LOOKUP_PRESET: Final = LookupPreset(
+    max_names=8192, max_prefixes=1024, max_datatypes=64
+)
 
 
 @dataclass(frozen=True)
@@ -218,3 +243,57 @@ def validate_type_compatibility(
         logical_type_name = jelly.LogicalStreamType.Name(logical_type)
         msg = f"{physical_type_name} is not compatible with {logical_type_name}"
         raise JellyAssertionError(msg)
+
+
+@dataclass(frozen=True)
+class SparqlOptions:
+    """
+    Options for writing a Jelly-SPARQL stream.
+
+    Attributes:
+        lookup_preset: lookup sizes. The name lookup needs at least 128 entries.
+        rdf_version: RDF version of the terms in the stream. RDF 1.1 allows no
+            base directions or triple terms, RDF 1.2 Basic no triple terms.
+        punctuated: write a sequence of result sets (the PUNCTUATED stream type)
+            instead of one result set.
+        frame_values: maximum values (rows times variables) per frame. A frame
+            can end earlier if the lookups fill up.
+        delimited: write delimited frames, which files and HTTP need. A
+            non-delimited stream is a single frame, e.g. one message for a message
+            broker. All terms of the results must then fit in the lookups.
+        stream_name: name of the stream.
+
+    """
+
+    lookup_preset: LookupPreset = SPARQL_LOOKUP_PRESET
+    rdf_version: jelly.RdfVersion = jelly.RDF_VERSION_UNSPECIFIED
+    punctuated: bool = False
+    frame_values: int = DEFAULT_SPARQL_FRAME_VALUES
+    delimited: bool = True
+    stream_name: str = ""
+
+    def __post_init__(self) -> None:
+        max_names = self.lookup_preset.max_names
+        if max_names < MIN_COLUMN_NAME_LOOKUP_SIZE:
+            msg = (
+                f"the name lookup size is {max_names}, but in Jelly-SPARQL it must "
+                f"be at least {MIN_COLUMN_NAME_LOOKUP_SIZE}"
+            )
+            raise JellyConformanceError(msg)
+        if self.frame_values < 1:
+            msg = f"frame_values must be at least 1, not {self.frame_values}"
+            raise ValueError(msg)
+        if self.punctuated and not self.delimited:
+            msg = "a PUNCTUATED stream must be delimited"
+            raise ValueError(msg)
+
+    def rows_per_frame(self, variables: int) -> int:
+        """
+        Compute the maximum rows per frame for this number of variables.
+
+        >>> SparqlOptions().rows_per_frame(4)
+        1024
+        >>> SparqlOptions(frame_values=10).rows_per_frame(0)
+        10
+        """
+        return max(1, self.frame_values // max(1, variables))
