@@ -5,10 +5,10 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from collections import defaultdict
-from dataclasses import dataclass
+from collections.abc import Collection
 from pathlib import Path
-from typing import cast
 
 import pytest
 from _pytest.nodes import Item
@@ -23,19 +23,58 @@ FOAF = Namespace("http://xmlns.com/foaf/0.1/")
 ASSERTOR = URIRef("#assertor")
 IMPL = URIRef("#impl")
 DEVELOPER = URIRef("#developer")
+
+GENERIC = "generic"
+RDFLIB = "rdflib"
+IMPLEMENTATIONS = (GENERIC, RDFLIB)
+
 _outcome_map = {
     "passed": EARL.passed,
     "failed": EARL.failed,
     "inapplicable": EARL.inapplicable,
 }
 
+_outcome_priority = ("failed", "passed", "inapplicable")
 
-@dataclass(frozen=True)
-class Result:
-    """Single test result."""
 
-    name: str
-    outcome: str
+def implementation_of(node_id: str) -> str | None:
+    """
+    Indicate which integration is tested by the conformance test.
+
+    Every conformance test says so in its name: `rdflib` for the RDFLib
+    integration, `generic` for the Generic API.
+
+    Args:
+        node_id (str): pytest node ID of the test
+
+    Returns:
+        str | None: the integration, or nothing if the name tells us neither
+
+    """
+    name = node_id.rsplit("::", 1)[-1]
+    if RDFLIB in name:
+        return RDFLIB
+    if GENERIC in name:
+        return GENERIC
+    return None
+
+
+def combine_outcomes(outcomes: Collection[str]) -> str:
+    """
+    Sum up what one integration did with one case.
+
+    Args:
+        outcomes (Collection[str]): outcomes of the tests that integration ran
+            for the case; empty if it ran none
+
+    Returns:
+        str: the outcome to report for the case
+
+    """
+    for outcome in _outcome_priority:
+        if outcome in outcomes:
+            return outcome
+    return "inapplicable"
 
 
 def get_release_version_date() -> tuple[str, str]:
@@ -70,7 +109,8 @@ class ConformanceReportPlugin:
     Plugin class used during pytest execution for conformance test reporting.
 
     Pytest Hooks:
-        pytest_runtest_makereport: store results data from each test
+        pytest_itemcollected: remember which case each test runs
+        pytest_runtest_logreport: store results data from each test
         pytest_sessionfinish: build RDF graph with all test results
     """
 
@@ -97,8 +137,12 @@ class ConformanceReportPlugin:
         self.path_to_generic_report = path_to_generic_report
         self.path_to_rdflib_sparql_report = path_to_rdflib_sparql_report
         self.path_to_generic_sparql_report = path_to_generic_sparql_report
-        self._results: defaultdict[str, list[Result]] = defaultdict(list)
-        self._case_by_id: dict[str, object | None] = defaultdict(list)
+        # Case IRI -> integration -> outcomes of that integration's tests.
+        self._results: defaultdict[str, defaultdict[str, list[str]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+        self._case_by_id: dict[str, object | None] = {}
+        self.unclassified: set[str] = set()
 
     @staticmethod
     def _outcome_from_report(report: pytest.TestReport) -> str:
@@ -237,7 +281,8 @@ class ConformanceReportPlugin:
         g.add((result, EARL.outcome, _outcome_map[outcome]))
         return g
 
-    def pytest_runtest_call(self, item: Item) -> None:
+    def pytest_itemcollected(self, item: Item) -> None:
+        # Every collected test, so that the ones a mark skips are in here too.
         case = None
         if hasattr(item, "callspec"):
             case = item.callspec.params.get("case")
@@ -251,19 +296,22 @@ class ConformanceReportPlugin:
             report (TestReport): single test report
 
         """
-        if report.when != "call":
+        if report.when == "teardown":
             return
-        node_id = report.nodeid
-        case = self._case_by_id.get(node_id)
-        outcome = self._outcome_from_report(report)
-        test_name = report.nodeid.rsplit("::", 1)[-1]
+        if report.when == "setup" and report.outcome == "passed":
+            # The test itself is yet to run. A test that never gets that far,
+            # because a mark skips it, is only ever reported here.
+            return
+        case = self._case_by_id.get(report.nodeid)
         uri = getattr(case, "uri", None)
-        self._results[cast(str, uri)].append(
-            Result(
-                name=test_name,
-                outcome=outcome,
-            )
-        )
+        if uri is None:
+            # Not a conformance case -- a doctest, say.
+            return
+        implementation = implementation_of(report.nodeid)
+        if implementation is None:
+            self.unclassified.add(report.nodeid)
+            return
+        self._results[uri][implementation].append(self._outcome_from_report(report))
 
     def pytest_sessionfinish(self) -> None:
         """
@@ -271,67 +319,44 @@ class ConformanceReportPlugin:
 
         Builds RDF Graph using RDFLib and serializes to Turtle.
         """
-        rdf_graphs = (
-            self._initialize_graph(implementation="generic"),
-            self._initialize_graph(implementation="RDFLib"),
-        )
-        sparql_graphs = (
-            self._initialize_graph(implementation="generic"),
-            self._initialize_graph(implementation="RDFLib"),
-        )
+        rdf_graphs = {
+            implementation: self._initialize_graph(implementation)
+            for implementation in IMPLEMENTATIONS
+        }
+        sparql_graphs = {
+            implementation: self._initialize_graph(implementation)
+            for implementation in IMPLEMENTATIONS
+        }
 
-        for k, v in self._results.items():
+        for uri, outcomes in self._results.items():
             # The tests of Jelly-SPARQL have reports of their own
-            is_sparql = "/tests/sparql/" in str(k)
-            g_generic, g_rdflib = sparql_graphs if is_sparql else rdf_graphs
-            if len(v) == 1:
-                r = v[0]
-                if (
-                    "test_generic" in r.name
-                    or "test_serializes_generic" in r.name
-                    or "test_serializing_fails_generic" in r.name
-                ):
-                    g_generic = self._add_test_record_to_graph(
-                        g_generic, r.outcome, k, ASSERTOR, IMPL
-                    )
-                    g_rdflib = self._add_test_record_to_graph(
-                        g_rdflib, "inapplicable", k, ASSERTOR, IMPL
-                    )
-                elif (
-                    "test_rdflib" in r.name
-                    or "test_serializes_rdf" in r.name
-                    or "test_serializing_fails_rdf" in r.name
-                ):
-                    g_rdflib = self._add_test_record_to_graph(
-                        g_rdflib, r.outcome, k, ASSERTOR, IMPL
-                    )
-                    g_generic = self._add_test_record_to_graph(
-                        g_generic, "inapplicable", k, ASSERTOR, IMPL
-                    )
+            graphs = sparql_graphs if "/tests/sparql/" in uri else rdf_graphs
+            for implementation, g in graphs.items():
+                # An integration that ran no test for the case gets an
+                # inapplicable record, so that every report covers every case.
+                self._add_test_record_to_graph(
+                    g,
+                    combine_outcomes(outcomes.get(implementation, ())),
+                    uri,
+                    ASSERTOR,
+                    IMPL,
+                )
 
-            if len(v) > 1:
-                for r in v:
-                    if (
-                        "test_generic" in r.name
-                        or "test_serializes_generic" in r.name
-                        or "test_serializing_fails_generic" in r.name
-                    ):
-                        g_generic = self._add_test_record_to_graph(
-                            g_generic, r.outcome, k, ASSERTOR, IMPL
-                        )
-                    elif (
-                        "test_rdflib" in r.name
-                        or "test_serializes_rdf" in r.name
-                        or "test_serializing_fails_rdf" in r.name
-                    ):
-                        g_rdflib = self._add_test_record_to_graph(
-                            g_rdflib, r.outcome, k, ASSERTOR, IMPL
-                        )
+        rdf_graphs[RDFLIB].serialize(self.path_to_rdflib_report, format="turtle")
+        rdf_graphs[GENERIC].serialize(self.path_to_generic_report, format="turtle")
+        sparql_graphs[RDFLIB].serialize(
+            self.path_to_rdflib_sparql_report, format="turtle"
+        )
+        sparql_graphs[GENERIC].serialize(
+            self.path_to_generic_sparql_report, format="turtle"
+        )
 
-        rdf_graphs[1].serialize(self.path_to_rdflib_report, format="turtle")
-        rdf_graphs[0].serialize(self.path_to_generic_report, format="turtle")
-        sparql_graphs[1].serialize(self.path_to_rdflib_sparql_report, format="turtle")
-        sparql_graphs[0].serialize(self.path_to_generic_sparql_report, format="turtle")
+        if self.unclassified:
+            sys.stderr.write(
+                "Left out of the reports, because their names say nothing about "
+                "which integration they run:\n"
+                + "".join(f"  {node_id}\n" for node_id in sorted(self.unclassified))
+            )
 
 
 def main() -> int:
@@ -344,7 +369,10 @@ def main() -> int:
         path_to_generic_sparql_report="pyjelly Generic API SPARQL.ttl",
     )
 
-    return pytest.main(args=[tests_dir], plugins=[conformance_report_plugin])
+    code = int(pytest.main(args=[tests_dir], plugins=[conformance_report_plugin]))
+    if conformance_report_plugin.unclassified:
+        return max(code, 1)
+    return code
 
 
 if __name__ == "__main__":
