@@ -20,10 +20,17 @@ def test_datatype_index_zero_error() -> None:
 
 def test_at_invalid_index() -> None:
     decoder = LookupDecoder(lookup_size=4)
-    with pytest.raises(IndexError) as excinfo:
+    with pytest.raises(JellyConformanceError, match="lookup entry 2, which is not set"):
         decoder.at(2)
-    assert "invalid resolved index 2" in str(excinfo.value)
     assert decoder.last_reused_index == 2
+
+
+@pytest.mark.parametrize("index", [0, 5, 2**32 - 1])
+def test_at_outside_lookup(index: int) -> None:
+    decoder = LookupDecoder(lookup_size=4)
+    decoder.assign_entry(4, "d")
+    with pytest.raises(JellyConformanceError, match="which is not set"):
+        decoder.at(index)
 
 
 def test_assign_entry_outside_lookup() -> None:

@@ -44,10 +44,10 @@ class LookupDecoder:
 
     def at(self, index: int) -> str:
         self.last_reused_index = index
-        value = self.data[index - 1]
+        value = self.data[index - 1] if 0 < index <= self.lookup_size else None
         if value is None:
-            msg = f"invalid resolved index {index}"
-            raise IndexError(msg)
+            msg = f"a term refers to lookup entry {index}, which is not set"
+            raise JellyConformanceError(msg)
         return value
 
     def decode_prefix_term_index(self, index: int) -> str:

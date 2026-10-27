@@ -9,15 +9,24 @@ import pytest
 from google.protobuf.descriptor import Descriptor
 
 from pyjelly import jelly
+from pyjelly.integrations.generic.decode import GenericStatementSinkAdapter
+from pyjelly.integrations.generic.generic_sink import IRI
 from pyjelly.parse.ioutils import (
     FRAME_TAGS,
+    SPARQL_FRAME_TAGS,
     delimited_jelly_hint,
     get_options_and_frames,
     read_hint_header,
 )
+from pyjelly.parse.sparql import read_result_set
 from tests.utils import wire_fuzzer
 
 FRAME_DESCRIPTOR = cast("Descriptor", jelly.RdfStreamFrame.DESCRIPTOR)
+SPARQL_FRAME_DESCRIPTOR = cast("Descriptor", jelly.SparqlResultsFrame.DESCRIPTOR)
+FRAME_TYPES = {
+    "rdf": (FRAME_DESCRIPTOR, FRAME_TAGS),
+    "sparql": (SPARQL_FRAME_DESCRIPTOR, SPARQL_FRAME_TAGS),
+}
 
 # A frame of 25 bytes: too long for its first byte to be a size.
 FRAME_LARGE = jelly.RdfStreamFrame(
@@ -37,11 +46,11 @@ FRAME_SIZE_18 = jelly.RdfStreamFrame(
 )
 
 
-def detect(data: bytes) -> tuple[bool, bytes]:
+def detect(data: bytes, tags: frozenset[int] = FRAME_TAGS) -> tuple[bool, bytes]:
     """Run the detection and return its answer plus every byte of the input."""
     inp = io.BytesIO(data)
-    header = read_hint_header(inp)
-    return delimited_jelly_hint(header), header + inp.read()
+    header = read_hint_header(inp, tags)
+    return delimited_jelly_hint(header, tags), header + inp.read()
 
 
 def delimit(*frames: jelly.RdfStreamFrame) -> bytes:
@@ -154,15 +163,17 @@ def test_reads_the_header_from_a_stream_that_dribbles() -> None:
 ITERATIONS = 5_000
 
 
-def test_fuzz_detects_random_non_delimited_frames() -> None:
+@pytest.mark.parametrize("frame_type", list(FRAME_TYPES))
+def test_fuzz_detects_random_non_delimited_frames(frame_type: str) -> None:
+    descriptor, tags = FRAME_TYPES[frame_type]
     rnd = random.Random(1)
     failures = 0
     ambiguous = 0
     for _ in range(ITERATIONS):
-        data = wire_fuzzer.message(FRAME_DESCRIPTOR, rnd)
-        if data and data[0] in FRAME_TAGS:
+        data = wire_fuzzer.message(descriptor, rnd)
+        if data and data[0] in tags:
             ambiguous += 1
-        is_delimited, kept = detect(data)
+        is_delimited, kept = detect(data, tags)
         assert kept == data
         failures += is_delimited
     # A frame that does not start with the stream options can, by chance, also be a
@@ -172,28 +183,84 @@ def test_fuzz_detects_random_non_delimited_frames() -> None:
     assert ambiguous > ITERATIONS // 2
 
 
-def test_fuzz_detects_random_delimited_streams() -> None:
+@pytest.mark.parametrize("frame_type", list(FRAME_TYPES))
+def test_fuzz_detects_random_delimited_streams(frame_type: str) -> None:
+    descriptor, tags = FRAME_TYPES[frame_type]
     rnd = random.Random(2)
     ambiguous = 0
     for _ in range(ITERATIONS):
         data = b""
         for _ in range(rnd.randrange(1, 4)):
-            body = wire_fuzzer.message(FRAME_DESCRIPTOR, rnd)
+            body = wire_fuzzer.message(descriptor, rnd)
             data += wire_fuzzer.varint(len(body)) + body
-        if data[0] in FRAME_TAGS:
+        if data[0] in tags:
             ambiguous += 1
-        assert detect(data) == (True, data)
-    # The first frame is sometimes 10, 18 or 122 bytes long: sizes that are also tags
+        assert detect(data, tags) == (True, data)
+    # Some first frames have a length that is also a tag byte
     assert ambiguous > 0
 
 
-def test_fuzz_keeps_every_byte_of_random_input() -> None:
+@pytest.mark.parametrize("frame_type", list(FRAME_TYPES))
+def test_fuzz_keeps_every_byte_of_random_input(frame_type: str) -> None:
+    _, tags = FRAME_TYPES[frame_type]
     rnd = random.Random(3)
     for _ in range(ITERATIONS):
         length = rnd.randrange(400) if rnd.randrange(10) == 0 else rnd.randrange(24)
         data = bytes(rnd.randrange(256) for _ in range(length))
-        _, kept = detect(data)
+        _, kept = detect(data, tags)
         assert kept == data
+
+
+# Jelly-SPARQL stream options of several serialized sizes
+SPARQL_OPTIONS = [
+    jelly.SparqlResultsOptions(
+        max_name_table_size=names,
+        max_prefix_table_size=prefixes,
+        max_datatype_table_size=64,
+        version=1,
+    )
+    for names in (128, 256, 1024, 8192, 16384)
+    for prefixes in (0, 64, 1024, 4096)
+]
+
+
+def sparql_frame(options: jelly.SparqlResultsOptions) -> bytes:
+    return jelly.SparqlResultsFrame(
+        options=options,
+        variables=["x"],
+        row_count=1,
+        names=[jelly.RdfLookupEntryPacked(values=["http://example.org/a"])],
+        columns=[jelly.RdfColumn(name_ids=[1])],
+        trailer=jelly.SparqlResultsTrailer(),
+    ).SerializeToString()
+
+
+def test_sparql_options_cover_the_size_of_a_tag() -> None:
+    # Options of 10 bytes make a non-delimited frame start with 0A 0A, which is
+    # also how a delimited stream whose first frame is 10 bytes long starts
+    assert 10 in {options.ByteSize() for options in SPARQL_OPTIONS}
+
+
+@pytest.mark.parametrize(
+    "options",
+    SPARQL_OPTIONS,
+    ids=[
+        f"names={o.max_name_table_size},prefixes={o.max_prefix_table_size}"
+        for o in SPARQL_OPTIONS
+    ],
+)
+@pytest.mark.parametrize("delimited", [True, False], ids=["delimited", "non-delimited"])
+def test_detects_sparql_frames(
+    options: jelly.SparqlResultsOptions,
+    delimited: bool,  # noqa: FBT001
+) -> None:
+    data = sparql_frame(options)
+    if delimited:
+        data = wire_fuzzer.varint(len(data)) + data
+    assert detect(data, SPARQL_FRAME_TAGS) == (delimited, data)
+    # Read it back, delimited or not as detected
+    result_set = read_result_set(data, GenericStatementSinkAdapter)
+    assert list(result_set) == [(IRI("http://example.org/a"),)]
 
 
 # A frame holding only the stream options.
