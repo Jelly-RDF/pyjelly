@@ -6,12 +6,12 @@ from rdflib_neo4j import Neo4jStoreConfig, Neo4jStore, HANDLE_VOCAB_URI_STRATEGY
 # Example file from the Riverbench
 example_file, _ = urllib.request.urlretrieve("https://w3id.org/riverbench/v/dev.jelly")
 
-# Please introduce your credentials
+# Please introduce your credentials, e.g., of your AuraDB instance
 aura_db_uri = "aura_db_uri"
 aura_db_username = "neo4j"
 aura_db_pwd = "aura_db_pwd"
 
-# Prepare the authentication data to the AuraDB
+# Prepare the authentication data for Neo4j
 auth_data = {
     "uri": aura_db_uri,
     "database": "neo4j",
@@ -29,20 +29,21 @@ config = Neo4jStoreConfig(
 # Make a graph with Neo4jStore object
 neo4j_sink = Graph(store=Neo4jStore(config=config))
 
-# Parse the file into the AuraDB
+# Parse the file into Neo4j
 neo4j_sink.parse(example_file, format="jelly")
 
-# Close the stream
+# Close the store, which writes the remaining batch
 neo4j_sink.close(True)
 
 # Cypher query to check loaded data
 with GraphDatabase.driver(
     aura_db_uri, auth=(aura_db_username, aura_db_pwd)
 ).session() as session:
+    # Triples with literal objects are stored as node properties, not relationships
     count = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
-    print(f"Loaded {count} triples")
+    print(f"Loaded {count} relationships")
     for r in session.run(
-        "MATCH (s)-[r]->(o) RETURN s.uri AS s, type(r) AS p, coalesce(o.uri,o.name) AS o LIMIT 5"
+        "MATCH (s)-[r]->(o) RETURN s.uri AS s, type(r) AS p, o.uri AS o LIMIT 5"
     ):
         print(r["s"], f"-[{r['p']}]->", r["o"])
 

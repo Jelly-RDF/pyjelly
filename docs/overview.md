@@ -38,7 +38,11 @@ A Jelly-RDF 1.2 stream is either one graph or dataset, or a sequence of [RDF Mes
 
 ### RDF 1.2
 
-The generic API supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and directional language-tagged strings, as `Literal("text", "en", direction="ltr")`. To declare the RDF version for a stream, set `rdf_version` in `StreamParameters`. RDFLib 7 doesn't support RDF 1.2 yet.
+The [generic API](generic-sink.md) supports [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/): triple terms, as a `Triple` in the object of a statement, and directional language-tagged strings, as `Literal("text", "en", direction="ltr")`. RDFLib 7 doesn't support RDF 1.2 yet.
+
+To declare that a stream uses RDF 1.2, set `rdf_version=jelly.RDF_VERSION_1_2` in `StreamParameters` (`jelly` is `pyjelly.jelly`). `GenericStatementSink.serialize()` doesn't take options, so write the statements with `flat_stream_to_file` or `grouped_stream_to_file`:
+
+{{ code_example('generic/11_rdf_1_2.py') }}
 
 ### SPARQL query results
 

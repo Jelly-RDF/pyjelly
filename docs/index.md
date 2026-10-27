@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly)
+- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format]({{ proto_link("") }})
 - **[SPARQL query results](sparql.md)** in [Jelly-SPARQL]({{ proto_link("specification/sparql/") }})
 - **Seamless integration with [RDFLib](https://rdflib.readthedocs.io/)**
 - **Stream processing support** for large datasets or streams of many RDF graphs/datasets
@@ -22,14 +22,15 @@
 
 ## Compatibility
 
-pyjelly is compatible with Python 3.10 and newer. Python 3.10–3.14 are tested in CI and are guaranteed to work.
+pyjelly is compatible with Python 3.10 and newer. Python 3.10–3.15 are tested in CI and are guaranteed to work.
 
 The following table shows the compatibility of the pyjelly implementation with other libraries:
 
-| pyjelly                                                                                                                                             | Python     | RDFLib         |
-|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|----------------|
-| [0.7.0](https://w3id.org/jelly/pyjelly/0.7.0) – **[{{ python_package_version() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version() }})** | 3.10 – 3.14| 7.x (>= 7.1.4) |
-| [0.1.0](https://w3id.org/jelly/pyjelly/0.1.0) – [0.6.2](https://w3id.org/jelly/pyjelly/0.6.2) | 3.9 – 3.13 | 7.x (>= 7.1.4) |
+| pyjelly                                                                                                                                             | Python     | RDFLib         | Jelly-RDF |
+|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|----------------|-----------|
+| [0.9.0](https://w3id.org/jelly/pyjelly/0.9.0) – **[{{ python_package_version() }}](https://w3id.org/jelly/pyjelly/{{ python_package_version() }})** | 3.10 – 3.15| 7.x (>= 7.1.4) | 1.2 |
+| [0.7.0](https://w3id.org/jelly/pyjelly/0.7.0) – [0.8.2](https://w3id.org/jelly/pyjelly/0.8.2) | 3.10 – 3.14| 7.x (>= 7.1.4) | 1.1 |
+| [0.1.0](https://w3id.org/jelly/pyjelly/0.1.0) – [0.6.2](https://w3id.org/jelly/pyjelly/0.6.2) | 3.9 – 3.13 | 7.x (>= 7.1.4) | 1.1 |
 
 
 See the **[release notes on GitHub](https://github.com/Jelly-RDF/pyjelly/releases)** for more details.

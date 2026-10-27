@@ -96,6 +96,19 @@ def register_mimetypes(extension: str = ".jelly") -> None:
 @mypyc_attr(allow_interpreted_subclasses=True)
 @dataclass(frozen=True)
 class LookupPreset:
+    """
+    Sizes of the lookups of a stream.
+
+    The defaults are those of Jelly-RDF. Jelly-SPARQL streams use larger lookups
+    by default, see `SparqlOptions`.
+
+    Attributes:
+        max_names: size of the name lookup, at least 8.
+        max_prefixes: size of the prefix lookup, 0 to not use prefixes.
+        max_datatypes: size of the datatype lookup.
+
+    """
+
     max_names: int = DEFAULT_NAME_LOOKUP_SIZE
     max_prefixes: int = DEFAULT_PREFIX_LOOKUP_SIZE
     max_datatypes: int = DEFAULT_DATATYPE_LOOKUP_SIZE

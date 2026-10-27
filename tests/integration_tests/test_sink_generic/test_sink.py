@@ -369,3 +369,26 @@ def test_literal_with_base_direction() -> None:
     )
     assert literal != Literal("مرحبا", "ar")
     assert hash(literal) != hash(Literal("مرحبا", "ar"))
+
+
+def test_term_accessors() -> None:
+    assert BlankNode("b1").identifier == "b1"
+    assert IRI("http://example.com/s").iri == "http://example.com/s"
+    literal = Literal('say "hi"', "en", direction="ltr")
+    assert literal.lex == 'say "hi"'
+    assert literal.langtag == "en"
+    assert literal.datatype is None
+    assert literal.direction == "ltr"
+    typed = Literal("1", datatype="http://www.w3.org/2001/XMLSchema#integer")
+    assert typed.langtag is None
+    assert typed.datatype == "http://www.w3.org/2001/XMLSchema#integer"
+    assert typed.direction is None
+
+
+def test_term_accessors_are_read_only() -> None:
+    iri = IRI("http://example.com/s")
+    with pytest.raises(AttributeError):
+        iri.iri = "http://example.com/other"  # type: ignore[misc]
+    literal = Literal("a")
+    with pytest.raises(AttributeError):
+        literal.lex = "b"  # type: ignore[misc]

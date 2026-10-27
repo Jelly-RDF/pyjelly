@@ -24,7 +24,7 @@ with urllib.request.urlopen(url) as r:
 # Parse RDF from the Jelly format
 rdf_g = Graph()
 rdf_g.parse(example_file, format="jelly")
-print(f"Loaded graph with {len(rdf_g)} instances.")
+print(f"Loaded graph with {len(rdf_g)} triples.")
 
 # First step for filtering the graph
 rdf_g_filtered = Graph()
@@ -73,7 +73,11 @@ norm = lambda n: (
 # Example calculation, shortest path between two nodes (provided at least two nodes)
 source = next(n for n in nx_g if norm(n) == "socrates")
 target = next(n for n in nx_g if norm(n) == "obama")
-path = nx.shortest_path(nx_g, source=source, target=target)
+# There may be several shortest paths, take the first one in alphabetical order
+path = min(
+    nx.all_shortest_paths(nx_g, source=source, target=target),
+    key=lambda p: [str(n) for n in p],
+)
 print(f"Shortest path from {source} to {target}: {' -> '.join(path)}")
 
 # Take first 10 nodes

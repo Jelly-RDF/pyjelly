@@ -23,6 +23,11 @@ class BlankNode:
         # is a reserved word for the MSVC compiler
         self._id: str = identifier
 
+    @property
+    def identifier(self) -> str:
+        """The identifier of the blank node, without the `_:` prefix."""
+        return self._id
+
     def __str__(self) -> str:
         return f"_:{self._id}"
 
@@ -43,6 +48,11 @@ class IRI:
 
     def __init__(self, iri: str) -> None:
         self._iri: str = iri
+
+    @property
+    def iri(self) -> str:
+        """The IRI as a string, without angle brackets."""
+        return self._iri
 
     def __str__(self) -> str:
         return f"<{self._iri}>"
@@ -81,6 +91,26 @@ class Literal:
         self._langtag: str | None = langtag
         self._datatype: str | None = datatype
         self._direction: str | None = direction
+
+    @property
+    def lex(self) -> str:
+        """The lexical form, without quotes or escapes."""
+        return self._lex
+
+    @property
+    def langtag(self) -> str | None:
+        """The language tag, or None if there is none."""
+        return self._langtag
+
+    @property
+    def datatype(self) -> str | None:
+        """The datatype IRI as a string, or None if it is not given."""
+        return self._datatype
+
+    @property
+    def direction(self) -> str | None:
+        """The base direction, "ltr" or "rtl", or None if there is none."""
+        return self._direction
 
     def __str__(self) -> str:
         lex = (

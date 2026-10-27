@@ -5,13 +5,12 @@ import random
 
 # Example generator that yields raw triples
 def generate_sample_triples():
-    content = (
-        IRI("http://example.com/sensor"),
-        IRI("http://example.com/humidity"),
-        IRI(f"http://example.com/{random.random()}"),
-    )
     for _ in range(10):
-        yield Triple(*content)
+        yield Triple(
+            IRI("http://example.com/sensor"),
+            IRI("http://example.com/humidity"),
+            Literal(str(random.random())),
+        )
 
 
 output_file = "flat_output.jelly"

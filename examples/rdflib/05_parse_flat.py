@@ -25,6 +25,6 @@ with (
                 city_names.add(event.o)
 
 print(f"Found {len(city_names)} unique city names in the dataset.")
-print("10 random city names:")
+print("Sample city names:")
 for city in list(city_names)[:10]:
     print(f"- {city}")
