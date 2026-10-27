@@ -3,16 +3,17 @@ from pyjelly.integrations.generic.serialize import grouped_stream_to_file
 import random
 
 
-# Helper function to generate a generator of graphs
+# Example generator that yields graphs
 def generate_sample_sinks():
-    content = (
-        IRI("http://example.com/sensor"),
-        IRI("http://example.com/humidity"),
-        IRI(f"http://example.com/{random.random()}"),
-    )
     for _ in range(10):
         sink = GenericStatementSink()
-        sink.add(Triple(*content))
+        sink.add(
+            Triple(
+                IRI("http://example.com/sensor"),
+                IRI("http://example.com/humidity"),
+                Literal(str(random.random())),
+            )
+        )
         yield sink
 
 

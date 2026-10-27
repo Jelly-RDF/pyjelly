@@ -19,9 +19,9 @@ with (
     gzip.open(response) as jelly_stream,
 ):
     for event in parse_jelly_flat(jelly_stream):
-        if isinstance(event, Triple):
-            if str(event.p) == str(predicate_to_look_for):
-                city_names.add(str(event.o))
+        if isinstance(event, Triple):  # we are only interested in triples
+            if event.p == predicate_to_look_for:
+                city_names.add(event.o.lex)
 
 print(f"Found {len(city_names)} unique city names in the dataset.")
 print("Sample city names:")

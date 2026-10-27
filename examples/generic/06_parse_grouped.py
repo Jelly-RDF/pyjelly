@@ -1,5 +1,6 @@
 import gzip
 import urllib.request
+from itertools import islice
 
 from pyjelly.integrations.generic.parse import parse_jelly_grouped
 
@@ -15,8 +16,6 @@ with (
     # Parse into sinks (one per graph)
     graphs = parse_jelly_grouped(jelly_stream)
 
-    # First 50
-    for i, graph in enumerate(graphs):
+    # Only the first 50 graphs, the rest will not be parsed
+    for i, graph in enumerate(islice(graphs, 50)):
         print(f"Graph {i} in the stream has {len(graph)} triples")
-        if i >= 50:
-            break

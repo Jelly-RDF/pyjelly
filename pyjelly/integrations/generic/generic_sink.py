@@ -13,6 +13,7 @@ class _DefaultGraph:
 
 
 DefaultGraph = _DefaultGraph()
+"""The name of the default graph, used as the graph name of quads in it."""
 
 
 class BlankNode:
@@ -23,11 +24,16 @@ class BlankNode:
         # is a reserved word for the MSVC compiler
         self._id: str = identifier
 
+    @property
+    def identifier(self) -> str:
+        """The identifier of the blank node, without the `_:` prefix."""
+        return self._id
+
     def __str__(self) -> str:
         return f"_:{self._id}"
 
     def __repr__(self) -> str:
-        return f"BlankNode(identifier={self._id})"
+        return f"BlankNode({self._id!r})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, BlankNode):
@@ -44,11 +50,16 @@ class IRI:
     def __init__(self, iri: str) -> None:
         self._iri: str = iri
 
+    @property
+    def iri(self) -> str:
+        """The IRI as a string, without angle brackets."""
+        return self._iri
+
     def __str__(self) -> str:
         return f"<{self._iri}>"
 
     def __repr__(self) -> str:
-        return f"IRI({self._iri})"
+        return f"IRI({self._iri!r})"
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, IRI):
@@ -81,6 +92,26 @@ class Literal:
         self._langtag: str | None = langtag
         self._datatype: str | None = datatype
         self._direction: str | None = direction
+
+    @property
+    def lex(self) -> str:
+        """The lexical form, without quotes or escapes."""
+        return self._lex
+
+    @property
+    def langtag(self) -> str | None:
+        """The language tag, or None if there is none."""
+        return self._langtag
+
+    @property
+    def datatype(self) -> str | None:
+        """The datatype IRI as a string, or None if it is not given."""
+        return self._datatype
+
+    @property
+    def direction(self) -> str | None:
+        """The base direction, "ltr" or "rtl", or None if there is none."""
+        return self._direction
 
     def __str__(self) -> str:
         lex = (
@@ -130,28 +161,43 @@ class Triple(NamedTuple):
     """Class for RDF triples."""
 
     s: Node
+    """The subject."""
     p: Node
+    """The predicate."""
     o: Node
+    """The object."""
 
 
 class Quad(NamedTuple):
     """Class for RDF quads."""
 
     s: Node
+    """The subject."""
     p: Node
+    """The predicate."""
     o: Node
+    """The object."""
     g: GraphName
+    """The graph name, `DefaultGraph` for the default graph."""
 
 
 class Prefix(NamedTuple):
     """Class for generic namespace declaration."""
 
     prefix: str
+    """The prefix."""
     iri: IRI
+    """The namespace IRI."""
 
 
 @mypyc_attr(allow_interpreted_subclasses=True)
 class GenericStatementSink:
+    """
+    A graph or dataset of generic statements, kept in memory in order.
+
+    It holds triples or quads, and the namespaces bound to it.
+    """
+
     _store: deque[Triple | Quad]
 
     def __init__(self, identifier: GraphName = DefaultGraph) -> None:
@@ -172,9 +218,11 @@ class GenericStatementSink:
         self._id = identifier
 
     def add(self, statement: Triple | Quad) -> None:
+        """Add a statement at the end of the sink."""
         self._store.append(statement)
 
     def bind(self, prefix: str, namespace: IRI) -> None:
+        """Bind a prefix to a namespace, replacing an earlier binding of it."""
         self._namespaces.update({prefix: namespace})
 
     def __iter__(self) -> Generator[Triple | Quad]:
@@ -185,14 +233,17 @@ class GenericStatementSink:
 
     @property
     def namespaces(self) -> Generator[tuple[str, IRI]]:
+        """The bound namespaces, as (prefix, namespace IRI) pairs."""
         yield from self._namespaces.items()
 
     @property
     def identifier(self) -> GraphName:
+        """The name of the graph, `DefaultGraph` if it is not given."""
         return self._id
 
     @property
     def store(self) -> Generator[Triple | Quad]:
+        """The statements, in the order they were added."""
         yield from self._store
 
     @property
@@ -207,6 +258,16 @@ class GenericStatementSink:
         return bool(self._store) and len(self._store[0]) == TRIPLE_ARITY
 
     def parse(self, input_file: IO[bytes]) -> None:
+        """
+        Read a Jelly stream into the sink.
+
+        The statements, namespaces and identifier of the sink are replaced with
+        those read from the stream.
+
+        Args:
+            input_file (IO[bytes]): binary file to read.
+
+        """
         from pyjelly.integrations.generic.parse import (  # noqa: PLC0415
             parse_jelly_to_graph,
         )
@@ -217,6 +278,16 @@ class GenericStatementSink:
         self._id = parsed_result._id
 
     def serialize(self, output_file: IO[bytes]) -> None:
+        """
+        Write the sink as a Jelly stream, with the default options.
+
+        To choose the options, use `flat_stream_to_file` or
+        `grouped_stream_to_file` from `pyjelly.integrations.generic.serialize`.
+
+        Args:
+            output_file (IO[bytes]): binary file to write.
+
+        """
         from pyjelly.integrations.generic.serialize import (  # noqa: PLC0415
             grouped_stream_to_file,
         )

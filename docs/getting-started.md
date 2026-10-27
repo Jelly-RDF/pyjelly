@@ -42,6 +42,8 @@ Prefixes bound in RDFLib's namespace manager will then be written into the Jelly
     g.namespace_manager.bind("ex", EX, replace=True)
     ```
 
+    RDFLib binds about 30 common prefixes to every new graph, and they are all written as well. To write only the prefixes you bind yourself, create the graph with `Graph(bind_namespaces="none")`.
+
 
 ### Parsing a graph
 
@@ -53,7 +55,7 @@ RDFLib will reconstruct the graph from the Jelly file.
 
 ### Parsing a stream of graphs
 
-You can process a Jelly stream as a stream of graphs. A Jelly file consists of "frames" (batches of statements) – we can load each frame as a separate RDFLib graph.
+You can process a Jelly stream as a stream of graphs. A Jelly stream can hold a sequence of graphs, each in its own [RDF Message]({{ proto_link("specification/serialization/#stream-types") }}) – we can load each one as a separate RDFLib graph.
 
 In this example, we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev). We count the number of triples in each graph:
 
@@ -82,7 +84,6 @@ If you have a generator object containing graphs, you can easily serialize it in
 {{ code_example('rdflib/06_serialize_grouped.py')}}
 
 This method allows for transmitting logically grouped data, preserving their original division: each graph is one [RDF Message]({{ proto_link("specification/serialization/#stream-types") }}).
-For more precise control over frame serialization you can use [lower-level API](api.md)
 
 ### Serializing a stream of statements
 
@@ -91,17 +92,20 @@ If you have a generator object containing statements, you can easily serialize i
 {{ code_example('rdflib/07_serialize_flat.py')}}
 
 The flat method transmits the data as a continuous sequence of statements, keeping it simple and ordered.
-For more precise control over frame serialization you can use [lower-level API](api.md)
+
+For more control over framing and other options, see [`pyjelly.integrations.rdflib.serialize`](api.md#pyjelly.integrations.rdflib.serialize) in the API reference.
 
 ### File extension support
 
-You can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
+When parsing, you can generally omit the `format="jelly"` parameter if the file ends in `.jelly` – RDFLib will auto-detect the format:
 
 {{ code_example('rdflib/03_parse_autodetect.py') }}
 
 !!! warning 
 
-    Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in the `serialize()` or `parse()` call before.
+    Unfortunately, the way this is implemented in RDFLib is a bit wonky, so it will only work if you explicitly import `pyjelly.integrations.rdflib`, or you used `format="jelly"` in a `serialize()` or `parse()` call before.
+
+    This only works for parsing. `serialize()` does not look at the file extension, so `g.serialize("out.jelly")` writes Turtle. Always pass `format="jelly"` when serializing.
 
 ## See also
 

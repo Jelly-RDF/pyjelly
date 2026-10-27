@@ -5,10 +5,8 @@ NetworkX is a Python package that represents complex networks as graphs and allo
 Install the following libraries:
 
 ```bash
-pip install pyjelly[rdflib] networkx==3.2.1 matplotlib==3.9.4
+pip install pyjelly[rdflib] networkx matplotlib
 ```
-
-Below there are few useful examples to follow.
 
 ## Parse graph, show it
 
@@ -23,7 +21,7 @@ We can easily load it:
 Output from `print()`:
 
 ```text
-Loaded graph with 90000 instances.
+Loaded graph with 90000 triples.
 ```
 
 Convert it into a convenient NetworkX graph:
@@ -48,26 +46,26 @@ Output from `print()`:
 
 ```text
 Top 5 nodes sorted by degree:
-Socrates: 241
+Sócrates: 241
 Cavaco: 189
 Passos Coelho: 187
 Costa: 179
-Antonio Costa: 168
+António Costa: 168
 ```
 
 What is the shortest path between two nodes? We can check:
 
-{{ code_example('networkx_integration/01_parse_calculate_visualize.py', 75, 79) }}
+{{ code_example('networkx_integration/01_parse_calculate_visualize.py', 68, 81) }}
 
 Output from `print()`:
 
 ```text
-Shortest path from Socrates to Obama: Socrates -> Marcelo Rebelo de Sousa -> Durao Barroso -> Obama
+Shortest path from Socrates to Obama: Socrates -> Marcelo Rebelo de Sousa -> António Costa -> Obama
 ```
 
 However, it's best to see the full picture (for our example we truncate to 10 nodes for clarity):
 
-{{ code_example('networkx_integration/01_parse_calculate_visualize.py', 81, 92) }}
+{{ code_example('networkx_integration/01_parse_calculate_visualize.py', 83, 94) }}
 
 The graph presents as follows
 
@@ -78,7 +76,7 @@ The graph presents as follows
 
 In summary:
 
-{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 95, title="Entire example", expanded=False) }}
+{{ snippet_admonition('examples/networkx_integration/01_parse_calculate_visualize.py', 0, 96, title="Entire example", expanded=False) }}
 
 We converted an RDFLib graph to NetworkX, calculated insightful metrics and visualized the graph.  
 
@@ -86,7 +84,7 @@ For more info about the data source please see the [Politiquices dataset in Rive
 
 ## Serialize NetworkX graph
 
-This example shows how to write a NetworkX graph to a Jelly file.:
+This example shows how to write a NetworkX graph to a Jelly file:
 
 {{ code_example('networkx_integration/02_serialize.py') }}
 

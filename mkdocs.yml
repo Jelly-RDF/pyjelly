@@ -34,6 +34,10 @@ plugins:
             show_symbol_type_heading: false
             show_symbol_type_toc: true
             summary: true
+            # Hide private members and the rdf_pb2 alias imported by sparql_pb2
+            filters: ["!^_[^_]", "!^rdf__pb2$"]
+            # Read the source, not the modules that mypyc compiles next to it
+            allow_inspection: false
           paths: [pyjelly/]
           inventories:
             - http://docs.python.org/3/objects.inv
@@ -55,6 +59,11 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+exclude_docs: |
+  /env.py
+  /overrides/
+  /examples/
 
 repo_url: https://github.com/Jelly-RDF/pyjelly
 repo_name: Jelly-RDF/pyjelly
@@ -123,6 +132,10 @@ nav:
       - Neo4j: "rdflib-neo4j-integration.md"
       - NetworkX: "networkx-integration.md"
   - API reference: "api.md"
+  - Performance:
+      - Jelly-RDF: "https://w3id.org/jelly/dev/performance/rdf/#pyjelly"
+      - Jelly-SPARQL: "https://w3id.org/jelly/dev/performance/sparql/#pyjelly"
+      - Jelly-RDF 1.1 vs 1.2: "https://w3id.org/jelly/dev/performance/rdf-1-1-vs-1-2/#pyjelly"
   - Contributing:
       - "contributing/index.md"
       - Code of conduct: "contributing/code_of_conduct.md"

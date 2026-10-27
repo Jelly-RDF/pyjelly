@@ -2,23 +2,24 @@
 
 # pyjelly
 
-**pyjelly** is a Python implementation of [Jelly](http://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs.
+**pyjelly** is a Python implementation of [Jelly](https://w3id.org/jelly), a high-performance binary serialization format and streaming protocol for RDF knowledge graphs.
 
 **Documentation, usage guide and more: https://w3id.org/jelly/pyjelly**
 
 ## Features
 
-- **Fast reading and writing** of RDF knowledge graphs in the [Jelly format](http://w3id.org/jelly).
-- Reading and writing **[SPARQL query results](https://w3id.org/jelly/pyjelly/dev/sparql)** in [Jelly-SPARQL](https://w3id.org/jelly/dev/specification/sparql), with rdflib or the generic API.
-- **Standalone [generic API](https://w3id.org/jelly/pyjelly/dev/generic-sink)** with no third-party dependencies, allowing for:
+- **[Fast](https://w3id.org/jelly/dev/performance/rdf/#pyjelly) reading and writing** of RDF knowledge graphs in the [Jelly format](https://w3id.org/jelly). pyjelly writes [Jelly-RDF 1.2](https://w3id.org/jelly/dev/specification/serialization/) by default, and reads Jelly-RDF 1.0–1.2.
+- Reading and writing **[SPARQL query results](https://w3id.org/jelly/pyjelly/dev/sparql)** in [Jelly-SPARQL](https://w3id.org/jelly/dev/specification/sparql), with RDFLib or the generic API.
+- **Standalone [generic API](https://w3id.org/jelly/pyjelly/dev/generic-sink)** that doesn't need RDFLib or any other RDF library, allowing for:
     - Serialization and parsing of statements to and from Jelly files.
     - Parsing and serializing streams of graphs and statements.
-- Precise control over **serialization options, framing and compression**.
+    - [RDF 1.2](https://www.w3.org/TR/rdf12-concepts/) triple terms and literals with a base direction.
+- Precise control over **serialization options and framing**.
 - **Seamless** integration with: 
-    - **[rdflib](https://w3id.org/jelly/pyjelly/dev/getting-started)**
+    - **[RDFLib](https://w3id.org/jelly/pyjelly/dev/getting-started)**
     - **[RDFLib-Neo4j](https://w3id.org/jelly/pyjelly/dev/rdflib-neo4j-integration)**
     - **[NetworkX](https://w3id.org/jelly/pyjelly/dev/networkx-integration)**
-- **Stream processing support** for large datasets or streams of all [physical stream types](https://w3id.org/jelly/dev/specification/reference/#physicalstreamtype).
+- **Stream processing support** for large datasets and streams of many RDF graphs or datasets.
 
 **pyjelly** is useful when dealing with (see [full description](https://w3id.org/jelly/pyjelly/dev/overview/#use-cases)):
 
@@ -44,7 +45,7 @@ g.parse("http://xmlns.com/foaf/spec/index.rdf")
 g.serialize(destination="foaf.jelly", format="jelly")
 ```
 
-To read a Jelly file and convert it to an rdflib `Graph`:
+To read a Jelly file and convert it to an RDFLib `Graph`:
 
 ```python
 from rdflib import Graph

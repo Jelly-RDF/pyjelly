@@ -1,7 +1,7 @@
 from rdflib import Graph
 
 g = Graph()
-g.parse("foaf.jelly", format="jelly")
+g.parse("sunspots.jelly", format="jelly")
 
 print("Parsed triples:")
 for s, p, o in g:

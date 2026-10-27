@@ -40,7 +40,7 @@ for row in Graph(store=store).query("SELECT * WHERE { ?s ?p ?o } LIMIT 10"):
 
 ### Large results
 
-By default, `Result.parse` reads all rows at once. With `lazy=True`, the rows are read as the result is iterated, like RDFLib does with the results of its own queries. The stream must then stay open until you are done with the result.
+By default, `Result.parse` reads all rows at once. With `Result.parse(file, format="jelly", lazy=True)`, the rows are read as the result is iterated, like RDFLib does with the results of its own queries. The stream must then stay open until you are done with the result.
 
 When writing, the rows of an RDFLib result are written as the query makes them, so the first frames are written before the query is done. Each frame is flushed when it's written.
 
@@ -79,12 +79,16 @@ options = SparqlOptions(
     # Sizes of the lookups, see below
     lookup_preset=LookupPreset(max_names=4096, max_prefixes=256, max_datatypes=32),
     # How many values (rows times variables) a frame may have, at most
-    frame_values=4096,
+    frame_values=1024,
 )
 results.serialize(destination="results.jellys", format="jelly", options=options)
 ```
 
-The default lookup sizes are 8192 names, 1024 prefixes and 64 datatypes. Readers accept lookups of up to 16384 names, 4096 prefixes and 256 datatypes.
+The default lookup sizes are 8192 names, 1024 prefixes and 64 datatypes, and a frame has at most 4096 values by default. Readers accept lookups of up to 16384 names, 4096 prefixes and 256 datatypes.
+
+!!! note
+
+    `LookupPreset()` without arguments has the smaller defaults of Jelly-RDF (4000 names, 150 prefixes and 32 datatypes), not the defaults of `SparqlOptions`. Give all three sizes when you make a `LookupPreset` for SPARQL results.
 
 With `delimited=False`, the results are written as one frame without its size, e.g., to be used in Kafka or MQTT. Then the lookups must be large enough to store all terms of the result set. Files and HTTP responses must be delimited, which is the default. To send the frames of the results as separate messages, see [writing frame by frame](#writing-frame-by-frame).
 

@@ -10,10 +10,7 @@ Install pyjelly from PyPI:
 pip install pyjelly
 ```
 
-### Requirements
-
-- Python 3.10 or newer  
-- Linux, macOS, or Windows
+The requirements are the same as [with RDFLib](getting-started.md#requirements).
 
 ## Usage without external libraries
 
@@ -27,13 +24,19 @@ To make a set of triples/quads and write them to a Jelly file, use:
 
 This example uses pyjelly’s simple custom triple/quad type, which is easy to create and work with.
 
+The terms in the statements are `IRI`, `BlankNode` and `Literal`. You can read their parts with `IRI.iri`, `BlankNode.identifier`, and `Literal.lex`, `Literal.langtag`, `Literal.datatype` (the datatype IRI as a string) and `Literal.direction`. `str()` gives a term in N-Triples syntax, e.g., `<http://example.com/subject>` or `"Hello"@en`.
+
 ## Parsing statements from a Jelly file
 
-To load triples/quads into your python object from a `.jelly` file, see:
+To load triples/quads from a `.jelly` file into a `GenericStatementSink`, see:
 
 {{ code_example('generic/02_parse.py') }}
 
-Which retrieves data from your `.jelly` file.
+`GenericStatementSink` keeps all statements in memory. To read a large file statement by statement instead, use `parse_jelly_flat` in a generator:
+
+{{ code_example('generic/03_streaming.py') }}
+
+Only the statement that is being processed is kept in memory.
 
 ### Parsing a stream of graphs
 
@@ -41,25 +44,17 @@ Similarly, to process a Jelly stream as a stream of graphs through generic API, 
 
 {{ code_example('generic/06_parse_grouped.py') }}
 
-Where we use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
+We use a [dataset of weather measurements](https://w3id.org/riverbench/datasets/lod-katrina/dev) and count the number of triples in each graph.
 
 ### Parsing a stream of statements
 
-You can also process a Jelly stream as a flat stream with only generic API:
-
-We look through a fragment of Denmark's OpenStreetMap to find all city names:
+You can also process a Jelly stream as a flat stream of statements. We look through a fragment of Denmark's OpenStreetMap to find all city names:
 
 {{ code_example('generic/07_parse_flat.py') }}
 
-We get a generator of stream events, which allows us to process the file statement-by-statement, however with no external libraries used.
+`parse_jelly_flat` returns a generator of statements, so the file is processed statement by statement.
 
-## Streaming data
-
-If you need to process a certain quantity of statements both efficiently and iteratively, you can provide a simple generator:
-
-{{ code_example('generic/03_streaming.py') }}
-
-With this method you avoid storing all statements in memory, which greatly improves performance.
+## Serializing streams
 
 ### Serializing a stream of graphs
 
@@ -67,35 +62,34 @@ If you have a generator object containing graphs, you can use a generic approach
 
 {{ code_example('generic/04_serialize_grouped.py')}}
 
-Grouped data is streamed in its original form, no need for additional RDF libraries like RDFLib. 
+Each sink is written as one [RDF Message]({{ proto_link("specification/serialization/#stream-types") }}), so the grouping is kept when the stream is read with `parse_jelly_grouped`.
 
 ### Serializing a stream of statements
 
-Serializing a generator object of statements to `.jelly` file through generic API:
+If you have a generator object containing statements, you can serialize it like this:
 
 {{ code_example('generic/05_serialize_flat.py')}}
 
-Data is transmitted and kept ordered and simple.
+The statements are written in order, as one flat stream.
 
-### Working with byte buffers and Kafka
+## Working with byte buffers and Kafka
 
 When working with Kafka or other message brokers, you may want to write Jelly data to a byte buffer instead of a file. You can do this by using the `BytesIO` class from the `io` module:
 
 {{ code_example('generic/08_byte_buffer.py')}}
 
-The `data` variable is of type `bytes`, and can be passed to Kafka with [`KafkaProducer.send(value=data)`](https://kafka-python.readthedocs.io/en/master/), or any other API that accepts byte buffers. Same trick may be used when working with the [RDFLib integration](getting-started.md).
+The `data` variable is of type `bytes`, and can be passed to Kafka with [`KafkaProducer.send(value=data)`](https://kafka-python.readthedocs.io/en/master/), or any other API that accepts byte buffers. With the [RDFLib integration](getting-started.md), write to the buffer with `graph.serialize(destination=buffer, format="jelly")`, and read the bytes back with `graph.parse(data=data, format="jelly")`.
 
 When working with Kafka, you should be aware of the broker's offset management and partitioning strategies. Data within one Jelly stream must be strictly ordered and no frames may be dropped. If you have less strict ordering guarantees, you should split up the stream into multiple Jelly streams, each with guaranteed consistency.
 
-### Accessing stream frame metadata 
+## Accessing stream frame metadata
 
-It is possible to access [`RdfStreamFrame` metadata](https://w3id.org/jelly/dev/specification/serialization/#stream-frame-metadata) in pyjelly via **context variables**.
+It is possible to access [`RdfStreamFrame` metadata]({{ proto_link("specification/serialization/#stream-frame-metadata") }}) in pyjelly via **context variables**.
 To do that, define a **context variable** before parsing and pass it as argument to parser functions, e.g.:
 
 {{ code_example('generic/09_metadata.py')}}
 
-
-### See also
+## See also
 
 If you are familiar with RDFLib, you can use pyjelly together with RDFLib in a similar way. [See the dedicated guide](getting-started.md).
 

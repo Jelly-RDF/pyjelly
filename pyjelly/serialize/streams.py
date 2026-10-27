@@ -44,6 +44,20 @@ if TYPE_CHECKING:
 
 @dataclass
 class SerializerOptions:
+    """
+    Options for writing a Jelly-RDF stream.
+
+    Attributes:
+        flow: how statements are split into frames. If None, it is chosen from
+            the logical stream type.
+        frame_size: target number of rows per frame.
+        logical_type: logical stream type. If unspecified, it is guessed from
+            the data.
+        params: other stream parameters, e.g., the protocol version.
+        lookup_preset: lookup sizes.
+
+    """
+
     flow: FrameFlow | None = None
     frame_size: int = DEFAULT_FRAME_SIZE
     logical_type: LogicalStreamType = jelly.LOGICAL_STREAM_TYPE_UNSPECIFIED
