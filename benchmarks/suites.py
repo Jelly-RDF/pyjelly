@@ -6,9 +6,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from benchmarks import data, sparql_data
+from benchmarks import data
 from benchmarks.methods import METHODS, round_trip
-from benchmarks.sparql_methods import SPARQL_METHODS, sparql_round_trip
 
 
 @dataclass(frozen=True)
@@ -33,7 +32,17 @@ SUITES = {
         data.load,
         round_trip,
     ),
-    "sparql": Suite(
+}
+
+try:
+    from benchmarks import sparql_data
+    from benchmarks.sparql_methods import SPARQL_METHODS, sparql_round_trip
+except ImportError:
+    # pyjelly 0.8 and older have no Jelly-SPARQL, but the rdf suite still runs on
+    # them, to compare them with the current version
+    pass
+else:
+    SUITES["sparql"] = Suite(
         "sparql",
         "cells",
         sparql_data.DATASETS,
@@ -41,5 +50,4 @@ SUITES = {
         SPARQL_METHODS,
         sparql_data.load,
         sparql_round_trip,
-    ),
-}
+    )

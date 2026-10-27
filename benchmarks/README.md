@@ -87,8 +87,9 @@ Method names are `<terms>-<format>`, plus `-<API>` for Jelly, which has two APIs
 | `rdflib-jelly-graph` | Jelly through rdflib's plugin API: `Graph.serialize` | `Graph.parse` |
 | `rdflib-jelly-stream` | Jelly with pyjelly's flat streaming API, from the list | `parse_jelly_flat` |
 | `generic-jelly-stream` | The same, with the generic integration's terms instead of rdflib's | `parse_jelly_flat` |
+| `rdflib-jelly11-stream`, `generic-jelly11-stream` | The same two, writing Jelly-RDF 1.1 instead of 1.2 | `parse_jelly_flat` |
 
-All Jelly methods use pyjelly's default options: the "big" lookup preset (4000 names, 150 prefixes, 32 datatypes) and frames of 250 rows. The other formats' writers get the dataset's prefixes.
+All Jelly methods use pyjelly's default options: the "big" lookup preset (4000 names, 150 prefixes, 32 datatypes) and frames of 1024 rows. The other formats' writers get the dataset's prefixes.
 
 ### Tasks
 
