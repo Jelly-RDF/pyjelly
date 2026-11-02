@@ -76,8 +76,10 @@ It will take you to GitHub, where you can edit the Markdown file and submit a pu
 Install dependencies for docs:
 
 ```shell
-uv sync --group docs
+uv sync --python 3.13 --group docs
 ```
+
+The docs tooling needs Python 3.11 or newer.
 
 Then, start a local docs server:
 
